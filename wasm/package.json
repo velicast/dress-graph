@@ -1,0 +1,40 @@
+{
+    "name": "dress-graph",
+    "version": "0.1.1",
+    "description": "DRESS — Diffusive Recursive Structural Similarity on Graphs (WebAssembly)",
+    "type": "module",
+    "main": "dress.js",
+    "types": "dress.d.ts",
+    "files": [
+        "dress.js",
+        "dress.d.ts",
+        "dress_wasm.js",
+        "dress_wasm.wasm"
+    ],
+    "exports": {
+        ".": {
+            "import": "./dress.js",
+            "types": "./dress.d.ts"
+        }
+    },
+    "scripts": {
+        "build": "bash build.sh",
+        "build:debug": "bash build.sh --debug",
+        "test": "node test.mjs"
+    },
+    "keywords": [
+        "graph",
+        "similarity",
+        "edge-similarity",
+        "network",
+        "community-detection",
+        "wasm",
+        "webassembly"
+    ],
+    "license": "MIT",
+    "author": "Eduar Castrillo Velilla",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/velicast/dress-graph"
+    }
+}

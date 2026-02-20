@@ -1,0 +1,18 @@
+[package]
+name    = "dress-graph"
+version = "0.1.1"
+edition = "2021"
+authors = ["Eduar Castrillo Velilla"]
+license = "MIT"
+description = "Rust bindings for the DRESS Graph C library"
+repository  = "https://github.com/velicast/dress-graph"
+keywords    = ["graph", "similarity", "community-detection", "isomorphism", "network"]
+categories  = ["algorithms", "science"]
+include     = ["src/**", "vendor/**", "build.rs", "Cargo.toml", "LICENSE"]
+
+[lib]
+name = "dress_graph"
+path = "src/lib.rs"
+
+[build-dependencies]
+cc = "1"

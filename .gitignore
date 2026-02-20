@@ -1,0 +1,64 @@
+# Build artifacts
+build/
+*.o
+*.so
+*.a
+*.dylib
+*.mex
+
+# MkDocs generated site
+site/
+
+# C/C++ test binaries
+tests/c/test_dress
+tests/c/test_dress_igraph
+tests/cpp/test_dress
+
+# R (vendored C sources copied at publish time)
+r/src/dress.c
+r/src/dress/
+
+# Rust
+rust/target/
+rust/vendor/
+rust/LICENSE
+tests/rust/target/
+Cargo.lock
+
+# Go
+tests/go/go.sum
+
+# Python
+python/_dress.c
+python/build/
+python/src/*.egg-info/
+python/src/dress/*.so
+*.egg-info/
+__pycache__/
+*.pyc
+.venv/
+dist/
+.pytest_cache/
+
+# WASM (Emscripten output)
+wasm/dress_wasm.cjs
+wasm/dress_wasm.wasm
+wasm/node_modules/
+wasm/.npmrc
+
+# R build artifacts
+*.Rcheck/
+*.tar.gz
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Emscripten SDK
+emsdk/
+
+# IDE
+.vscode/
+.idea/

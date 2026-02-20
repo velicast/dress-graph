@@ -1,0 +1,15 @@
+Package: dress.graph
+Type: Package
+Title: Diffusive Recursive Structural Similarity on Graphs
+Version: 0.1.1
+Authors@R: person("Eduar", "Castrillo Velilla", role = c("aut", "cre"),
+                  email = "velicast@outlook.com")
+Description: Compute per-edge similarity values on graphs using the
+    DRESS (Diffusive Recursive Structural Similarity) algorithm.
+    Supports weighted/unweighted and directed/undirected graphs.
+    Iterative fixed-point fitting converges to stable edge scores
+    that capture neighbourhood overlap structure.
+License: MIT + file LICENSE
+Encoding: UTF-8
+NeedsCompilation: yes
+SystemRequirements: OpenMP

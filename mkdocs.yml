@@ -1,0 +1,53 @@
+site_name: DRESS Graph
+site_description: "Diffusive Recursive Structural Similarity on Graphs"
+site_url: https://velicast.github.io/dress-graph/
+repo_url: https://github.com/velicast/dress-graph
+repo_name: velicast/dress-graph
+
+theme:
+  name: readthedocs
+  highlightjs: true
+  hljs_languages:
+    - c
+    - cpp
+    - python
+    - rust
+    - go
+    - julia
+    - r
+    - matlab
+    - javascript
+
+markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences
+  - admonition
+  - attr_list
+  - tables
+  - toc:
+      permalink: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+nav:
+  - Home: index.md
+  - Theory:
+      - The DRESS Equation: theory/equation.md
+      - Properties: theory/properties.md
+      - The DRESS Family: theory/family.md
+      - Self-Loop Contribution: theory/self-loop.md
+      - Role of Weights: theory/weights.md
+  - Applications:
+      - Overview: applications/overview.md
+      - Graph Isomorphism: applications/isomorphism.md
+      - Community Detection: applications/community-detection.md
+      - Research Directions: applications/research-directions.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Quick Start: getting-started/quickstart.md
+      - API Reference: getting-started/api.md
+  - Benchmarks: benchmarks.md
+  - Publications: publications.md

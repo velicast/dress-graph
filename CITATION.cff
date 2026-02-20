@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the following paper."
+title: "DRESS Graph"
+type: software
+repository-code: "https://github.com/velicast/dress-graph"
+preferred-citation:
+  type: article
+  title: "Dynamic Structural Similarity on Graphs"
+  authors:
+    - family-names: Castrillo
+      given-names: Eduar
+    - family-names: León
+      given-names: Elizabeth
+    - family-names: Gómez
+      given-names: Jonatan
+  year: 2018
+  url: "https://arxiv.org/abs/1805.01419"
+  identifiers:
+    - type: other
+      value: "arXiv:1805.01419"
+      description: "arXiv preprint"

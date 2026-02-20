@@ -1,0 +1,10 @@
+name = "DRESS"
+uuid = "337f85c3-a3a7-4a55-b862-85761cd282b3"
+authors = ["Eduar Castrillo Velilla <velicast@outlook.com>"]
+version = "0.1.1"
+
+[deps]
+Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
+
+[compat]
+julia = "1.6"
