@@ -16,7 +16,7 @@ import pytest
 core = pytest.importorskip("dress.core", reason="pure-Python backend not found")
 _core = pytest.importorskip("dress._core", reason="C extension not built")
 
-from dress.core import DRESS as PyDRESS, Variant as PyVariant
+from dress.core import dress_fit as py_dress_fit, Variant as PyVariant
 from dress._core import DRESS as CDRESS
 
 # Map pure-Python variant enum to C variant enum
@@ -35,9 +35,9 @@ EPS = 1e-12
 
 def _compare(n, sources, targets, weights=None, variant=PyVariant.UNDIRECTED):
     """Build both backends, fit, and assert identical results."""
-    # Pure Python
-    pg = PyDRESS(n, sources, targets, weights=weights, variant=variant)
-    pr = pg.fit(max_iterations=MAX_ITER, epsilon=EPS)
+    # Pure Python (functional API)
+    pr = py_dress_fit(n, sources, targets, weights=weights, variant=variant,
+                      max_iterations=MAX_ITER, epsilon=EPS)
 
     # C
     cv = _C_VARIANTS[variant]

@@ -6,12 +6,13 @@ No compiled dependencies required. Only the Python standard library and
 
 Usage::
 
-    from dress.core import DRESS, UNDIRECTED
+    from dress import dress_fit
 
-    g = DRESS(4, [0, 1, 2, 0], [1, 2, 3, 3])
-    result = g.fit()
-    print(result.edge_dress)   # per-edge similarity values
-    print(result.node_dress)   # per-node norms
+    result = dress_fit(4, [0, 1, 2, 0], [1, 2, 3, 3])
+    result.edge_dress     # per-edge similarity values
+    result.node_dress     # per-node norms
+    result.iterations     # number of iterations
+    result.delta          # final convergence delta
 """
 
 from __future__ import annotations
@@ -23,8 +24,10 @@ from enum import IntEnum
 from typing import List, Optional, Sequence
 
 __all__ = [
+    "dress_fit",
     "DRESS",
     "DRESSResult",
+    "FitResult",
     "Variant",
     "UNDIRECTED",
     "DIRECTED",
@@ -48,11 +51,25 @@ FORWARD = Variant.FORWARD
 BACKWARD = Variant.BACKWARD
 
 
-# -- result dataclass -------------------------------------------------------
+# -- result dataclasses -----------------------------------------------------
+
+@dataclass
+class FitResult:
+    """Lightweight result of :meth:`DRESS.fit` (matches C extension API)."""
+
+    iterations: int
+    delta: float
+
+    def __repr__(self) -> str:
+        return (
+            f"FitResult(iterations={self.iterations}, "
+            f"delta={self.delta:.6e})"
+        )
+
 
 @dataclass
 class DRESSResult:
-    """Result of :meth:`DRESS.fit`."""
+    """Extended result with copies of edge/node data (legacy API)."""
 
     sources: List[int]
     targets: List[int]
@@ -134,24 +151,46 @@ class DRESS:
         n_vertices: int,
         sources: Sequence[int],
         targets: Sequence[int],
-        weights: Optional[Sequence[float]] = None,
-        variant: Variant = UNDIRECTED,
+        weights_or_variant=None,
+        variant_or_precompute=UNDIRECTED,
         precompute_intercepts: bool = False,
+        *,
+        weights: Optional[Sequence[float]] = None,
+        variant: Optional[Variant] = None,
     ) -> None:
+        # Support both calling conventions:
+        #   DRESS(n, src, dst, weights, variant, precompute)   -- weighted positional
+        #   DRESS(n, src, dst, variant, precompute)            -- unweighted positional (C-extension style)
+        #   DRESS(n, src, dst, weights=..., variant=...)       -- keyword style
+        if weights is not None or variant is not None:
+            # Keyword-style call
+            _weights = weights
+            _variant = Variant(variant) if variant is not None else UNDIRECTED
+        elif isinstance(weights_or_variant, (Variant, int)) and not isinstance(weights_or_variant, bool):
+            # Unweighted positional: DRESS(n, src, dst, variant, precompute)
+            _weights = None
+            _variant = Variant(weights_or_variant)
+            if isinstance(variant_or_precompute, bool):
+                precompute_intercepts = variant_or_precompute
+        else:
+            # Weighted positional: DRESS(n, src, dst, weights, variant, precompute)
+            _weights = weights_or_variant
+            _variant = Variant(variant_or_precompute)
+
         E = len(sources)
         if len(targets) != E:
             raise ValueError("sources and targets must have equal length")
-        if weights is not None and len(weights) != E:
+        if _weights is not None and len(_weights) != E:
             raise ValueError("weights must have the same length as sources")
 
         self._N = n_vertices
         self._E = E
         self._U = list(sources)
         self._V = list(targets)
-        self._variant = Variant(variant)
+        self._variant = Variant(_variant)
         self._precompute_intercepts = precompute_intercepts
 
-        w_in = [1.0] * E if weights is None else [float(w) for w in weights]
+        w_in = [1.0] * E if _weights is None else [float(w) for w in _weights]
 
         # Build variant adjacency (CSR)
         self._build_adjacency(w_in)
@@ -386,7 +425,7 @@ class DRESS:
         self,
         max_iterations: int = 100,
         epsilon: float = 1e-6,
-    ) -> DRESSResult:
+    ) -> FitResult:
         """Run iterative fixed-point fitting.
 
         Parameters
@@ -398,7 +437,10 @@ class DRESS:
 
         Returns
         -------
-        DRESSResult
+        FitResult
+            Lightweight result with ``iterations`` and ``delta``.
+            Edge and node values are available on the graph object
+            via ``dress_values``, ``node_dress_values``, etc.
         """
         N, E = self._N, self._E
         adj_offset = self._adj_offset
@@ -488,12 +530,57 @@ class DRESS:
             for i, v in enumerate(nd):
                 self._np_node_dress[i] = v
 
-        return DRESSResult(
-            sources=list(self._U),
-            targets=list(self._V),
-            edge_dress=list(ed),
-            edge_weight=list(ew),
-            node_dress=list(nd),
+        return FitResult(
             iterations=final_iter,
             delta=final_delta,
         )
+
+
+# -- top-level convenience function -----------------------------------------
+
+def dress_fit(
+    n_vertices: int,
+    sources: Sequence[int],
+    targets: Sequence[int],
+    weights: Optional[Sequence[float]] = None,
+    variant: Variant = UNDIRECTED,
+    max_iterations: int = 100,
+    epsilon: float = 1e-6,
+) -> DRESSResult:
+    """Compute DRESS similarity for a graph and return all results.
+
+    This is the primary Python API.  It mirrors the functional style used
+    by the Rust, Go, Julia, R, MATLAB, and JavaScript bindings.
+
+    Parameters
+    ----------
+    n_vertices : int
+        Number of vertices (0-indexed).
+    sources, targets : sequence of int
+        Edge endpoint arrays (same length).
+    weights : sequence of float, optional
+        Per-edge weights (``None`` for unweighted, i.e. all 1).
+    variant : Variant
+        ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
+    max_iterations : int
+        Maximum number of fix-point iterations (default 100).
+    epsilon : float
+        Convergence threshold (default 1e-6).
+
+    Returns
+    -------
+    DRESSResult
+        Dataclass with fields ``sources``, ``targets``, ``edge_dress``,
+        ``edge_weight``, ``node_dress``, ``iterations``, and ``delta``.
+    """
+    g = DRESS(n_vertices, sources, targets, weights=weights, variant=variant)
+    fr = g.fit(max_iterations=max_iterations, epsilon=epsilon)
+    return DRESSResult(
+        sources=list(g._U),
+        targets=list(g._V),
+        edge_dress=list(g._edge_dress),
+        edge_weight=list(g._edge_weight),
+        node_dress=list(g._node_dress),
+        iterations=fr.iterations,
+        delta=fr.delta,
+    )

@@ -31,7 +31,7 @@ pip install -e "$ROOT/python[native,networkx]" -q
 pip install pybind11 numpy -q
 
 # --- dev / test dependencies ---
-pip install pytest mkdocs pymdown-extensions -q
+pip install pytest mkdocs pymdown-extensions build twine -q
 
 echo ""
 echo "Environment ready.  Activate with:"

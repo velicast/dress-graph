@@ -2,13 +2,17 @@
 
 ## Core concepts
 
-All bindings expose the same underlying algorithm with a consistent interface:
+All bindings expose the same underlying algorithm through a single function
+call: **`dress_fit()`**.  Pass in the graph (vertices, edges, optional
+weights), and get back a result struct containing every output array.
 
-1. **Initialise** with: number of vertices, source array, target array,
-   optional weight array, variant, and precompute flag.
-2. **Fit** with: max iterations and epsilon.
-3. **Read results**: edge dress values, edge weights, node dress values,
-   iteration count, final delta.
+```
+result = dress_fit(n_vertices, sources, targets, [weights], [variant], ...)
+```
+
+The result always contains the same fields across every language:
+edge dress values, edge weights, node dress norms, iteration count, and
+final convergence delta.
 
 ## Variants
 
@@ -156,50 +160,61 @@ g.edgeTargets()        // const int*
 ### Python
 
 ```python
-from dress import DRESS, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
+from dress import dress_fit, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
 
-# Construct (unweighted)
-g = DRESS(n_vertices, sources, targets,
-          variant=UNDIRECTED, precompute_intercepts=False)
+# Unweighted
+result = dress_fit(n_vertices, sources, targets)
 
-# Construct (weighted)
-g = DRESS(n_vertices, sources, targets, weights,
-          variant=UNDIRECTED, precompute_intercepts=False)
+# Weighted
+result = dress_fit(n_vertices, sources, targets,
+                   weights=[1.0, 2.0, 3.0])
 
-# Fit
-result = g.fit(max_iterations=100, epsilon=1e-6)
+# With options
+result = dress_fit(n_vertices, sources, targets,
+                   variant=DIRECTED,
+                   max_iterations=200,
+                   epsilon=1e-12)
+
+result.sources      # list[int]
+result.targets      # list[int]
+result.edge_dress   # list[float]
+result.edge_weight  # list[float]
+result.node_dress   # list[float]
 result.iterations   # int
 result.delta        # float
+```
 
-# Accessors (zero-copy NumPy views)
-g.dress_values      # float64 array [E]
-g.weights           # float64 array [E]
-g.node_dress_values # float64 array [N]
-g.sources           # int32 array [E]
-g.targets           # int32 array [E]
-g.n_vertices        # int
-g.n_edges           # int
+The `dress_fit()` function works identically whether the C extension
+or the pure-Python backend is active.  It returns a single `DRESSResult`
+with all arrays and metadata.
 
-# Per-element access
-g.edge_dress(e)     # float
-g.edge_weight(e)    # float
-g.node_dress(u)     # float
+For advanced use (e.g. re-fitting with different parameters), the
+low-level `DRESS` class is also available:
+
+```python
+from dress import DRESS, UNDIRECTED
+
+g = DRESS(n_vertices, sources, targets, variant=UNDIRECTED)
+fit_info = g.fit(max_iterations=100, epsilon=1e-6)
+fit_info.iterations   # int
+fit_info.delta        # float
+
+# Read values from graph object
+g.edge_dress(e)       # float, DRESS value for edge e
+g.edge_weight(e)      # float
+g.node_dress(u)       # float
+g.n_vertices          # int
+g.n_edges             # int
 ```
 
 ### Python (pure, no C dependencies)
 
 ```python
-from dress.core import DRESS, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
+from dress.core import dress_fit, UNDIRECTED
 
-# Construct (unweighted)
-g = DRESS(n_vertices, sources, targets, variant=UNDIRECTED)
+result = dress_fit(n_vertices, sources, targets,
+                   variant=UNDIRECTED)
 
-# Construct (weighted)
-g = DRESS(n_vertices, sources, targets, weights=[1.0, 2.0, 3.0],
-          variant=UNDIRECTED)
-
-# Fit
-result = g.fit(max_iterations=100, epsilon=1e-6)
 result.sources      # list[int]
 result.targets      # list[int]
 result.edge_dress   # list[float]

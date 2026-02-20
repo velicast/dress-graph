@@ -79,11 +79,64 @@ This has three practical consequences:
    clustered, or fed directly into ML pipelines — none of which is possible
    with a discrete partition.
 
-DRESS achieves 100 % accuracy on standard isomorphism benchmarks, but
-shares the same theoretical ceiling as 1-WL: it cannot distinguish CFI
-constructions or strongly regular graphs with identical parameters.
+DRESS achieves 100 % accuracy on standard isomorphism benchmarks.
+Empirically it appears to share the same ceiling as 1-WL — it fails on
+CFI constructions and strongly regular graphs with identical parameters —
+but a formal proof that DRESS is at least as powerful as 1-WL is still
+open.
 See [Properties — WL comparison](../theory/properties.md#weisfeilerleman-wl-colour-refinement)
 for a detailed side-by-side table.
+
+### DRESS distinguishes graphs that 1-WL cannot
+
+The **prism graph** (\(C_3 \square K_2\)) and \(K_{3,3}\) are both
+3-regular on 6 nodes with 9 edges.  WL-1 assigns all nodes the same colour
+in both graphs (every node has degree 3 and all neighbour multisets are
+identical), so it cannot distinguish them.
+
+DRESS succeeds because it operates on **edges**, not nodes.  In the prism,
+triangle edges share a common neighbour while matching edges do not;
+these structurally different roles produce different DRESS values.
+In \(K_{3,3}\), no two adjacent nodes share a common neighbour, so all
+edges are structurally equivalent.
+
+```python
+from dress import dress_fit
+
+# Prism: C_3 □ K_2
+r1 = dress_fit(6,
+    [0, 1, 0, 3, 4, 3, 0, 1, 2],   # sources
+    [1, 2, 2, 4, 5, 5, 3, 4, 5],   # targets
+    max_iterations=100, epsilon=1e-10)
+
+# K_{3,3}
+r2 = dress_fit(6,
+    [0, 0, 0, 1, 1, 1, 2, 2, 2],
+    [3, 4, 5, 3, 4, 5, 3, 4, 5],
+    max_iterations=100, epsilon=1e-10)
+
+print(sorted(r1.edge_dress))   # two distinct values
+print(sorted(r2.edge_dress))   # one uniform value
+```
+
+| Graph | Sorted DRESS vector |
+|-------|---------------------|
+| Prism | \([0.922, 0.922, 0.922, 1.709, 1.709, 1.709, 1.709, 1.709, 1.709]\) |
+| \(K_{3,3}\) | \([1.155, 1.155, 1.155, 1.155, 1.155, 1.155, 1.155, 1.155, 1.155]\) |
+
+The vectors differ, so DRESS correctly identifies the graphs as
+non-isomorphic.  This is not an empirical accident: the proof follows
+from the structure of the DRESS equation.
+
+**Proof sketch.**  Suppose all 9 edges in the prism converge to the same
+value \(d^*\).  Triangle edges have 1 common neighbour; their update
+equation gives \(d^* = (8 + 4d^*) / (4 + 3d^*)\).  Matching edges have
+0 common neighbours; their equation gives \(d^* = (8 + 2d^*) / (4 + 3d^*)\).
+These yield \(d^* = \sqrt{8/3}\) and \(d^* = 4/3\) respectively — a
+contradiction.  Therefore the prism must have at least two distinct edge
+values, while \(K_{3,3}\) (edge-transitive, 0 common neighbours everywhere)
+has a single uniform value.  The sorted vectors necessarily differ.
+\(\square\)
 
 ## Higher-order DRESS for harder cases
 

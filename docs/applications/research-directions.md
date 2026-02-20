@@ -1,10 +1,12 @@
 # Research Directions
 
-DRESS is a continuous relaxation of 1-WL colour refinement: same
-discriminative power, but with **real-valued edge scores** instead of
-discrete colours.  This means DRESS can, in principle, replace 1-WL in
-every application that relies on it.  Below are open research directions
-where the continuous output may provide concrete advantages.
+DRESS is a continuous relaxation of 1-WL colour refinement with
+**real-valued edge scores** instead of discrete colours.  DRESS is
+provably stronger than 1-WL on some graph families (e.g. it
+[distinguishes the prism graph from \(K_{3,3}\)](isomorphism.md#dress-distinguishes-graphs-that-1-wl-cannot),
+which 1-WL cannot).  Whether WL-1 can distinguish any pair that DRESS
+cannot remains open.  Below are research directions where the continuous
+output may provide concrete advantages.
 
 ---
 
@@ -139,8 +141,7 @@ A DRESS molecular fingerprint:
 
 ```python
 def dress_fingerprint(mol):
-    d = DRESS(mol.num_atoms, mol.bond_sources, mol.bond_targets)
-    result = d.fit()
+    result = dress_fit(mol.num_atoms, mol.bond_sources, mol.bond_targets)
     return sorted(result.edge_dress)
 ```
 

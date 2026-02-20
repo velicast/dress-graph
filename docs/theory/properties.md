@@ -272,7 +272,7 @@ that 1-WL produces **discrete colour partitions** while DRESS produces
 | Output | Colour histogram (partition) | Real-valued edge vector (metric) |
 | Refinement | Hash of neighbour multiset | Cosine-like ratio with recursive weights |
 | Fixed point | Stable colouring (finite steps) | Unique continuous fixed point |
-| Sensitivity | Cannot distinguish regular graphs | Same theoretical limits (CFI, SRG) |
+| Sensitivity | Cannot distinguish regular graphs | Provably stronger: distinguishes prism vs \(K_{3,3}\) ([proof](../applications/isomorphism.md#dress-distinguishes-graphs-that-1-wl-cannot)); empirically same upper limits (CFI, SRG) |
 | Parameters | None | None |
 
 This continuous relaxation has concrete advantages:

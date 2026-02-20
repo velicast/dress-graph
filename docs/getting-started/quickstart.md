@@ -3,15 +3,13 @@
 ## Python
 
 ```python
-from dress import DRESS, UNDIRECTED
+from dress import dress_fit
 
-g = DRESS(
+result = dress_fit(
     n_vertices=4,
     sources=[0, 1, 2, 0],
     targets=[1, 2, 3, 3],
-    variant=UNDIRECTED,
 )
-result = g.fit()
 
 print(f"Iterations: {result.iterations}")
 print(f"Edge DRESS values: {result.edge_dress}")

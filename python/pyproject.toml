@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dress-graph"
-version = "0.1.1"
+version = "0.1.2"
 description = "DRESS: Diffusive Recursive Structural Similarity on Graphs"
 authors = [{name = "Eduar Castrillo Velilla"}]
 requires-python = ">=3.7"
