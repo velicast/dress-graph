@@ -138,6 +138,100 @@ values, while \(K_{3,3}\) (edge-transitive, 0 common neighbours everywhere)
 has a single uniform value.  The sorted vectors necessarily differ.
 \(\square\)
 
+### DRESS reveals edge roles in regular graphs
+
+On any \(d\)-regular graph WL-1 assigns a single colour to every vertex and
+a single colour to every edge — it learns nothing.  DRESS, working at the
+edge level, can still expose structurally distinct edge roles.
+
+**Example: circulant graph \(C(10,\{1,2,5\})\).**  This is a 5-regular
+graph on 10 vertices where each vertex \(i\) connects to
+\(i \pm 1\), \(i \pm 2\), and \(i + 5\) (mod 10).
+
+```python
+from dress import dress_fit
+
+n = 10
+edges = set()
+for i in range(n):
+    for s in [1, 2]:
+        edges.add((min(i, (i+s)%n), max(i, (i+s)%n)))
+        edges.add((min(i, (i-s)%n), max(i, (i-s)%n)))
+    edges.add((min(i, (i+5)%n), max(i, (i+5)%n)))
+
+edges = sorted(edges)
+r = dress_fit(n, [u for u,v in edges], [v for u,v in edges])
+print(f"Iterations: {r.iterations}")
+for s, t, d in zip(r.sources, r.targets, r.edge_dress):
+    print(f"  ({s},{t})  {d:.6f}")
+```
+
+DRESS converges in 12 iterations and produces **three distinct edge
+values**:
+
+| Edge type | DRESS value | Count | Structural meaning |
+|-----------|-------------|-------|--------------------|
+| Distance-1 (e.g. 0–1) | 1.549 | 10 | Share 2 common neighbours (most triangles) |
+| Distance-2 (e.g. 0–2) | 1.166 | 10 | Share 1 common neighbour |
+| Antipodal (e.g. 0–5) | 0.657 | 5 | Share 0 common neighbours (no triangles) |
+
+All 10 node DRESS values are identical (\(\approx 4.022\)), which is
+expected: the graph is vertex-transitive.  But the edges carry three
+different roles that WL-1 is completely blind to.
+
+### DRESS also has limits: strongly regular graphs
+
+The **4×4 rook graph** and the **Shrikhande graph** are both
+SRG(16, 6, 2, 2) — 6-regular on 16 vertices where every pair of adjacent
+vertices shares exactly 2 common neighbours, and every pair of non-adjacent
+vertices also shares exactly 2.
+
+```python
+from dress import dress_fit
+
+# 4×4 rook graph: vertex (r,c) connects to all in same row/column
+n, edges = 16, set()
+for r in range(4):
+    for c in range(4):
+        v = r*4 + c
+        for c2 in range(4):
+            if c2 != c: edges.add((min(v, r*4+c2), max(v, r*4+c2)))
+        for r2 in range(4):
+            if r2 != r: edges.add((min(v, r2*4+c), max(v, r2*4+c)))
+edges = sorted(edges)
+rook = dress_fit(n, [u for u,v in edges], [v for u,v in edges])
+
+# Shrikhande graph: Cayley graph of Z4×Z4, generators {(0,1),(1,0),(1,1)}
+edges = set()
+gens = [(0,1),(1,0),(1,1),(0,3),(3,0),(3,3)]
+for r in range(4):
+    for c in range(4):
+        v = r*4 + c
+        for dr, dc in gens:
+            u = ((r+dr)%4)*4 + (c+dc)%4
+            edges.add((min(v,u), max(v,u)))
+edges = sorted(edges)
+shri = dress_fit(n, [u for u,v in edges], [v for u,v in edges])
+
+print(f"Rook       edge DRESS: {rook.edge_dress[0]:.6f} (uniform)")
+print(f"Shrikhande edge DRESS: {shri.edge_dress[0]:.6f} (uniform)")
+```
+
+Both graphs produce **identical, uniform** DRESS values:
+
+| | Edge DRESS | Node DRESS | Distinct edge values |
+|---|---|---|---|
+| 4×4 Rook | 1.215 | 4.311 | 1 |
+| Shrikhande | 1.215 | 4.311 | 1 |
+
+DRESS cannot distinguish them.  Both graphs are edge-transitive, and every
+edge has exactly the same local structure (2 common neighbours).  The DRESS
+update equation sees identical inputs at every edge in both graphs, so it
+converges to the same fixed point.
+
+This confirms that DRESS, like WL-1, fails on strongly regular graphs where
+all edges are structurally indistinguishable.
+
 ## Higher-order DRESS for harder cases
 
 Applying DRESS to a \(k\)-hop augmented graph \(G_k\) may break symmetries
