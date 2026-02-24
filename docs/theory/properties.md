@@ -7,18 +7,18 @@ DRESS values are bounded in \([0, 2]\).
 - \(d_{uv} = 2\) if and only if \(u = v\) (self-similarity).
 - \(d_{uv} = 0\) cannot occur on any edge in a connected graph (the self-loop
   contribution guarantees a positive numerator).
-- For edges between nodes with no common neighbours beyond the self-loop,
+- For edges between nodes with no common neighbors beyond the self-loop,
   values are small but strictly positive.
 
-## Parameter-free (self-regularisation)
+## Parameter-free (self-regularization)
 
-Unlike PageRank (damping factor \(\alpha\)), HITS (normalisation choices), or
+Unlike PageRank (damping factor \(\alpha\)), HITS (normalization choices), or
 GNN-based methods (learning rate, layers, hidden dimensions), DRESS has **no
 model parameters**.  The quantities \(\epsilon\) and `max_iterations` are
 convergence tolerances, not structural choices.
 
 The nonlinear denominator \(\|u\| \cdot \|v\|\) acts as a natural
-regulariser: as edge values grow, the denominator grows proportionally,
+regularizer: as edge values grow, the denominator grows proportionally,
 automatically bounding the system.  The contraction is built into the formula.
 
 Given a graph, there is exactly one DRESS assignment.  No choices, no
@@ -45,7 +45,7 @@ homogeneity in \(d\), so \(\lambda\) cancels.
 
 ## Unique fixed point
 
-DRESS converges to a unique solution regardless of initialisation.  This
+DRESS converges to a unique solution regardless of initialization.  This
 follows from the update being a contraction mapping on the bounded set
 \([0, 2]^{|E|}\).
 
@@ -57,15 +57,15 @@ The DRESS iteration defines a discrete dynamical system on the space of edge
 value vectors. 
 
 - **Diffusion.** At each iteration, every edge absorbs similarity information
-  from its common-neighbour edges, which in turn absorbed from *their*
-  neighbours in the previous step.  After \(t\) iterations, each edge
+  from its common-neighbor edges, which in turn absorbed from *their*
+  neighbors in the previous step.  After \(t\) iterations, each edge
   effectively integrates structural information from paths of length up
   to \(t\).
 - **Self-regulation.** The denominator (product of node norms) acts as an
   automatic gain control: if all values grow, the norms grow proportionally
   and the ratio stays bounded. This is the degree-0 homogeneity property.
 - **Contraction.** The combined effect of additive diffusion in the numerator
-  and multiplicative normalisation in the denominator produces a contractive
+  and multiplicative normalization in the denominator produces a contractive
   mapping, guaranteeing convergence to a unique fixed point from any
   non-negative initial condition.
 
@@ -73,15 +73,15 @@ At steady state, every edge value \(d_{uv}\) encodes how structurally similar
 nodes \(u\) and \(v\) are, as seen by the entire graph.
 
 - **Normalised structural overlap.**  The numerator aggregates shared
-  neighbourhood contributions; the denominator normalises by the structural
+  neighborhood contributions; the denominator normalizes by the structural
   size of each node.  The ratio is a cosine-like similarity between the
   structural profiles of \(u\) and \(v\).
 - **Recursive depth.**  Similarity is not based on raw adjacency but on the
-  similarity values of neighbouring edges, which in turn depend on *their*
-  neighbours, and so on.  At the fixed point every edge has absorbed
+  similarity values of neighboring edges, which in turn depend on *their*
+  neighbors, and so on.  At the fixed point every edge has absorbed
   information from the entire connected component.
 - **Self-consistency.**  No edge wants to change.  Every value is exactly what
-  the DRESS equation predicts from its neighbourhood.  The assignment is the
+  the DRESS equation predicts from its neighborhood.  The assignment is the
   unique structural description where every local perspective is globally
   consistent.
 - **Diffusive equilibrium.**  Initially all edges are equal (value = 1).
@@ -109,7 +109,7 @@ randomness, no sampling, no ordering dependence.
 If two graphs \(G\) and \(G'\) are isomorphic, their sorted DRESS edge value
 multisets are identical.  DRESS depends only on the graph's structure (adjacency
 and weights), not on vertex labelling.  Any relabelling (permutation of nodes)
-that maps \(G\) to \(G'\) also maps each edge's neighbourhood identically,
+that maps \(G\) to \(G'\) also maps each edge's neighborhood identically,
 so the fixed-point equation produces the same values.
 
 This makes the sorted DRESS vector a **graph fingerprint**: two graphs are
@@ -120,7 +120,7 @@ isomorphism candidates if and only if their fingerprints match.  See
 
 Many iterative graph algorithms suffer from numerical issues in
 floating-point arithmetic: vanishing or exploding values, sensitivity to
-initialisation, or accumulation of rounding errors across iterations.
+initialization, or accumulation of rounding errors across iterations.
 DRESS is numerically stable by construction.  Four properties work together
 to guarantee this:
 
@@ -132,10 +132,10 @@ to guarantee this:
    small multiplicative perturbations (the dominant form of floating-point
    error) do not amplify across iterations.
 
-3. **Self-regularising denominator.**  The \(\|u\| \cdot \|v\|\) term grows
+3. **Self-regularizing denominator.**  The \(\|u\| \cdot \|v\|\) term grows
    proportionally to the numerator.  If rounding errors push values slightly
    upward, the denominator absorbs the increase automatically.  There is no
-   separate normalisation step that could introduce additional error.
+   separate normalization step that could introduce additional error.
 
 4. **Contraction mapping.**  Each iteration strictly reduces the distance
    between distinct value vectors.  Rounding errors introduced at iteration
@@ -152,21 +152,21 @@ DRESS runs in \(O(N + k \cdot E \cdot \bar{d})\) time and \(O(N + E)\)
 memory, where \(k\) is the number of iterations (typically 5--20) and
 \(\bar{d}\) is the average degree.  For sparse graphs (\(E = O(N)\)), the
 total cost is effectively **linear in the graph size**.  With precomputed
-neighbourhood intercepts the per-edge cost drops further to
+neighborhood intercepts the per-edge cost drops further to
 \(O(|N[u] \cap N[v]|)\).  See
 [Complexity](equation.md#complexity) for the full analysis.
 
 ## Massive parallelism
 
-Each edge update reads only from its neighbourhood's current values.  All edges
+Each edge update reads only from its neighborhood's current values.  All edges
 can be updated simultaneously (Jacobi-style iteration), making DRESS trivially
-parallelisable with OpenMP, CUDA, or any SIMD framework.
+parallelizable with OpenMP, CUDA, or any SIMD framework.
 
 ## Local invertibility (incremental edge query)
 
 DRESS is a global recursive fixed point: changing one edge should, in
 principle, require re-solving the entire system.  Remarkably, each edge's
-value can be computed from its **immediate neighbourhood alone**, without
+value can be computed from its **immediate neighborhood alone**, without
 re-fitting.
 
 For any edge \((u, v)\) (existing, removed, or hypothetical) its DRESS
@@ -181,7 +181,7 @@ where:
 
 - \(A = \displaystyle\sum_{x \in N[u] \cap N[v]}
   \bigl(\bar{w}(u,x)\,d_{ux} + \bar{w}(v,x)\,d_{vx}\bigr)\) is the
-  common-neighbour contribution (known from the fitted graph),
+  common-neighbor contribution (known from the fitted graph),
 - \(D_u = \displaystyle\sum_{x \in N[u]} \bar{w}(u,x)\,d_{ux}\) and
   \(D_v = \displaystyle\sum_{x \in N[v]} \bar{w}(v,x)\,d_{vx}\) are the
   squared node norms without the queried edge,
@@ -192,7 +192,7 @@ This is a scalar equation in \(d_{uv}\) alone and converges in a few
 iterations (or can be solved in closed form).
 
 **Why this matters.**  DRESS is global yet **locally invertible**: any single
-edge value is fully determined by its immediate neighbourhood at steady state.
+edge value is fully determined by its immediate neighborhood at steady state.
 This means incremental updates are cheap (\(O(\deg u + \deg v)\) per query
 after one \(O(E)\) fit), and the global fixed point barely moves when a
 single edge is perturbed.
@@ -221,7 +221,7 @@ processes.  DRESS differs from all of them in important ways.
 ### SimRank
 
 [SimRank](https://dl.acm.org/doi/10.1145/775047.775126) (Jeh & Widom, 2002)
-measures **node–node** similarity: two nodes are similar if their neighbours
+measures **node–node** similarity: two nodes are similar if their neighbors
 are similar.
 
 | Aspect | SimRank | DRESS |
@@ -253,26 +253,26 @@ computes a **node importance** score via a random-walk model.
 
 PageRank answers a different question (*which nodes are important?*) and
 cannot distinguish structural roles of edges.  DRESS and PageRank are
-complementary: PageRank ranks nodes, DRESS characterises edges.
+complementary: PageRank ranks nodes, DRESS characterizes edges.
 
-### Weisfeiler–Leman (WL) colour refinement
+### Weisfeiler–Leman (WL) color refinement
 
-The 1-WL algorithm iteratively refines node colours based on neighbour
+The 1-WL algorithm iteratively refines node colors based on neighbor
 multisets.  It is the basis of most GNN message-passing architectures.
 
 DRESS can be understood as a **continuous relaxation of 1-WL**.
 Both algorithms iterate over the same local structure — each node's
-neighbourhood — and converge to a fixed point.  The key difference is
-that 1-WL produces **discrete colour partitions** while DRESS produces
+neighborhood — and converge to a fixed point.  The key difference is
+that 1-WL produces **discrete color partitions** while DRESS produces
 **continuous real-valued edge scores**.
 
 | Aspect | 1-WL | DRESS |
 |--------|------|-------|
-| Entity | Nodes (discrete colours) | Edges (continuous values) |
-| Output | Colour histogram (partition) | Real-valued edge vector (metric) |
-| Refinement | Hash of neighbour multiset | Cosine-like ratio with recursive weights |
-| Fixed point | Stable colouring (finite steps) | Unique continuous fixed point |
-| Sensitivity | Cannot distinguish regular graphs | Provably stronger: distinguishes prism vs \(K_{3,3}\) ([proof](../applications/isomorphism.md#dress-distinguishes-graphs-that-1-wl-cannot)); empirically same upper limits (CFI, SRG) |
+| Entity | Nodes (discrete colors) | Edges (continuous values) |
+| Output | Color histogram (partition) | Real-valued edge vector (metric) |
+| Refinement | Hash of neighbor multiset | Cosine-like ratio with recursive weights |
+| Fixed point | Stable coloring (finite steps) | Unique continuous fixed point |
+| Sensitivity | Cannot distinguish regular graphs | Distinguishes beyond 1-WL: distinguishes prism vs \(K_{3,3}\) ([proof](../applications/isomorphism.md#dress-distinguishes-graphs-that-1-wl-cannot)) |
 | Parameters | None | None |
 
 This continuous relaxation has concrete advantages:
@@ -280,7 +280,7 @@ This continuous relaxation has concrete advantages:
 - **Metric output.**  1-WL answers "same or different"; DRESS answers
   "how similar."  Every binary classification task becomes a
   regression/similarity task, and every histogram becomes a distribution.
-- **Edge granularity.**  1-WL assigns one colour per node; DRESS assigns
+- **Edge granularity.**  1-WL assigns one color per node; DRESS assigns
   one value per edge, providing strictly finer structural description.
 - **Downstream utility.**  Continuous values can be thresholded, ranked,
   clustered, or used directly as features — none of which are possible

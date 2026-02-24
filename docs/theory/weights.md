@@ -23,8 +23,8 @@ landscape reflects not just topology but how strongly connected each path is.
 ### Attention
 
 When computing the update for edge \((u, v)\), the weight \(\bar{w}(u, x)\)
-scales how much neighbour \(x\) contributes to \(u\)'s structural profile.
-Heavy edges amplify a neighbour's vote; light edges dampen it.  Weights act
+scales how much neighbor \(x\) contributes to \(u\)'s structural profile.
+Heavy edges amplify a neighbor's vote; light edges dampen it.  Weights act
 as a built-in attention mechanism.
 
 ### Relative, not absolute
@@ -37,6 +37,6 @@ pattern of connection strengths, not their absolute magnitude.
 ## Unweighted as a special case
 
 When all weights are 1, the equation reduces to pure structural counting.
-Weights generalise this: they let the graph express "this connection matters
+Weights generalize this: they let the graph express "this connection matters
 more than that one," and DRESS respects it throughout its fixed-point
 computation without introducing any additional parameters.

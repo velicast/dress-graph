@@ -22,7 +22,7 @@ single removal at \(O(n \cdot m^2)\) cost.
 For a connected graph \(G\), we progressively remove edges according to an
 ordering and track the **Largest Connected Component (LCC) fraction** — the
 fraction of nodes still reachable from the largest component.  The area under
-this curve (AUC) summarises how quickly the ordering fragments the graph:
+this curve (AUC) summarizes how quickly the ordering fragments the graph:
 **lower AUC = more damaging ordering**.
 
 ### Strategies compared
@@ -47,7 +47,7 @@ ceiling but orders of magnitude more expensive.
 ### Why ascending?
 
 Edges with **low** DRESS values are structurally isolated: they lack common
-neighbours and receive little support during convergence.  These are
+neighbors and receive little support during convergence.  These are
 precisely the bridges and bottlenecks whose removal disconnects components.
 Removing them first is the DRESS-native attack strategy.
 
@@ -164,7 +164,7 @@ significantly loses on any.
 
 DRESS-asc significantly beats Fiedler on 9 of 10 datasets.
 Fiedler's spectral cut is competitive on individual biological
-datasets but does not generalise across domains.
+datasets but does not generalize across domains.
 
 ### Adaptive comparison
 
@@ -218,7 +218,7 @@ the spectral cut is optimal by design.
 
 DRESS values reflect **local structural support**: an edge \((u,v)\)
 receives a high value when \(u\) and \(v\) share many well-connected
-common neighbours.  Edges with low DRESS values are structurally exposed —
+common neighbors.  Edges with low DRESS values are structurally exposed —
 they sit at bottlenecks, between communities, or at the periphery.
 
 ## Cost comparison

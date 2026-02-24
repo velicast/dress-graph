@@ -3,8 +3,8 @@
 ## Approach
 
 DRESS edge values form a natural spectrum: intra-community edges (supported by
-many common neighbours) receive high values, while inter-community edges
-(bridges with few common neighbours) receive low values.
+many common neighbors) receive high values, while inter-community edges
+(bridges with few common neighbors) receive low values.
 
 Thresholding edges by DRESS value separates communities **without training
 data** and with minimal hyperparameters (only the threshold itself, or none at

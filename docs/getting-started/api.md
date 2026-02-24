@@ -18,10 +18,10 @@ final convergence delta.
 
 | Constant | Value | Neighbourhood \(N[u]\) | Combined weight \(\bar{w}(u,v)\) |
 |----------|-------|------------------------|----------------------------------|
-| `UNDIRECTED` | 0 | \(\{u\} \cup\) all neighbours (ignoring direction) | \(2\,w(u,v)\) |
-| `DIRECTED` | 1 | \(\{u\} \cup\) all neighbours (in + out) | \(w(u,v) + w(v,u)\) |
-| `FORWARD` | 2 | \(\{u\} \cup\) out-neighbours | \(w(u,v)\) |
-| `BACKWARD` | 3 | \(\{u\} \cup\) in-neighbours | \(w(v,u)\) |
+| `UNDIRECTED` | 0 | \(\{u\} \cup\) all neighbors (ignoring direction) | \(2\,w(u,v)\) |
+| `DIRECTED` | 1 | \(\{u\} \cup\) all neighbors (in + out) | \(w(u,v) + w(v,u)\) |
+| `FORWARD` | 2 | \(\{u\} \cup\) out-neighbors | \(w(u,v)\) |
+| `BACKWARD` | 3 | \(\{u\} \cup\) in-neighbors | \(w(v,u)\) |
 
 ## Result fields
 

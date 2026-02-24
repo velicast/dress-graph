@@ -3,17 +3,17 @@
 ## Motivation
 
 Most graph similarity measures are either closed-form formulae (common
-neighbours, Jaccard) or linear eigenvector problems (PageRank, spectral
+neighbors, Jaccard) or linear eigenvector problems (PageRank, spectral
 methods).  DRESS is neither. It is a **self-referential nonlinear fixed point
 over edges**.
 
-Every edge's similarity depends on its neighbours' similarities, and the
-normalising denominator itself depends on edge values.  Despite this circular
+Every edge's similarity depends on its neighbors' similarities, and the
+normalizing denominator itself depends on edge values.  Despite this circular
 dependency, the system converges to a unique solution.
 
 ## Definition
 
-For each edge \((u, v) \in E\), define the **closed neighbourhood**
+For each edge \((u, v) \in E\), define the **closed neighborhood**
 \(N[u] = N(u) \cup \{u\}\), where the self-loop carries combined weight
 \(\bar{w}_{uu} = 2\) and similarity \(d_{uu} = 2\).
 
@@ -29,16 +29,16 @@ where the **node norm** is:
 \|u\| = \sqrt{\displaystyle\sum_{x \in N[u]} \bar{w}_{ux}\, d_{ux}}
 \]
 
-The numerator sums over every common neighbour \(x\) of \(u\) and \(v\)
+The numerator sums over every common neighbor \(x\) of \(u\) and \(v\)
 (including self-loops), adding the weighted similarities that \(u\) and \(v\)
-each have with \(x\).  The denominator normalises by the geometric mean of
+each have with \(x\).  The denominator normalizes by the geometric mean of
 the two node norms, ensuring the result is bounded.
 
 ## Convergence
 
 The iteration is:
 
-1. Initialise all \(d_{uv}^{(0)} = c\) for any constant \(c \ge 0\)
+1. Initialize all \(d_{uv}^{(0)} = c\) for any constant \(c \ge 0\)
    (typically \(c = 1\)).
 2. For each iteration \(t\), compute \(d_{uv}^{(t+1)}\) from \(d^{(t)}\)
    using the equation above.
@@ -51,25 +51,25 @@ in 5–20 iterations.
 ## Variants
 
 For directed graphs, four adjacency constructions are supported.  Each variant
-determines both the neighbourhood and the combined edge weight:
+determines both the neighborhood and the combined edge weight:
 
 | Variant | Neighbourhood \(N[u]\) | Combined weight \(\bar{w}(u,v)\) |
 |---------|------------------------|----------------------------------|
-| `UNDIRECTED` | \(\{u\} \cup\) all neighbours (ignoring direction) | \(2\,w(u,v)\) |
-| `DIRECTED` | \(\{u\} \cup\) all neighbours (in + out) | \(w(u,v) + w(v,u)\) |
-| `FORWARD` | \(\{u\} \cup\) out-neighbours | \(w(u,v)\) |
-| `BACKWARD` | \(\{u\} \cup\) in-neighbours | \(w(v,u)\) |
+| `UNDIRECTED` | \(\{u\} \cup\) all neighbors (ignoring direction) | \(2\,w(u,v)\) |
+| `DIRECTED` | \(\{u\} \cup\) all neighbors (in + out) | \(w(u,v) + w(v,u)\) |
+| `FORWARD` | \(\{u\} \cup\) out-neighbors | \(w(u,v)\) |
+| `BACKWARD` | \(\{u\} \cup\) in-neighbors | \(w(v,u)\) |
 
 ## Complexity
 
 ### Time
 
 Let \(N = |V|\), \(E = |E|\), and \(T\) be the total number of
-common-neighbour entries across all edges.
+common-neighbor entries across all edges.
 
 | Phase | Without intercepts | With precomputed intercepts |
 |-------|-------------------|-----------------------------|
-| **Initialisation** (CSR build, self-loops) | \(O(N + E)\) | \(O(N + E + T)\) |
+| **Initialization** (CSR build, self-loops) | \(O(N + E)\) | \(O(N + E + T)\) |
 | **Per iteration** | \(O\!\left(\sum_{(u,v)} (\deg u + \deg v)\right)\) | \(O(T)\) |
 | **Total** (\(k\) iterations) | \(O(N + k \cdot E \cdot \bar{d})\) | \(O(N + E + k \cdot T)\) |
 
@@ -80,7 +80,7 @@ graph size**.
 
 With precomputed intercepts the per-edge update cost drops from
 \(O(\deg u + \deg v)\) to \(O(|N[u] \cap N[v]|)\), which is
-substantially faster on sparse graphs where most neighbours are *not*
+substantially faster on sparse graphs where most neighbors are *not*
 shared.
 
 ### Memory
@@ -100,16 +100,16 @@ iteration's** values. There are no read–write dependencies between
 edges within the same iteration.  This makes DRESS embarrassingly
 parallel at the edge level:
 
-- **CPU (OpenMP).** The reference C implementation parallelises the
+- **CPU (OpenMP).** The reference C implementation parallelizes the
   edge loop with `#pragma omp parallel for`.  Each thread processes a
   subset of edges independently.
 - **GPU (CUDA / OpenCL / Metal).** Each edge can be mapped to a single
   thread or warp.  The CSR adjacency and intercept arrays are
   read-only during the iteration, so they can reside in device
-  memory with no synchronisation.  Only a barrier between iterations
+  memory with no synchronization.  Only a barrier between iterations
   (to swap the read/write buffers) is needed.
 - **Distributed.** Edges can be partitioned across machines.  Each
-  partition needs read access to the edge values of its neighbours
+  partition needs read access to the edge values of its neighbors
   (a halo / ghost layer), exchanged once per iteration.  The
   communication volume scales with the number of *cut edges*
   between partitions, not the total graph size.

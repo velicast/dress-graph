@@ -3,10 +3,10 @@
 The self-loop in DRESS is not a numerical trick. It is mathematically
 essential.
 
-## Closed vs open neighbourhood
+## Closed vs open neighborhood
 
-By defining \(N[u] = N(u) \cup \{u\}\) (closed neighbourhood), every node
-becomes its own neighbour with a virtual self-edge:
+By defining \(N[u] = N(u) \cup \{u\}\) (closed neighborhood), every node
+becomes its own neighbor with a virtual self-edge:
 
 - **Original weight:** \(w(u, u) = 1\)
 - **Combined weight:** \(\bar{w}(u, u) = 2\) (since the self-loop is always
@@ -32,7 +32,7 @@ its power.
 
 ### 3. The denominator can be zero
 
-If a node has no neighbours with nonzero dress values, \(\|u\| = 0\).  The
+If a node has no neighbors with nonzero dress values, \(\|u\| = 0\).  The
 self-loop guarantees \(\|u\| \ge \sqrt{\bar{w}_{uu}\,d_{uu}} = \sqrt{4} = 2 > 0\) always.
 
 ## The self-loop makes DRESS a fixed-point equation

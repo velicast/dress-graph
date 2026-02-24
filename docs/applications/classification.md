@@ -2,11 +2,11 @@
 
 ## Approach
 
-A DRESS fingerprint summarises a graph's structural profile in a fixed-size
+A DRESS fingerprint summarizes a graph's structural profile in a fixed-size
 vector.  The pipeline has three steps:
 
 1. **Compute DRESS** on the graph (a single call to `dress_fit`).
-2. **Summarise** the edge values into a 24-dimensional fingerprint.
+2. **Summarize** the edge values into a 24-dimensional fingerprint.
 3. **Classify** with an off-the-shelf classifier (Random Forest or Gradient
    Boosted Trees).
 
@@ -14,7 +14,7 @@ No neural network, no GPU, no training loop, no hyperparameter search.
 
 ### Fingerprint construction
 
-The sorted DRESS edge values are summarised into a **percentile vector**:
+The sorted DRESS edge values are summarized into a **percentile vector**:
 
 - \(q\) evenly spaced percentiles of the edge value distribution (where \(q \in \{10, 20, 40, 80\}\) is tuned via cross-validation).
 - Distribution entropy (Shannon entropy of a 50-bin histogram).

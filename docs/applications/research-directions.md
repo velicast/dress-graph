@@ -1,7 +1,7 @@
 # Research Directions
 
-DRESS is a continuous relaxation of 1-WL colour refinement with
-**real-valued edge scores** instead of discrete colours.  DRESS is
+DRESS is a continuous relaxation of 1-WL color refinement with
+**real-valued edge scores** instead of discrete colors.  DRESS is
 provably stronger than 1-WL on some graph families (e.g. it
 [distinguishes the prism graph from \(K_{3,3}\)](isomorphism.md#dress-distinguishes-graphs-that-1-wl-cannot),
 which 1-WL cannot).  Whether WL-1 can distinguish any pair that DRESS
@@ -23,7 +23,7 @@ out = gnn(x=node_features, edge_index=edges, edge_attr=edge_attr)
 ```
 
 Because DRESS encodes the full 1-WL information in two floats per edge,
-the network starts with a structurally meaningful initialisation rather
+the network starts with a structurally meaningful initialization rather
 than learning these features from scratch.  This is analogous to
 random-walk or Laplacian positional encodings used in Graphormer and GPS,
 but deterministic and structurally grounded.
@@ -32,7 +32,7 @@ but deterministic and structurally grounded.
 
 ## 2. Graph Kernels
 
-The WL subtree kernel builds a colour histogram at each refinement round
+The WL subtree kernel builds a color histogram at each refinement round
 and sums inner products across rounds.  DRESS replaces this with a single
 continuous edge-value vector that auto-converges (no round count
 hyperparameter \(h\)).
@@ -54,7 +54,7 @@ classification.
 
 ## 3. Symmetry Breaking in Combinatorial Optimisation
 
-1-WL gives an equitable partition: nodes in the same colour class are
+1-WL gives an equitable partition: nodes in the same color class are
 structurally equivalent (same orbit).  DRESS gives the same partition,
 plus a **continuous ranking** within each class via edge values.
 
@@ -72,7 +72,7 @@ heuristics in integer linear programming solvers.
 
 ## 4. Database Query Optimisation
 
-Colour refinement on query graphs produces structural summaries for
+Color refinement on query graphs produces structural summaries for
 estimating join sizes.  DRESS assigns each edge a continuous "structural
 importance" score that can feed a regression model for cardinality
 estimation, rather than discrete histogram lookups.  DRESS also handles
@@ -82,7 +82,7 @@ weighted property graphs natively.
 
 ## 5. Canonical Labelling
 
-Tools like nauty use colour refinement to produce an initial partition,
+Tools like nauty use color refinement to produce an initial partition,
 then branch and backtrack.  Running DRESS first yields a finer initial
 ordering:
 
@@ -90,7 +90,7 @@ ordering:
 1. Compute F-DRESS + B-DRESS: each edge gets a (f, b) pair.
 2. Node signature = sorted list of incident (f, b) pairs.
 3. Identical signatures = same orbit (guaranteed).
-4. Feed this partition to nauty as initial colouring.
+4. Feed this partition to nauty as initial coloring.
 ```
 
 If the continuous values break ties that early WL rounds leave unresolved,
@@ -100,7 +100,7 @@ nauty's search tree shrinks.
 
 ## 6. Graph Compression and Summarisation
 
-The 1-WL quotient graph has one super-node per colour class.  DRESS
+The 1-WL quotient graph has one super-node per color class.  DRESS
 produces the same quotient structure, but each super-edge carries a
 **continuous weight** (the DRESS value of that edge type).  This tells you
 not just *that* two groups are connected, but *how tightly*.
@@ -112,7 +112,7 @@ visualisation.
 
 ## 7. Role Extraction in Networks
 
-1-WL assigns one colour per structural role (binary: same or different).
+1-WL assigns one color per structural role (binary: same or different).
 DRESS gives a **continuous role embedding** per node:
 
 ```python
@@ -135,7 +135,7 @@ gradient naturally; 1-WL only gives a binary answer.
 ## 8. Molecular Fingerprints
 
 Morgan/ECFP fingerprints are WL on molecular graphs with atom labels:
-hash each atom's neighbourhood into a bit vector for similarity search.
+hash each atom's neighborhood into a bit vector for similarity search.
 
 A DRESS molecular fingerprint:
 
@@ -181,7 +181,7 @@ without expensive exact computation.
 | GNNs | theoretical ceiling | **structural edge features** (pre-converged) |
 | Graph kernels | histogram kernel | **Wasserstein kernel** (no \(h\) hyperparameter) |
 | Symmetry breaking | orbit partition | **continuous tie-breaking** |
-| Query optimisation | discrete bins | **regression features** |
+| Query optimization | discrete bins | **regression features** |
 | Canonical labelling | initial partition | **finer initial ordering** |
 | Compression | quotient graph | **weighted quotient** (cohesion measure) |
 | Role extraction | binary same/different | **continuous role similarity** |

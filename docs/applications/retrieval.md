@@ -13,7 +13,7 @@ computed in a single unsupervised pass, with no training data required.
 ## Method
 
 1. **Compute DRESS** on every graph in the database (one `dress_fit` call each).
-2. **Summarise** each graph's edge values into an 84-dimensional percentile
+2. **Summarize** each graph's edge values into an 84-dimensional percentile
    fingerprint (80 evenly spaced percentiles + entropy + edge count +
    unique count + zero fraction).
 3. **Rank** database graphs by L1 distance to the query fingerprint.

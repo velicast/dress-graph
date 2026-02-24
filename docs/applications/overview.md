@@ -19,7 +19,7 @@ completely different approaches:
 | Knowledge graphs | Predicting missing relations, entity resolution |
 | Network security | Detecting structural changes in communication graphs |
 | Drug discovery | Molecular graph fingerprinting (atoms = nodes, bonds = edges) |
-| Compiler optimisation | Dependency graph deduplication via isomorphism detection |
+| Compiler optimization | Dependency graph deduplication via isomorphism detection |
 
 ## Potential applications
 
@@ -72,7 +72,7 @@ See [Graph Isomorphism](isomorphism.md#directed-graphs) for details.
 ### Network robustness
 
 Edges with low DRESS values are structurally isolated (few common
-neighbours, weak support) — bridges and bottlenecks. Benchmarking on 200 graphs from 10 TU datasets
+neighbors, weak support) — bridges and bottlenecks. Benchmarking on 200 graphs from 10 TU datasets
 shows that static DRESS-asc is a **strong static strategy**, beating betweenness centrality (79 %) and Fiedler spectral
 cut (78 %). It captures a significant portion of the
 improvement achieved by adaptive betweenness — a method that
@@ -95,7 +95,7 @@ computed as a by-product of fitting. No extra work is needed.
 \(D_u\) could be useful wherever a **structural node score** is needed:
 
 - **Node centrality.**  High \(D_u\) means the node's edges are
-  well-supported by common neighbours.  Unlike degree centrality, \(D_u\)
+  well-supported by common neighbors.  Unlike degree centrality, \(D_u\)
   accounts for the quality of connections, not just their count.  Unlike
   betweenness or closeness, it is computed in the same \(O(t \cdot |E|)\)
   pass as the edge values.
@@ -163,7 +163,7 @@ solution:
   that is lost in a flat adjacency list.
 - **Retrieval-augmented generation (RAG).** In graph-based RAG pipelines,
   DRESS values can rank edges by structural importance, guiding the retriever
-  to fetch the most informative subgraph neighbourhoods.
+  to fetch the most informative subgraph neighborhoods.
 - **Graph fingerprints as embeddings.** The sorted DRESS vector is a
   fixed-size, deterministic graph descriptor.  It can serve as a graph-level
   embedding for retrieval or comparison tasks without requiring a learned

@@ -2,10 +2,10 @@
 
 **A Continuous Framework for Structural Graph Refinement**
 
-DRESS is a parameter-free, self-regularising algorithm that computes a unique
+DRESS is a parameter-free, self-regularizing algorithm that computes a unique
 self-consistent edge similarity for any graph.  Given an edge list, DRESS
 iteratively solves a nonlinear fixed-point system where every edge's similarity
-value depends on its neighbours' values.  It converges to a unique, bounded
+value depends on its neighbors' values.  It converges to a unique, bounded
 solution in \([0, 2]\) with no tuning parameters.
 
 This work is an independent continuation of research from the author's master's thesis:
@@ -23,7 +23,7 @@ and edge-importance ranking.
 !!! note "On the name"
     DRESS was originally named **DSS** (Dynamic Structural
     Similarity), then renamed to **DRESS**
-    to emphasise the diffusive and recursive
+    to emphasize the diffusive and recursive
     nature of the equation.  The word *Dynamic* in the original name referred
     to the fact that the underlying fixed-point system is a discrete dynamical
     system, but it was dropped to avoid confusion with *dynamic graphs*
@@ -36,7 +36,7 @@ and edge-importance ranking.
 | Property |
 |----------|
 | Bounded \([0, 2]\), self-similarity \(= 2\) |
-| Parameter-free (self-regularising, no damping factor) |
+| Parameter-free (self-regularizing, no damping factor) |
 | Scale invariant (degree-0 homogeneous) |
 | Unique deterministic fixed point |
 | Numerically stable (no overflow, no error amplification) |
@@ -44,7 +44,7 @@ and edge-importance ranking.
 | Graph fingerprinting (practical): MiVIA / IsoBench 100 % |
 | Community detection (improves SCAN) |
 | Weighted + directed support |
-| Massively parallelisable (per-edge independent updates) |
+| Massively parallelizable (per-edge independent updates) |
 
 ## The equation at a glance
 
@@ -65,7 +65,7 @@ d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{x \in N[u] \cap N[v]}
 \]
 
 where \(\|u\|^{(t)} = \sqrt{\displaystyle\sum_{x \in N[u]} \bar{w}_{ux}\, d_{ux}^{(t)}}\),
-\(N[u] = N(u) \cup \{u\}\) is the closed neighbourhood (including a
+\(N[u] = N(u) \cup \{u\}\) is the closed neighborhood (including a
 self-loop with \(\bar{w}_{uu} = 2\), \(d_{uu} = 2\)), and \(\bar{w}\) is the
 **combined weight** for the chosen variant.
 
