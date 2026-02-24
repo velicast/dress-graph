@@ -1,0 +1,198 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{hyperref}
+\usepackage{booktabs}
+
+\title{\texorpdfstring{$\Delta^\ell$}{Delta-ell}-DRESS: Climbing the WL Hierarchy One Deletion at a Time}
+\author{Eduar Castrillo Velilla \\ \texttt{eduarcastrillo@gmail.com}}
+\date{}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+The Cai--F\"urer--Immerman (CFI) construction provides the canonical family of hard instances for the Weisfeiler--Leman (WL) hierarchy: distinguishing the two non-isomorphic CFI graphs over a base graph $G$ requires $k$-WL where $k$ meets or exceeds the treewidth of $G$. In this paper, we introduce $\Delta^\ell$-DRESS, which applies $\ell$ levels of iterated node deletion to the DRESS continuous structural refinement framework. $\Delta^\ell$-DRESS runs Original-DRESS on all $\binom{n}{\ell}$ subgraphs obtained by removing $\ell$ nodes, and compares the resulting histograms. We show empirically on the canonical CFI benchmark family that Original-DRESS ($\Delta^0$) already distinguishes $\text{CFI}(K_3)$ (requiring 2-WL), and that each additional deletion level extends the range by one WL level: $\Delta^1$ reaches 3-WL, $\Delta^2$ reaches 4-WL, and $\Delta^3$ reaches 5-WL, distinguishing CFI pairs over $K_n$ for $n = 3, \ldots, 6$. Crucially, $\Delta^3$ fails on $\text{CFI}(K_7)$ (requiring 6-WL), confirming a sharp boundary at $(\ell+2)$-WL. The computational cost is $\mathcal{O}\bigl(\binom{n}{\ell} \cdot I \cdot m \cdot d_{\max}\bigr)$---polynomial in $n$ for fixed $\ell$. These results establish $\Delta^\ell$-DRESS as a practical framework for systematically climbing the WL hierarchy on the canonical CFI benchmark family.
+\end{abstract}
+
+\section{Introduction}
+
+The Weisfeiler--Leman (WL) hierarchy \cite{weisfeiler1968reduction} is the standard yardstick for measuring the expressiveness of graph isomorphism algorithms. The $k$-WL test operates on $k$-tuples of vertices and runs in $\mathcal{O}(n^{k+1})$ time per iteration \cite{cai1992optimal}. While powerful in theory, even 3-WL at $\mathcal{O}(n^4)$ is impractical for large graphs.
+
+The CFI construction \cite{cai1992optimal} provides the canonical hard instances: for any base graph $G$, it produces a pair of non-isomorphic graphs $\text{CFI}(G)$ and $\text{CFI}'(G)$ that $k$-WL cannot distinguish whenever $k$ is below the treewidth of $G$. In particular, $\text{CFI}(K_n)$ requires $(n{-}1)$-WL, making these the hardest known instances for the WL hierarchy.
+
+In the companion paper \cite{castrillo2025dress}, we introduced the DRESS family of continuous structural refinement algorithms and showed that $\Delta$-DRESS---which runs DRESS on each single-node-deleted subgraph---empirically distinguishes strongly regular graphs that confound 3-WL. The connection to the Kelly--Ulam reconstruction conjecture \cite{kelly1942congruence, ulam1960collection} was noted: the multiset of node-deleted DRESS fingerprints is a continuous relaxation of the reconstruction deck.
+
+In this paper, we generalize $\Delta$-DRESS to $\Delta^\ell$-DRESS by applying $\ell$ levels of iterated node deletion. We show that each deletion level adds approximately one WL level of discriminative power on the CFI family: $\Delta^0$ (Original-DRESS) already distinguishes $\text{CFI}(K_3)$, $\Delta^1$ reaches $\text{CFI}(K_4)$, $\Delta^2$ reaches $\text{CFI}(K_5)$, and $\Delta^3$ reaches $\text{CFI}(K_6)$.
+
+\subsection{Contributions}
+\begin{enumerate}
+    \item We define $\Delta^\ell$-DRESS formally and analyze its complexity.
+    \item We show that $\Delta^0$ (Original-DRESS) already distinguishes $\text{CFI}(K_3)$---a result not previously reported.
+    \item We present empirical results showing that $\Delta^\ell$-DRESS distinguishes $\text{CFI}(K_{\ell+3})$ for each $\ell = 0, 1, 2, 3$, and fails at the next level, covering WL levels 2 through 5.
+    \item We observe that each deletion level adds approximately one WL level of expressiveness on the CFI family.
+    \item We discuss the theoretical implications and open questions raised by these results.
+\end{enumerate}
+
+\section{Preliminaries}
+
+\subsection{DRESS}
+
+The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs} is a parameter-free, non-linear dynamical system on edges:
+
+\begin{equation}
+d_{uv}^{(t+1)} = \frac{\sum_{x \in N[u] \cap N[v]} \bigl(d_{ux}^{(t)} + d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
+\end{equation}
+
+where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the node norm and $N[u] = N(u) \cup \{u\}$ is the closed neighborhood. Self-loops are added to every node; the invariant $d_{uu} = 2$ holds at every iteration. The equation converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any positive initialization \cite{castrillo2025dress}.
+
+The graph fingerprint can be represented equivalently as the sorted vector $\text{sort}(d^*)$ or as the histogram $h(d^*)$; both uniquely identify the multiset of converged edge values. Since DRESS values are bounded in $[0, 2]$ and convergence tolerance is $\epsilon = 10^{-6}$, each edge value maps to one of $\lceil 2/\epsilon \rceil = 2 \times 10^{6}$ integer bins (the bin count is determined by the convergence tolerance), so the histogram is a compact bin-count vector. In this work we use the histogram representation. Two graphs are declared non-isomorphic if their fingerprints differ.
+
+\subsection{\texorpdfstring{$\Delta$}{Delta}-DRESS}
+
+$\Delta$-DRESS \cite{castrillo2025dress} runs DRESS on each node-deleted subgraph:
+
+\begin{definition}[$\Delta$-DRESS]
+Given a graph $G = (V, E)$ and a DRESS variant $\mathcal{F}$, the $\Delta$-DRESS fingerprint is the histogram obtained by running $\mathcal{F}$ on each node-deleted subgraph and accumulating every edge similarity value into a single bin-count vector:
+\[
+\Delta\text{-DRESS}(\mathcal{F}, G) = h\!\left(\bigsqcup_{v \in V} \mathcal{F}(G \setminus \{v\})\right)
+\]
+where $G \setminus \{v\}$ is the subgraph induced by $V \setminus \{v\}$, $\bigsqcup$ denotes multiset union, and $h$ maps each value to its integer bin in a fixed-size array.
+\end{definition}
+
+\subsection{CFI Graphs}
+
+The CFI construction \cite{cai1992optimal} is defined over a base graph $G = (V_G, E_G)$. For each vertex $v \in V_G$, a ``gadget'' replaces $v$ with a set of vertices encoding its incident edges. Two non-isomorphic graphs $\text{CFI}(G)$ and $\text{CFI}'(G)$ are produced by twisting the parity of one gadget. The key property is:
+
+\begin{theorem}[Cai, F\"urer, Immerman \cite{cai1992optimal}]
+The $k$-WL algorithm cannot distinguish $\text{CFI}(G)$ from $\text{CFI}'(G)$ whenever $k < \text{tw}(G)$, where $\text{tw}(G)$ is the treewidth of $G$.
+\end{theorem}
+
+For the complete graph $K_n$, the treewidth is $n - 1$, so $\text{CFI}(K_n)$ requires $(n{-}1)$-WL. In particular:
+\begin{itemize}
+    \item $\text{CFI}(K_3)$: requires 2-WL.
+    \item $\text{CFI}(K_5)$: requires 4-WL, operating on 4-tuples---$\mathcal{O}(n^5)$ per iteration.
+    \item $\text{CFI}(K_6)$: requires 5-WL, operating on 5-tuples---$\mathcal{O}(n^6)$ per iteration.
+\end{itemize}
+
+\section{\texorpdfstring{$\Delta^\ell$}{Delta-ell}-DRESS}
+
+We now define the iterated deletion operator.
+
+\begin{definition}[$\Delta^\ell$-DRESS]
+For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $\ell \ge 0$:
+\[
+\Delta^\ell\text{-DRESS}(\mathcal{F}, G) = h\!\left(\bigsqcup_{\substack{S \subset V,\; |S|=\ell}} \mathcal{F}(G \setminus S)\right)
+\]
+where $G \setminus S$ is the subgraph induced by $V \setminus S$, and $h$ maps the pooled edge values into a histogram.
+\end{definition}
+
+At depth $\ell$, $\Delta^\ell$-DRESS computes DRESS on all $\binom{n}{\ell}$ subgraphs obtained by removing exactly $\ell$ vertices. Every individual edge similarity value from every subgraph is added to a single histogram of $G$. Two graphs are compared by checking equality of their histograms. Individual subgraph fingerprints are not recoverable from the pooled histogram. The memory footprint is constant regardless of $\ell$, whereas storing the raw multiset of $\binom{n}{\ell} \cdot |E|$ floating-point values would be prohibitive. It is noteworthy that this fixed-size representation, combined with the deletion operator $\Delta^\ell$, empirically matches the discriminative power of $k$-WL methods that require $\mathcal{O}(n^{k+1})$ storage.
+
+\begin{proposition}[Complexity]
+The time complexity of $\Delta^\ell$-DRESS is
+\[
+\mathcal{O}\!\left(\binom{n}{\ell} \cdot I \cdot m \cdot d_{\max}\right)
+\]
+where $n = |V|$, $m = |E|$, $d_{\max}$ is the maximum degree, and $I$ is the number of DRESS iterations per subgraph. The $\binom{n}{\ell}$ subgraph computations are entirely independent and embarrassingly parallel.
+\end{proposition}
+
+\paragraph{Comparison with \texorpdfstring{$k$}{k}-WL.} The cost of $k$-WL is $\mathcal{O}(n^{k+1})$ per iteration. For $\text{CFI}(K_6)$, 5-WL costs $\mathcal{O}(n^6)$, while $\Delta^3$-DRESS costs $\mathcal{O}(n^3 \cdot I \cdot m \cdot d_{\max}) = \mathcal{O}(n^3 \cdot m \cdot d_{\max})$ (with $I$ constant).
+
+\section{Empirical Results}
+
+All experiments use Original-DRESS as the base variant $\mathcal{F}$, with convergence tolerance $\epsilon = 10^{-6}$ and a maximum of 100 iterations. In every case, convergence was reached before the iteration limit.
+
+\subsection{\texorpdfstring{$\Delta^\ell$}{Delta-ell}-DRESS on \texorpdfstring{CFI$(K_n)$}{CFI(Kn)}}
+
+We test $\Delta^\ell$-DRESS for $\ell = 0, 1, 2, 3$ on CFI pairs over complete graphs $K_n$ ($n = 3, \ldots, 10$). Higher deletion depths on larger base graphs were not executed due to time constraints (marked --- in the table).
+
+\begin{table}[h]
+\centering
+\caption{$\Delta^\ell$-DRESS results on CFI graph pairs. $\checkmark$ = pair distinguished; $\times$ = pair not distinguished; --- = not executed due to time constraints. The WL requirement column shows the minimum $k$-WL level needed to distinguish the pair.}
+\label{tab:cfi-results}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+Base graph & $|V_{\text{CFI}}|$ & WL req. & $\Delta^0$ & $\Delta^1$ & $\Delta^2$ & $\Delta^3$ \\
+\midrule
+$K_3$   & 6     & 2-WL & $\checkmark$  & $\checkmark$  & $\checkmark$  & $\checkmark$  \\
+$K_4$   & 16    & 3-WL & $\times$      & $\checkmark$  & $\checkmark$  & $\checkmark$  \\
+$K_5$   & 40    & 4-WL & $\times$      & $\times$      & $\checkmark$  & $\checkmark$  \\
+$K_6$   & 96    & 5-WL & $\times$      & $\times$      & $\times$      & $\checkmark$  \\
+$K_7$   & 224   & 6-WL & $\times$      & $\times$      & $\times$      & $\times$      \\
+$K_8$   & 512   & 7-WL & $\times$      & $\times$      & ---            & ---            \\
+$K_9$   & 1152  & 8-WL & $\times$      & $\times$      & ---            & ---            \\
+$K_{10}$& 2560  & 9-WL & $\times$      & $\times$      & ---            & ---            \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Analysis}
+
+The results in Table~\ref{tab:cfi-results} reveal a clear staircase pattern:
+
+\begin{enumerate}
+    \item \textbf{$\Delta^0$ (Original-DRESS)} distinguishes $\text{CFI}(K_3)$, which requires 2-WL. This is a notable result: Original-DRESS---with no node deletion---already exceeds 1-WL on CFI instances, consistent with the prism vs.\ $K_{3,3}$ result in \cite{castrillo2025dress}. It fails on all larger CFI pairs.
+
+    \item \textbf{$\Delta^1$} extends the range to $\text{CFI}(K_4)$ (3-WL). This is consistent with the results in \cite{castrillo2025dress}, where $\Delta$-DRESS was shown to distinguish SRG pairs that confound 3-WL. It fails on $\text{CFI}(K_5)$.
+
+    \item \textbf{$\Delta^2$} reaches $\text{CFI}(K_5)$ (4-WL).
+
+    \item \textbf{$\Delta^3$} reaches $\text{CFI}(K_6)$ (5-WL) but fails on $\text{CFI}(K_7)$ (6-WL), confirming that the staircase has a sharp boundary at $(\ell+2)$-WL. The $\text{CFI}(K_7)$ test required processing all $\binom{224}{3} = 1{,}848{,}224$ subgraphs ($\approx$19.3 billion edge values).
+\end{enumerate}
+
+\paragraph{WL level per deletion depth.} The tested data shows:
+
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+Deletion depth $\ell$ & Max WL matched & Effective WL \\
+\midrule
+0 & 2-WL & $\ell + 2$ \\
+1 & 3-WL & $\ell + 2$ \\
+2 & 4-WL & $\ell + 2$ \\
+3 & 5-WL & $\ell + 2$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The pattern is strikingly regular: $\Delta^\ell$-DRESS empirically matches $(\ell+2)$-WL on the CFI family. Each deletion level adds one WL level of expressiveness, with the base DRESS contributing 2-WL on its own. The computational cost grows as $\binom{n}{\ell}$ (polynomial in $n$ for fixed $\ell$), while the equivalent $(\ell+2)$-WL cost grows as $n^{\ell+3}$.
+
+\section{Discussion}
+
+\subsection{Relationship to Existing Work}
+
+\paragraph{Subgraph GNNs.} Methods such as ESAN \cite{bevilacqua2022equivariant} and GNN-AK+ \cite{zhao2022from} also use node-deleted or node-marked subgraphs to boost expressiveness. However, these are supervised methods that learn aggregation functions from data. $\Delta^\ell$-DRESS is entirely unsupervised: the aggregation is the deterministic DRESS fixed point, and the histogram comparison is parameter-free. This makes $\Delta^\ell$-DRESS a canonical baseline for the expressiveness of subgraph-based approaches.
+
+\paragraph{Reconstruction conjecture.} The Kelly--Ulam conjecture \cite{kelly1942congruence, ulam1960collection} states that graphs with $n \ge 3$ are determined by their deck of node-deleted subgraphs. Conceptually, $\Delta^1$-DRESS computes a continuous relaxation of this deck: each ``card'' is the DRESS fingerprint of a node-deleted subgraph. In practice, all edge values are accumulated into a fixed-size histogram for memory efficiency, though individual cards are not recoverable.
+
+\paragraph{Fixed-parameter tractability.} For fixed $\ell$, $\Delta^\ell$-DRESS runs in polynomial time. The empirical pattern $\Delta^\ell \approx (\ell+2)$-WL suggests that the minimum deletion depth needed to distinguish $\text{CFI}(K_n)$ grows as $n - 2$, which is linear in $n$. While each additional deletion level is polynomial, the number of required levels grows with the base graph size.
+
+\subsection{Open Questions}
+
+\begin{enumerate}
+    \item \textbf{Does the $\Delta^\ell \approx (\ell+2)$-WL pattern continue?} We have confirmed that $\Delta^3$ fails on $\text{CFI}(K_7)$ (6-WL). Testing $\Delta^4$ on $\text{CFI}(K_7)$ would confirm whether the staircase extends to $\ell = 4$.
+
+    \item \textbf{Is the pattern specific to CFI, or does it hold more broadly?} Other hard graph families may behave differently.
+
+    \item \textbf{Are there graph families where $\Delta^\ell$-DRESS fails for all constant $\ell$?} CFI graphs over graphs of unbounded treewidth would be natural candidates.
+
+    \item \textbf{Does combining $\Delta^\ell$ with other DRESS variants yield further gains?} The DRESS family includes Motif-DRESS and Generalized-DRESS \cite{castrillo2025dress}. Whether a stronger base variant $\mathcal{F}$ shifts the staircase upward or merely overlaps with the deletion mechanism is an open question.
+\end{enumerate}
+
+\section{Conclusion}
+
+We introduced $\Delta^\ell$-DRESS, which applies $\ell$ levels of iterated node deletion to the DRESS framework. Original-DRESS ($\Delta^0$) already distinguishes $\text{CFI}(K_3)$, and each additional deletion level adds one WL level: $\Delta^1$ matches 3-WL, $\Delta^2$ matches 4-WL, and $\Delta^3$ matches 5-WL but fails on 6-WL, establishing the empirical pattern $\Delta^\ell \approx (\ell+2)$-WL on the CFI family with a sharp upper boundary. These results establish $\Delta^\ell$-DRESS as a systematic, scalable method for climbing the WL hierarchy on the canonical CFI benchmarks. An open-source implementation is available at \url{https://github.com/velicast/dress-graph}.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}

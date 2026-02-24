@@ -38,6 +38,7 @@ nav:
       - The DRESS Equation: theory/equation.md
       - Properties: theory/properties.md
       - The DRESS Family: theory/family.md
+      - Iterated Deletion: theory/delta-ell-dress.md
       - Self-Loop Contribution: theory/self-loop.md
       - Role of Weights: theory/weights.md
   - Applications:

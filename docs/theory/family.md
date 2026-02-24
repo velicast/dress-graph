@@ -180,7 +180,7 @@ $\Delta(\cdot)$ is an **orthogonal wrapper** applicable to any of the above: giv
 
 $$\Delta\text{-DRESS}(\mathcal{F}) = \{\!\{ \mathcal{F}(G \setminus \{v\}) : v \in V \}\!\}$$
 
-The node-deletion strategy is independent of the choice of $\mathcal{N}$, $f$, and $g$. All experiments in the Δ-DRESS section use $\mathcal{F} = \text{Original-DRESS}$, but Δ-Motif-DRESS or Δ-Cosine-DRESS are equally valid and may offer complementary expressiveness. The deletion strategy generalizes naturally to $\Delta^k$-DRESS, which runs DRESS on all $\binom{n}{k}$ node-deleted subgraphs; we leave the exploration of this hierarchy to future work.
+The node-deletion strategy is independent of the choice of $\mathcal{N}$, $f$, and $g$. All experiments in the Δ-DRESS section use $\mathcal{F} = \text{Original-DRESS}$, but Δ-Motif-DRESS or Δ-Cosine-DRESS are equally valid and may offer complementary expressiveness. The deletion strategy generalizes to $\Delta^\ell$-DRESS, which runs DRESS on all $\binom{n}{\ell}$ node-deleted subgraphs — see [Iterated Deletion (Δℓ-DRESS)](delta-ell-dress.md) for the full treatment.
 
 ## k-Ego-DRESS
 
