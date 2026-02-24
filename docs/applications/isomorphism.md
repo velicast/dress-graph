@@ -80,10 +80,12 @@ This has three practical consequences:
    with a discrete partition.
 
 DRESS achieves 100 % accuracy on standard isomorphism benchmarks (MiVIA, IsoBench).
-Empirically it appears to share the same ceiling as 1-WL — it fails on
-CFI constructions and strongly regular graphs with identical parameters —
-but a formal proof that DRESS is at least as powerful as 1-WL is still
-open.
+Original-DRESS is **provably strictly more powerful than 1-WL**: it
+[distinguishes the prism graph from \(K_{3,3}\)](#dress-distinguishes-graphs-that-1-wl-cannot),
+a pair that 1-WL provably cannot separate
+(see [Theorem 1 in the k-DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)).
+It still fails on CFI constructions and strongly regular graphs with
+identical parameters, the same upper limits as 1-WL.
 See [Properties — WL comparison](../theory/properties.md#weisfeilerleman-wl-colour-refinement)
 for a detailed side-by-side table.
 
@@ -319,7 +321,7 @@ Motif-DRESS generalises the neighbourhood operator from triangles to arbitrary m
 | Chang-1 vs Chang-3 | **PASS** | |
 | Chang-2 vs Chang-3 | **PASS** | |
 
-Since 3-WL provably cannot distinguish SRGs with identical parameters, each successful distinction above empirically demonstrates that Motif-DRESS distinguishes specific graph pairs that 3-WL cannot.
+The specific SRG pairs tested above are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
 
 ### Δ-DRESS
 

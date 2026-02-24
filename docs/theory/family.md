@@ -39,7 +39,7 @@ Different choices of motif $M$ yield different neighbourhood operators:
 
 **Complexity:** $\mathcal{O}(\text{Motif Extraction}) + \mathcal{O}(I \cdot |\text{Motifs}|)$. For motifs such as 4-cycles or $K_4$ cliques in sparse graphs, this is often faster than Original-DRESS.
 
-**Expressiveness:** All experiments below use the $K_4$ clique motif. Since 3-WL provably cannot distinguish SRGs with identical parameters, each successful distinction demonstrates that Motif-DRESS empirically distinguishes specific graph pairs that 3-WL cannot.
+**Expressiveness:** All experiments below use the $K_4$ clique motif. The specific SRG pairs tested below are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
 
 - **Rook vs. Shrikhande:** Successfully distinguishes this pair of SRGs with parameters $(16, 6, 2, 2)$. The Rook graph ($K_4 \square K_4$) contains $K_4$ cliques while the Shrikhande graph does not, so the $K_4$-neighbourhood sizes differ per edge.
 - **Chang Graphs:** Distinguishes 5 of the 6 pairwise comparisons among the four SRGs with parameters $(28, 12, 6, 4)$: T(8), Chang-1, Chang-2, and Chang-3. The only failure is T(8) vs. Chang-3, which share identical $K_4$-neighbourhood structure (all edges have the same $K_4$ count).
@@ -153,7 +153,7 @@ Unlike approaches that modify the DRESS iteration itself (e.g., clamping edge va
 **Connection to the Reconstruction Conjecture.** The multiset $\{\!\{ \text{DRESS}(G \setminus \{v\}) : v \in V \}\!\}$ is directly analogous to the *deck* in the Kelly–Ulam reconstruction conjecture, which posits that graphs with $n \ge 3$ are determined (up to isomorphism) by their multiset of node-deleted subgraphs. Δ-DRESS computes a continuous relaxation of this deck.
 
 - **Complexity:** $\mathcal{O}(n \cdot I \cdot m \cdot \Delta)$. Embarrassingly parallel across the $n$ deletions.
-- **Expressiveness:** Incomparable to the standard WL hierarchy: it empirically distinguishes specific SRG pairs that confound 3-WL, yet fails on some instances (e.g., co-spectral vertex-transitive graphs) that higher-order methods can separate. Validated empirically using sorted multiset comparison:
+- **Expressiveness:** Incomparable to the standard WL hierarchy: it empirically distinguishes specific SRG pairs that confound 3-WL, yet fails on some instances (e.g., co-spectral vertex-transitive graphs) that higher-order methods can separate.
     - **Rook vs. Shrikhande:** Successfully distinguished (SRG(16, 6, 2, 2)).
     - **$2 \times C_4$ vs. $C_8$:** Successfully distinguished (both 2-regular on 8 nodes).
     - **Petersen vs. Pentagonal Prism:** Successfully distinguished (both 3-regular on 10 nodes).
