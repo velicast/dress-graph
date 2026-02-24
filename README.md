@@ -12,7 +12,8 @@ that achieves 100 % accuracy on standard isomorphism benchmarks.
 For the theory, generalizations (Motif-DRESS, Δ-DRESS), see the research paper:
 [**research/k-DRESS.pdf**](research/k-DRESS.pdf)
 
-For iterated deletion (Δℓ-DRESS) and climbing the WL hierarchy on CFI graphs:
+For the relationship between DRESS and the Weisfeiler-Leman hierarchy — each
+deletion level ℓ empirically matches (ℓ+2)-WL on CFI graphs:
 [**research/delta-k-DRESS.pdf**](research/delta-k-DRESS.pdf)
 
 ## Key properties
