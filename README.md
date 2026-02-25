@@ -73,6 +73,22 @@ result = g.fit()
 print(g.dress_values)  # DRESS value for each edge
 ```
 
+### Δ^k-DRESS (deletion-based refinement)
+
+```python
+from dress import delta_dress_fit
+
+result = delta_dress_fit(
+    n_vertices=4,
+    sources=[0, 1, 2, 0],
+    targets=[1, 2, 3, 3],
+    k=1,              # remove 1 vertex at a time
+    epsilon=1e-6,
+)
+print(result.histogram)   # histogram of edge DRESS values across all subgraphs
+print(result.hist_size)   # number of bins
+```
+
 ## Language bindings
 
 DRESS is implemented in C with bindings for:
