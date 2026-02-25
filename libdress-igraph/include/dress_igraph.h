@@ -23,14 +23,16 @@
 #define DRESS_IGRAPH_H
 
 #include "dress/dress.h"
+#include "dress/delta_dress.h"
 #include <igraph/igraph.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /* ------------------------------------------------------------------ */
-/*  Result structure                                                   */
+/*  Result structures                                                  */
 /* ------------------------------------------------------------------ */
 
 typedef struct dress_igraph_result_t {
@@ -93,6 +95,63 @@ void dress_igraph_free(dress_igraph_result_t *result);
  */
 int dress_igraph_to_vector(const dress_igraph_result_t *result,
                            igraph_vector_t *out);
+
+/* ------------------------------------------------------------------ */
+/*  Δ^k-DRESS result structure                                         */
+/* ------------------------------------------------------------------ */
+
+typedef struct dress_igraph_delta_result_t {
+    int64_t *histogram;  /* [hist_size] bin counts (caller frees via delta_free) */
+    int      hist_size;  /* number of bins = floor(2/epsilon) + 1               */
+} dress_igraph_delta_result_t;
+
+/* ------------------------------------------------------------------ */
+/*  Δ^k-DRESS API                                                      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * dress_igraph_delta_compute
+ *
+ * Run Δ^k-DRESS on an igraph graph and write results into `result`.
+ *
+ * Parameters:
+ *   graph        — pointer to a valid igraph_t (not modified)
+ *   weight_attr  — name of an edge attribute holding weights, or NULL
+ *   variant      — DRESS_VARIANT_UNDIRECTED / DIRECTED / FORWARD / BACKWARD
+ *   k            — deletion depth: vertices removed per subset
+ *   max_iters    — maximum DRESS iterations per subgraph
+ *   epsilon      — convergence threshold and histogram bin width
+ *   precompute   — 1 to precompute neighborhood intercepts, 0 otherwise
+ *   result       — output struct (caller-allocated, contents filled in)
+ *
+ * Returns 0 on success, non-zero on error.
+ */
+int dress_igraph_delta_compute(const igraph_t *graph,
+                               const char *weight_attr,
+                               dress_variant_t variant,
+                               int k,
+                               int max_iters,
+                               double epsilon,
+                               int precompute,
+                               dress_igraph_delta_result_t *result);
+
+/*
+ * dress_igraph_delta_free
+ *
+ * Free all heap memory inside a dress_igraph_delta_result_t.
+ * The struct itself is not freed (it may be stack-allocated).
+ */
+void dress_igraph_delta_free(dress_igraph_delta_result_t *result);
+
+/*
+ * dress_igraph_delta_to_vector
+ *
+ * Copy the histogram from a delta result into an igraph_vector_t,
+ * ordered by bin index [0..hist_size-1].  The igraph_vector_t must be
+ * initialized by the caller.
+ */
+int dress_igraph_delta_to_vector(const dress_igraph_delta_result_t *result,
+                                 igraph_vector_t *out);
 
 #ifdef __cplusplus
 }

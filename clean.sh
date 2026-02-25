@@ -10,10 +10,10 @@ echo "Cleaning build artifacts..."
 rm -rf build/
 
 # C/C++ objects and libraries
-find . -name '*.o' -not -path './.git/*' -delete
-find . -name '*.a' -not -path './.git/*' -delete
-find . -name '*.so' -not -path './.git/*' -delete
-find . -name '*.dylib' -not -path './.git/*' -delete
+find . -name '*.o' -not -path './.git/*' -not -path './.venv/*' -delete
+find . -name '*.a' -not -path './.git/*' -not -path './.venv/*' -delete
+find . -name '*.so' -not -path './.git/*' -not -path './.venv/*' -delete
+find . -name '*.dylib' -not -path './.git/*' -not -path './.venv/*' -delete
 
 # CMake generated files (in-source)
 rm -f CMakeCache.txt cmake_install.cmake Makefile
@@ -22,6 +22,8 @@ rm -rf CMakeFiles/
 # C/C++ test binaries
 rm -f tests/c/test_dress
 rm -f tests/cpp/test_dress
+rm -f tests/c/test_delta_dress
+rm -f tests/c/test_delta_dress_igraph
 
 # Rust
 rm -rf rust/target/

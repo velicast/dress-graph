@@ -20,6 +20,7 @@ _build_native = os.environ.get("DRESS_BUILD_NATIVE", "0") == "1"
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 DRESS_C_SRC = os.path.join(ROOT, "libdress", "src", "dress.c")
+DELTA_DRESS_C_SRC = os.path.join(ROOT, "libdress", "src", "delta_dress.c")
 
 ext_modules = []
 cmdclass = {}
@@ -28,7 +29,10 @@ if _build_native and os.path.isfile(DRESS_C_SRC):
     LIBDRESS_INC = os.path.join(ROOT, "libdress", "include")
     LIBDRESSPP_INC = os.path.join(ROOT, "libdress++", "include")
     DRESS_C_LOCAL = os.path.join(HERE, "_dress.c")
+    DELTA_DRESS_C_LOCAL = os.path.join(HERE, "_delta_dress.c")
     shutil.copy2(DRESS_C_SRC, DRESS_C_LOCAL)
+    if os.path.isfile(DELTA_DRESS_C_SRC):
+        shutil.copy2(DELTA_DRESS_C_SRC, DELTA_DRESS_C_LOCAL)
 
     class build_ext(_build_ext):
         """Defer pybind11 include lookup until build time."""
@@ -38,11 +42,15 @@ if _build_native and os.path.isfile(DRESS_C_SRC):
                 ext.include_dirs.append(pybind11.get_include())
             super().build_extensions()
 
+    c_sources = ["_dress.c"]
+    if os.path.isfile(DELTA_DRESS_C_LOCAL):
+        c_sources.append("_delta_dress.c")
+
     ext_modules = [Extension(
         name="dress._core",
         sources=[
             os.path.join("bindings", "dress_pybind11.cpp"),
-            "_dress.c",
+            *c_sources,
         ],
         include_dirs=[LIBDRESS_INC, LIBDRESSPP_INC],
         language="c++",

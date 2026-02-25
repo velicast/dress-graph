@@ -24,8 +24,8 @@ if ! command -v emcc &>/dev/null; then
     exit 1
 fi
 
-EXPORTED_FUNCTIONS='["_init_dress_graph","_fit","_free_dress_graph","_malloc","_free"]'
-EXPORTED_RUNTIME='["ccall","cwrap","getValue","setValue","HEAP32","HEAPF64"]'
+EXPORTED_FUNCTIONS='["_init_dress_graph","_fit","_free_dress_graph","_delta_fit","_malloc","_free"]'
+EXPORTED_RUNTIME='["ccall","cwrap","getValue","setValue","HEAP32","HEAPU32","HEAPF64"]'
 
 FLAGS=(
     -s EXPORTED_FUNCTIONS="$EXPORTED_FUNCTIONS"
@@ -49,6 +49,7 @@ fi
 
 emcc "${FLAGS[@]}" \
     "$LIB_DIR/src/dress.c" \
+    "$LIB_DIR/src/delta_dress.c" \
     -I "$LIB_DIR/include" \
     -o "$OUT_DIR/dress_wasm.cjs"
 

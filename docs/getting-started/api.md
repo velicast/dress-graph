@@ -2,8 +2,10 @@
 
 ## Core concepts
 
-All bindings expose the same underlying algorithm through a single function
-call: **`dress_fit()`**.  Pass in the graph (vertices, edges, optional
+All bindings expose the same underlying algorithm through two main function
+calls: **`dress_fit()`** and **`delta_dress_fit()`**.
+
+**`dress_fit()`** — Pass in the graph (vertices, edges, optional
 weights), and get back a result struct containing every output array.
 
 ```
@@ -13,6 +15,19 @@ result = dress_fit(n_vertices, sources, targets, [weights], [variant], ...)
 The result always contains the same fields across every language:
 edge dress values, edge weights, node dress norms, iteration count, and
 final convergence delta.
+
+**`delta_dress_fit()`** — Compute the \(\Delta^k\)-DRESS histogram.
+Enumerates all \(\binom{N}{k}\) vertex-deletion subsets, runs DRESS on
+each subgraph, and accumulates edge values into a histogram.
+
+```
+result = delta_dress_fit(n_vertices, sources, targets, [k], [epsilon], ...)
+```
+
+The result contains a histogram of integer counts and its size.
+Each bin \(i\) counts edge values in \([i \cdot \varepsilon,\; (i+1) \cdot \varepsilon)\),
+with the top bin (index \(\lfloor 2/\varepsilon \rfloor\)) holding
+exact value 2.0.  The number of bins is \(\lfloor 2/\varepsilon \rfloor + 1\).
 
 ## Variants
 
@@ -25,6 +40,8 @@ final convergence delta.
 
 ## Result fields
 
+### `dress_fit` result
+
 | Field | Type | Description |
 |-------|------|-------------|
 | `sources` | int array [E] | Edge source vertices (0-based) |
@@ -34,6 +51,13 @@ final convergence delta.
 | `node_dress` | float array [N] | Per-node aggregated DRESS norm |
 | `iterations` | int | Number of iterations performed |
 | `delta` | float | Final maximum per-edge change |
+
+### `delta_dress_fit` result
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `histogram` | int64 array [hist_size] | Bin counts of converged edge values |
+| `hist_size` | int | Number of bins: \(\lfloor 2/\varepsilon \rfloor + 1\) |
 
 ## Language-specific APIs
 
@@ -71,6 +95,21 @@ g->edge_weight[e]  /* per-edge weight */
 g->node_dress[u]   /* per-node norm */
 g->U[e], g->V[e]   /* edge endpoints */
 g->N, g->E         /* vertex / edge count */
+```
+
+#### Δ^k-DRESS (C)
+
+```c
+#include "dress/delta_dress.h"
+
+/* Compute the Δ^k-DRESS histogram.
+   Returns a malloc'd int64_t array; caller must free(). */
+int64_t *delta_fit(p_dress_graph_t g,
+                   int k,              /* deletion depth (0 = original) */
+                   int iterations,     /* max DRESS iterations per subgraph */
+                   double epsilon,     /* convergence tol / bin width */
+                   int precompute,     /* precompute intercepts */
+                   int *hist_size);    /* [out] number of bins */
 ```
 
 ### C (igraph wrapper)
@@ -157,6 +196,21 @@ g.edgeSources()        // const int*
 g.edgeTargets()        // const int*
 ```
 
+#### Δ^k-DRESS (C++)
+
+```cpp
+// Method on the DRESS class
+DRESS::DeltaFitResult deltaFit(int k, int maxIterations,
+                                double epsilon,
+                                bool precompute = false);
+
+// Result struct
+struct DeltaFitResult {
+    std::vector<int64_t> histogram;   // bin counts
+    int                  hist_size;   // floor(2/epsilon) + 1
+};
+```
+
 ### Python
 
 ```python
@@ -187,6 +241,26 @@ result.delta        # float
 The `dress_fit()` function works identically whether the C extension
 or the pure-Python backend is active.  It returns a single `DRESSResult`
 with all arrays and metadata.
+
+#### Δ^k-DRESS (Python)
+
+```python
+from dress import delta_dress_fit
+
+result = delta_dress_fit(
+    n_vertices, sources, targets,
+    k=1,                    # deletion depth (default 0)
+    variant=UNDIRECTED,     # graph variant
+    max_iterations=100,     # per-subgraph iterations
+    epsilon=1e-3,           # convergence tol / bin width
+    precompute=False,       # precompute intercepts
+)
+
+result.histogram    # list[int], length = hist_size
+result.hist_size    # int, floor(2/epsilon) + 1
+```
+
+The same function is available in pure Python via `from dress.core import delta_dress_fit`.
 
 For advanced use (e.g. re-fitting with different parameters), the
 low-level `DRESS` class is also available:
@@ -267,6 +341,26 @@ r.iterations    // i32
 r.delta         // f64
 ```
 
+#### Δ^k-DRESS (Rust)
+
+```rust
+use dress_graph::{DRESS, Variant, DeltaDressResult, DressError};
+
+let result: Result<DeltaDressResult, DressError> =
+    DRESS::delta_fit(
+        n, sources, targets,
+        k,                          // deletion depth
+        max_iterations,             // per-subgraph
+        epsilon,                    // convergence tol / bin width
+        Variant::Undirected,
+        precompute,                 // bool
+    );
+
+let r = result.unwrap();
+r.histogram     // Vec<i64>
+r.hist_size     // i32
+```
+
 ### Go
 
 ```go
@@ -290,6 +384,24 @@ result.EdgeWeight  // []float64
 result.NodeDress   // []float64
 result.Iterations  // int
 result.Delta       // float64
+```
+
+#### Δ^k-DRESS (Go)
+
+```go
+result, err := dress.DeltaFit(
+    n,                      // int, number of vertices
+    sources,                // []int32
+    targets,                // []int32
+    k,                      // int, deletion depth
+    dress.Undirected,       // Variant
+    100,                    // maxIterations
+    1e-3,                   // epsilon (bin width)
+    false,                  // precompute
+)
+
+result.Histogram   // []int64
+result.HistSize    // int
 ```
 
 ### JavaScript (WASM)
@@ -317,6 +429,26 @@ result.iterations  // number
 result.delta       // number
 ```
 
+#### Δ^k-DRESS (WASM)
+
+```javascript
+import { deltaDressFit } from './dress.js';
+
+const result = await deltaDressFit({
+    numVertices: n,
+    sources,                              // Int32Array or number[]
+    targets,                              // Int32Array or number[]
+    k: 1,                                 // deletion depth (default 0)
+    variant: Variant.UNDIRECTED,          // default
+    maxIterations: 100,                   // default
+    epsilon: 1e-3,                        // bin width
+    precompute: false,                    // default
+});
+
+result.histogram   // Float64Array (int64 counts cast to double)
+result.histSize    // number
+```
+
 ### Julia
 
 ```julia
@@ -336,6 +468,20 @@ result.edge_weight  # Vector{Float64}
 result.node_dress   # Vector{Float64}
 result.iterations   # Int
 result.delta        # Float64
+```
+
+#### Δ^k-DRESS (Julia)
+
+```julia
+result = delta_dress_fit(N, sources, targets;
+                         k = 1,                     # deletion depth
+                         variant = UNDIRECTED,
+                         max_iterations = 100,
+                         epsilon = 1e-3,
+                         precompute = false)
+
+result.histogram    # Vector{Int64}
+result.hist_size    # Int
 ```
 
 ### R
@@ -364,6 +510,24 @@ result$iterations   # integer
 result$delta        # numeric
 ```
 
+#### Δ^k-DRESS (R)
+
+```r
+result <- delta_dress_fit(
+  n_vertices,
+  sources,
+  targets,
+  k              = 1L,              # deletion depth
+  variant        = DRESS_UNDIRECTED,
+  max_iterations = 100L,
+  epsilon        = 1e-3,            # bin width
+  precompute     = FALSE
+)
+
+result$histogram    # numeric [hist_size]
+result$hist_size    # integer
+```
+
 ### MATLAB / Octave
 
 ```matlab
@@ -382,4 +546,18 @@ result.edge_weight  % double [E x 1]
 result.node_dress   % double [N x 1]
 result.iterations   % int32
 result.delta        % double
+```
+
+#### Δ^k-DRESS (MATLAB / Octave)
+
+```matlab
+result = delta_dress_fit(n_vertices, sources, targets, ...
+    'K',             1,      ...   % deletion depth (default 0)
+    'Variant',       0,      ...   % 0=UNDIRECTED
+    'MaxIterations', 100,    ...
+    'Epsilon',       1e-3,   ...   % bin width
+    'Precompute',    false);
+
+result.histogram    % double [hist_size x 1]
+result.hist_size    % int32
 ```

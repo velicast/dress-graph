@@ -12,6 +12,8 @@ site/
 # C/C++ test binaries
 tests/c/test_dress
 tests/c/test_dress_igraph
+tests/c/test_delta_dress
+tests/c/test_delta_dress_igraph
 tests/cpp/test_dress
 
 # R (vendored C sources copied at publish time)

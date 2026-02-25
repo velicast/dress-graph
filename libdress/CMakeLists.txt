@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 
 # ── libdress (static + shared) ──────────────────────────────────────
 
-add_library(dress_static STATIC src/dress.c)
+add_library(dress_static STATIC src/dress.c src/delta_dress.c)
 target_include_directories(dress_static
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -13,7 +13,7 @@ target_include_directories(dress_static
 )
 set_target_properties(dress_static PROPERTIES OUTPUT_NAME dress)
 
-add_library(dress_shared SHARED src/dress.c)
+add_library(dress_shared SHARED src/dress.c src/delta_dress.c)
 target_include_directories(dress_shared
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

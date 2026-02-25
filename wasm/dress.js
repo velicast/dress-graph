@@ -199,3 +199,94 @@ export async function dressFit(opts) {
         delta:      delta,
     };
 }
+
+// ── Delta-k-DRESS API ───────────────────────────────────────────────
+
+/**
+ * @typedef {Object} DeltaDressOptions
+ * @property {number}              numVertices       - Number of vertices (ids in 0..N-1)
+ * @property {Int32Array|number[]} sources           - Edge source vertices (0-based)
+ * @property {Int32Array|number[]} targets           - Edge target vertices (0-based)
+ * @property {number} [k=0]                          - Vertices to remove per subset
+ * @property {number} [variant=0]                    - Variant (see Variant enum)
+ * @property {number} [maxIterations=100]            - Max fitting iterations
+ * @property {number} [epsilon=1e-6]                 - Convergence threshold / bin width
+ * @property {boolean} [precompute=false]            - Pre-compute intercepts
+ */
+
+/**
+ * @typedef {Object} DeltaDressResult
+ * @property {Float64Array} histogram - Bin counts (as Float64 for BigInt-free access)
+ * @property {number}       histSize  - Number of bins
+ */
+
+/**
+ * Compute the Delta-k-DRESS histogram.
+ *
+ * Exhaustively removes all k-vertex subsets and measures
+ * the change in edge similarity values.
+ *
+ * @param {DeltaDressOptions} opts
+ * @returns {Promise<DeltaDressResult>}
+ */
+export async function deltaDressFit(opts) {
+    const M = await getModule();
+
+    const N = opts.numVertices;
+    const E = opts.sources.length;
+
+    if (opts.targets.length !== E) {
+        throw new Error(`sources (${E}) and targets (${opts.targets.length}) must have equal length`);
+    }
+
+    const k           = opts.k ?? 0;
+    const variant     = opts.variant ?? Variant.UNDIRECTED;
+    const maxIter     = opts.maxIterations ?? 100;
+    const epsilon     = opts.epsilon ?? 1e-6;
+    const precompute  = (opts.precompute ?? false) ? 1 : 0;
+
+    // Allocate C arrays (ownership transfers to init_dress_graph)
+    const uPtr = M._malloc(E * 4);
+    const vPtr = M._malloc(E * 4);
+
+    const heap32 = M.HEAP32;
+    const src = opts.sources;
+    const tgt = opts.targets;
+    for (let i = 0; i < E; i++) {
+        heap32[(uPtr >> 2) + i] = src[i];
+        heap32[(vPtr >> 2) + i] = tgt[i];
+    }
+
+    // Build graph
+    const g = M._init_dress_graph(N, E, uPtr, vPtr, 0, variant, precompute);
+    if (g === 0) {
+        throw new Error('init_dress_graph returned NULL');
+    }
+
+    // Allocate out-param for hist_size
+    const histSizePtr = M._malloc(4);
+
+    // Call delta_fit  (returns int64_t* — pointer to histogram on heap)
+    const histPtr = M._delta_fit(g, k, maxIter, epsilon, precompute, histSizePtr);
+
+    const histSize = M.getValue(histSizePtr, 'i32');
+
+    // Copy histogram into JS Float64Array (int64 values cast to double)
+    // WASM int64_t is 8 bytes; read as pairs of i32 (little-endian)
+    const histogram = new Float64Array(histSize);
+    for (let i = 0; i < histSize; i++) {
+        const lo = M.HEAPU32[(histPtr >> 2) + i * 2];
+        const hi = M.HEAP32[(histPtr >> 2) + i * 2 + 1];
+        histogram[i] = hi * 4294967296 + lo;
+    }
+
+    // Cleanup
+    M._free(histPtr);
+    M._free(histSizePtr);
+    M._free_dress_graph(g);
+
+    return {
+        histogram: histogram,
+        histSize:  histSize,
+    };
+}

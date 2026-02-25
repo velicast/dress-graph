@@ -19,7 +19,9 @@ package dress
 /*
 #cgo CFLAGS:  -O3 -I../libdress/include
 #cgo LDFLAGS: -lm -fopenmp
+#include <stdlib.h>
 #include "dress/dress.h"
+#include "dress/delta_dress.h"
 */
 import "C"
 import (
@@ -145,6 +147,87 @@ func Fit(n int, sources, targets []int32, weights []float64,
 	}
 	for i := 0; i < n; i++ {
 		result.NodeDress[i] = float64(ndSlice[i])
+	}
+
+	C.free_dress_graph(g)
+	return result, nil
+}
+
+// DeltaResult holds the output of a Δ^k-DRESS fitting operation.
+type DeltaResult struct {
+	Histogram []int64
+	HistSize  int
+}
+
+func (r *DeltaResult) String() string {
+	var total int64
+	for _, v := range r.Histogram {
+		total += v
+	}
+	return fmt.Sprintf("DeltaDressResult(hist_size=%d, total_values=%d)",
+		r.HistSize, total)
+}
+
+// DeltaFit runs Δ^k-DRESS: enumerates all C(N,k) node-deletion subsets,
+// runs DRESS on each subgraph, and returns the pooled histogram.
+//
+// Parameters:
+//   - n: number of vertices
+//   - sources, targets: edge list (0-based, same length)
+//   - k: deletion depth (0 = original graph)
+//   - variant: graph variant
+//   - maxIterations: maximum DRESS iterations per subgraph
+//   - epsilon: convergence tolerance and bin width
+//   - precompute: precompute intercepts in each subgraph
+func DeltaFit(n int, sources, targets []int32,
+	k int, variant Variant, maxIterations int, epsilon float64,
+	precompute bool) (*DeltaResult, error) {
+
+	e := len(sources)
+	if len(targets) != e {
+		return nil, fmt.Errorf("dress: sources and targets must have equal length (%d vs %d)", e, len(targets))
+	}
+
+	// Allocate C arrays for init_dress_graph (takes ownership)
+	uPtr := (*C.int)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.int(0)))))
+	vPtr := (*C.int)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.int(0)))))
+
+	uSlice := unsafe.Slice(uPtr, e)
+	vSlice := unsafe.Slice(vPtr, e)
+	for i := 0; i < e; i++ {
+		uSlice[i] = C.int(sources[i])
+		vSlice[i] = C.int(targets[i])
+	}
+
+	g := C.init_dress_graph(
+		C.int(n), C.int(e),
+		uPtr, vPtr, nil,
+		C.dress_variant_t(variant), C.int(0),
+	)
+	if g == nil {
+		return nil, fmt.Errorf("dress: init_dress_graph returned NULL")
+	}
+
+	precomp := C.int(0)
+	if precompute {
+		precomp = C.int(1)
+	}
+
+	var histSize C.int
+	hPtr := C.delta_fit(g, C.int(k), C.int(maxIterations),
+		C.double(epsilon), precomp, &histSize)
+
+	result := &DeltaResult{
+		HistSize:  int(histSize),
+		Histogram: make([]int64, int(histSize)),
+	}
+
+	if hPtr != nil && histSize > 0 {
+		hSlice := unsafe.Slice((*C.int64_t)(unsafe.Pointer(hPtr)), int(histSize))
+		for i := 0; i < int(histSize); i++ {
+			result.Histogram[i] = int64(hSlice[i])
+		}
+		C.free(unsafe.Pointer(hPtr))
 	}
 
 	C.free_dress_graph(g)
