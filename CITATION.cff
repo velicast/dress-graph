@@ -5,17 +5,29 @@ type: software
 repository-code: "https://github.com/velicast/dress-graph"
 preferred-citation:
   type: article
-  title: "Dynamic Structural Similarity on Graphs"
+  title: "DRESS: A Continuous Framework for Structural Graph Refinement"
   authors:
-    - family-names: Castrillo
+    - family-names: Castrillo Velilla
       given-names: Eduar
-    - family-names: León
-      given-names: Elizabeth
-    - family-names: Gómez
-      given-names: Jonatan
-  year: 2018
-  url: "https://arxiv.org/abs/1805.01419"
+  year: 2025
+  url: "https://arxiv.org/abs/2602.20833"
   identifiers:
     - type: other
-      value: "arXiv:1805.01419"
+      value: "arXiv:2602.20833"
       description: "arXiv preprint"
+references:
+  - type: article
+    title: "Dynamic Structural Similarity on Graphs"
+    authors:
+      - family-names: Castrillo
+        given-names: Eduar
+      - family-names: León
+        given-names: Elizabeth
+      - family-names: Gómez
+        given-names: Jonatan
+    year: 2018
+    url: "https://arxiv.org/abs/1805.01419"
+    identifiers:
+      - type: other
+        value: "arXiv:1805.01419"
+        description: "arXiv preprint"
