@@ -25,8 +25,6 @@ extern "C" {
 //   iterations - maximum DRESS iterations per subgraph.
 //   epsilon    - convergence tolerance for DRESS and histogram bin width.
 //                The histogram has ceil(2 / epsilon) bins.
-//   precompute - if nonzero, precompute intercepts for each subgraph
-//                (trades memory for speed; see init_dress_graph).
 //   hist_size  - [out] if non-NULL, set to floor(2 / epsilon) + 1 on return.
 //
 // Returns:
@@ -40,7 +38,7 @@ extern "C" {
 //   where d_max is the maximum degree.  Each subgraph is independent;
 //   the outer loop is embarrassingly parallel (not parallelised here).
 int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
-                   double epsilon, int precompute, int *hist_size);
+                   double epsilon, int *hist_size);
 
 #ifdef __cplusplus
 }

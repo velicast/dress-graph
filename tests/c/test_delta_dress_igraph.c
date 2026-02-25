@@ -292,7 +292,7 @@ static void test_cross_validate_with_c_api(void)
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
     int hist_size = 0;
-    int64_t *histogram = delta_fit(dg, 1, 100, 1e-6, 0, &hist_size);
+    int64_t *histogram = delta_fit(dg, 1, 100, 1e-6, &hist_size);
     free_dress_graph(dg);
 
     /* Compare histogram sizes */

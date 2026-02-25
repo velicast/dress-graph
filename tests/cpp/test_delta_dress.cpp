@@ -172,10 +172,15 @@ static void test_precompute()
 {
     std::printf("test_precompute\n");
 
-    DRESS g(4, {0, 0, 0, 1, 1, 2}, {1, 2, 3, 2, 3, 3});
+    /* precompute = false */
+    DRESS g1(4, {0, 0, 0, 1, 1, 2}, {1, 2, 3, 2, 3, 3},
+             {}, DRESS_VARIANT_UNDIRECTED, false);
+    /* precompute = true */
+    DRESS g2(4, {0, 0, 0, 1, 1, 2}, {1, 2, 3, 2, 3, 3},
+             {}, DRESS_VARIANT_UNDIRECTED, true);
 
-    auto r1 = g.deltaFit(1, 100, 1e-3, /*precompute=*/false);
-    auto r2 = g.deltaFit(1, 100, 1e-3, /*precompute=*/true);
+    auto r1 = g1.deltaFit(1, 100, 1e-3);
+    auto r2 = g2.deltaFit(1, 100, 1e-3);
 
     ASSERT_EQ(r1.hist_size, r2.hist_size, "precompute: same hist_size");
 

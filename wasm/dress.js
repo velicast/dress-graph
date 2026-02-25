@@ -267,7 +267,7 @@ export async function deltaDressFit(opts) {
     const histSizePtr = M._malloc(4);
 
     // Call delta_fit  (returns int64_t* — pointer to histogram on heap)
-    const histPtr = M._delta_fit(g, k, maxIter, epsilon, precompute, histSizePtr);
+    const histPtr = M._delta_fit(g, k, maxIter, epsilon, histSizePtr);
 
     const histSize = M.getValue(histSizePtr, 'i32');
 

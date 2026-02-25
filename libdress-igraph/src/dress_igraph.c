@@ -222,7 +222,7 @@ int dress_igraph_delta_compute(const igraph_t *graph,
 
     int hist_size = 0;
     int64_t *histogram = delta_fit(dg, k, max_iters, epsilon,
-                                   precompute, &hist_size);
+                                   &hist_size);
 
     free_dress_graph(dg);
 

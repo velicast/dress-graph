@@ -124,7 +124,7 @@ int main(void) {
                                          DRESS_VARIANT_UNDIRECTED, 0);
 
     int hist_size;
-    int64_t *hist = delta_fit(g, 1, 100, 1e-3, 0, &hist_size);
+    int64_t *hist = delta_fit(g, 1, 100, 1e-3, &hist_size);
 
     int64_t total = 0;
     for (int i = 0; i < hist_size; i++) total += hist[i];

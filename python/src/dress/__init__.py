@@ -142,8 +142,9 @@ def delta_dress_fit(
     if _BACKEND == "c":
         import dress._core as _core
         _cv = _core.Variant(int(variant))
-        g = _DRESS_cls(n_vertices, list(sources), list(targets), _cv)
-        dr = g.delta_fit(k, max_iterations, epsilon, precompute)
+        g = _DRESS_cls(n_vertices, list(sources), list(targets), _cv,
+                       precompute)
+        dr = g.delta_fit(k, max_iterations, epsilon)
         return DeltaDRESSResult(
             histogram=list(dr.histogram),
             hist_size=dr.hist_size,

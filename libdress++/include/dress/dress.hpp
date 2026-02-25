@@ -129,15 +129,13 @@ public:
     //   k              – deletion depth (0 = original graph)
     //   maxIterations  – max DRESS iterations per subgraph
     //   epsilon        – convergence tolerance and bin width
-    //   precompute     – precompute intercepts in subgraphs
     //
     // Returns a DeltaFitResult with the histogram and its size.
-    DeltaFitResult deltaFit(int k, int maxIterations, double epsilon,
-                            bool precompute = false) {
+    DeltaFitResult deltaFit(int k, int maxIterations, double epsilon) {
         ensureValid();
         int hsize = 0;
         int64_t *h = ::delta_fit(g_, k, maxIterations, epsilon,
-                                 precompute ? 1 : 0, &hsize);
+                                 &hsize);
         if (!h) throw std::runtime_error("DRESS: delta_fit returned NULL");
         DeltaFitResult result;
         result.hist_size = hsize;

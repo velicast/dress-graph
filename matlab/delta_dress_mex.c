@@ -162,7 +162,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
                           "init_dress_graph returned NULL.");
 
     /* ---- compute delta-k-dress ---- */
-    hist = delta_fit(g, k, max_iterations, epsilon, precompute, &hist_size);
+    hist = delta_fit(g, k, max_iterations, epsilon, &hist_size);
 
     /* ---- pack output struct ---- */
     plhs[0] = mxCreateStructMatrix(1, 1, 2, field_names);

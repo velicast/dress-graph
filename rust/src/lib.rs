@@ -57,7 +57,6 @@ extern "C" {
         k: c_int,
         iterations: c_int,
         epsilon: c_double,
-        precompute: c_int,
         hist_size: *mut c_int,
     ) -> *mut i64;
 }
@@ -346,7 +345,7 @@ impl DRESS {
                 v_ptr,
                 std::ptr::null_mut(),
                 variant as c_int,
-                0, // precompute for the outer graph doesn't matter
+                precompute as c_int,
             );
             if g.is_null() {
                 return Err(DressError::InitFailed);
@@ -358,7 +357,6 @@ impl DRESS {
                 k,
                 max_iterations,
                 epsilon,
-                precompute as c_int,
                 &mut hsize,
             );
 

@@ -108,7 +108,6 @@ int64_t *delta_fit(p_dress_graph_t g,
                    int k,              /* deletion depth (0 = original) */
                    int iterations,     /* max DRESS iterations per subgraph */
                    double epsilon,     /* convergence tol / bin width */
-                   int precompute,     /* precompute intercepts */
                    int *hist_size);    /* [out] number of bins */
 ```
 
@@ -201,8 +200,7 @@ g.edgeTargets()        // const int*
 ```cpp
 // Method on the DRESS class
 DRESS::DeltaFitResult deltaFit(int k, int maxIterations,
-                                double epsilon,
-                                bool precompute = false);
+                                double epsilon);
 
 // Result struct
 struct DeltaFitResult {
