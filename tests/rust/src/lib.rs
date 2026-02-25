@@ -61,4 +61,160 @@ mod tests {
             .unwrap();
         assert_eq!(r.edge_weight.len(), 3);
     }
+
+    // ── Delta-k-DRESS tests ────────────────────────────────────────
+
+    fn hist_total(r: &dress_graph::DeltaDressResult) -> i64 {
+        r.histogram.iter().sum()
+    }
+
+    const EPS: f64 = 1e-3;
+
+    #[test]
+    fn test_delta_hist_size() {
+        let r = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            0, 100, 1e-3, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(r.hist_size, 2001);
+        assert_eq!(r.histogram.len(), r.hist_size as usize);
+
+        let r2 = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            0, 100, 1e-6, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(r2.hist_size, 2000001);
+    }
+
+    #[test]
+    fn test_delta0_k3() {
+        let r = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            0, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(hist_total(&r), 3);
+        // Top bin (dress=2.0 for complete graph)
+        assert!(r.histogram[r.hist_size as usize - 1] > 0);
+        // Single non-zero bin
+        let nonzero = r.histogram.iter().filter(|&&x| x > 0).count();
+        assert_eq!(nonzero, 1);
+    }
+
+    #[test]
+    fn test_delta1_k3() {
+        let r = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            1, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        // C(3,1)=3 subgraphs × 1 edge each = 3
+        assert_eq!(hist_total(&r), 3);
+    }
+
+    #[test]
+    fn test_delta2_k3() {
+        let r = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            2, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(hist_total(&r), 0);
+    }
+
+    #[test]
+    fn test_delta0_k4() {
+        let r = DRESS::delta_fit(
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            0, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(hist_total(&r), 6);
+        assert_eq!(r.histogram[r.hist_size as usize - 1], 6);
+    }
+
+    #[test]
+    fn test_delta1_k4() {
+        let r = DRESS::delta_fit(
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            1, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        // C(4,1)=4 × 3 edges = 12
+        assert_eq!(hist_total(&r), 12);
+        assert_eq!(r.histogram[r.hist_size as usize - 1], 12);
+    }
+
+    #[test]
+    fn test_delta2_k4() {
+        let r = DRESS::delta_fit(
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            2, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        // C(4,2)=6 × 1 edge = 6
+        assert_eq!(hist_total(&r), 6);
+    }
+
+    #[test]
+    fn test_delta_k_geq_n() {
+        let r = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            3, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(hist_total(&r), 0);
+
+        let r2 = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            10, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(hist_total(&r2), 0);
+    }
+
+    #[test]
+    fn test_delta_precompute() {
+        let r1 = DRESS::delta_fit(
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            1, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        let r2 = DRESS::delta_fit(
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            1, 100, EPS, Variant::Undirected, true,
+        ).unwrap();
+        assert_eq!(r1.hist_size, r2.hist_size);
+        assert_eq!(r1.histogram, r2.histogram);
+    }
+
+    #[test]
+    fn test_delta_path_p4() {
+        let r = DRESS::delta_fit(
+            4, vec![0,1,2], vec![1,2,3],
+            0, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(hist_total(&r), 3);
+        let nonzero = r.histogram.iter().filter(|&&x| x > 0).count();
+        assert!(nonzero >= 2, "path P4 should have at least 2 distinct bins");
+    }
+
+    #[test]
+    fn test_delta1_p4() {
+        let r = DRESS::delta_fit(
+            4, vec![0,1,2], vec![1,2,3],
+            1, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        assert_eq!(hist_total(&r), 6);
+    }
+
+    #[test]
+    fn test_delta_length_mismatch() {
+        let r = DRESS::delta_fit(
+            3, vec![0, 1], vec![1, 2, 2],
+            0, 100, EPS, Variant::Undirected, false,
+        );
+        assert!(r.is_err(), "mismatched lengths should return Err");
+    }
+
+    #[test]
+    fn test_delta_display() {
+        let r = DRESS::delta_fit(
+            3, vec![0,1,0], vec![1,2,2],
+            0, 100, EPS, Variant::Undirected, false,
+        ).unwrap();
+        let s = format!("{}", r);
+        assert!(s.contains("DeltaDressResult"), "Display should contain type name");
+    }
 }

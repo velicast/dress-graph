@@ -57,6 +57,26 @@ PYBIND11_MODULE(_core, m) {
                  + ", delta=" + std::to_string(r.delta) + ")";
         });
 
+    // ---- DeltaFitResult ----
+
+    py::class_<DRESS::DeltaFitResult>(m, "DeltaFitResult",
+            "Result returned by DRESS.delta_fit()")
+        .def_readonly("hist_size",  &DRESS::DeltaFitResult::hist_size,
+                      "Number of histogram bins (floor(2/epsilon) + 1)")
+        .def_property_readonly("histogram", [](const DRESS::DeltaFitResult& r) {
+            return py::array_t<int64_t>(
+                {static_cast<py::ssize_t>(r.histogram.size())},
+                {sizeof(int64_t)},
+                r.histogram.data()
+            );
+        }, "Histogram as NumPy int64 array (copy)")
+        .def("__repr__", [](const DRESS::DeltaFitResult& r) {
+            int64_t total = 0;
+            for (auto v : r.histogram) total += v;
+            return "DeltaFitResult(hist_size=" + std::to_string(r.hist_size)
+                 + ", total_values=" + std::to_string(total) + ")";
+        });
+
     // ---- DRESS graph class ----
 
     py::class_<DRESS>(m, "DRESS", R"doc(
@@ -126,6 +146,32 @@ Returns
 -------
 FitResult
     Named result with `iterations` and `delta` fields.
+)doc")
+
+        .def("delta_fit", &DRESS::deltaFit,
+             py::arg("k"),
+             py::arg("max_iterations"),
+             py::arg("epsilon"),
+             py::arg("precompute") = false,
+             R"doc(
+Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS
+on each subgraph, and accumulate edge values into a histogram.
+
+Parameters
+----------
+k : int
+    Deletion depth (0 = original graph, 1 = single-node deletion, etc.)
+max_iterations : int
+    Maximum DRESS iterations per subgraph.
+epsilon : float
+    Convergence tolerance and histogram bin width.
+precompute : bool
+    Precompute intercepts in each subgraph (default False).
+
+Returns
+-------
+DeltaFitResult
+    Result with `histogram` (NumPy int64 array) and `hist_size` fields.
 )doc")
 
         // --- scalar accessors ---

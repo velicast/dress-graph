@@ -2,6 +2,7 @@
 #define DRESS_HPP
 
 #include "dress/dress.h"
+#include "dress/delta_dress.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -112,6 +113,37 @@ public:
         double d     = 0.0;
         ::fit(g_, maxIterations, epsilon, &iters, &d);
         return {iters, d};
+    }
+
+    // ------- delta fitting (Δ^k-DRESS) -------
+
+    struct DeltaFitResult {
+        std::vector<int64_t> histogram;   // bin-count vector of length hist_size
+        int                  hist_size;   // floor(2/epsilon) + 1
+    };
+
+    // Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets,
+    // fit DRESS on each, and accumulate edge values into a histogram.
+    //
+    // Parameters:
+    //   k              – deletion depth (0 = original graph)
+    //   maxIterations  – max DRESS iterations per subgraph
+    //   epsilon        – convergence tolerance and bin width
+    //   precompute     – precompute intercepts in subgraphs
+    //
+    // Returns a DeltaFitResult with the histogram and its size.
+    DeltaFitResult deltaFit(int k, int maxIterations, double epsilon,
+                            bool precompute = false) {
+        ensureValid();
+        int hsize = 0;
+        int64_t *h = ::delta_fit(g_, k, maxIterations, epsilon,
+                                 precompute ? 1 : 0, &hsize);
+        if (!h) throw std::runtime_error("DRESS: delta_fit returned NULL");
+        DeltaFitResult result;
+        result.hist_size = hsize;
+        result.histogram.assign(h, h + hsize);
+        std::free(h);
+        return result;
     }
 
     // ------- accessors -------

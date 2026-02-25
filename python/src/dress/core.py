@@ -25,8 +25,10 @@ from typing import List, Optional, Sequence
 
 __all__ = [
     "dress_fit",
+    "delta_dress_fit",
     "DRESS",
     "DRESSResult",
+    "DeltaDRESSResult",
     "FitResult",
     "Variant",
     "UNDIRECTED",
@@ -64,6 +66,21 @@ class FitResult:
         return (
             f"FitResult(iterations={self.iterations}, "
             f"delta={self.delta:.6e})"
+        )
+
+
+@dataclass
+class DeltaDRESSResult:
+    """Result of :func:`delta_dress_fit`."""
+
+    histogram: List[int]
+    hist_size: int
+
+    def __repr__(self) -> str:
+        total = sum(self.histogram)
+        return (
+            f"DeltaDRESSResult(hist_size={self.hist_size}, "
+            f"total_count={total})"
         )
 
 
@@ -584,3 +601,119 @@ def dress_fit(
         iterations=fr.iterations,
         delta=fr.delta,
     )
+
+
+def delta_dress_fit(
+    n_vertices: int,
+    sources: Sequence[int],
+    targets: Sequence[int],
+    k: int = 0,
+    variant: Variant = UNDIRECTED,
+    max_iterations: int = 100,
+    epsilon: float = 1e-6,
+    precompute: bool = False,
+) -> DeltaDRESSResult:
+    """Compute the Δ^k-DRESS histogram.
+
+    Exhaustively removes all k-vertex subsets from the graph, runs DRESS
+    on each resulting subgraph, and accumulates every converged edge value
+    into a single histogram binned by *epsilon*.
+
+    Parameters
+    ----------
+    n_vertices : int
+        Number of vertices (0-indexed).
+    sources, targets : sequence of int
+        Edge endpoint arrays (same length).
+    k : int
+        Deletion depth — number of vertices removed per subset.
+        ``k=0`` runs DRESS on the original graph (Δ^0).
+    variant : Variant
+        ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
+    max_iterations : int
+        Maximum DRESS iterations per subgraph (default 100).
+    epsilon : float
+        Convergence threshold and histogram bin width (default 1e-6).
+    precompute : bool
+        Pre-compute common-neighbour index (default ``False``).
+
+    Returns
+    -------
+    DeltaDRESSResult
+        Dataclass with ``histogram`` (list of int, length ``hist_size``)
+        and ``hist_size``.
+    """
+    N = n_vertices
+    E = len(sources)
+    nbins = int(2.0 / epsilon) + 1
+    hist: List[int] = [0] * nbins
+
+    src = list(sources)
+    tgt = list(targets)
+
+    def _fit_and_accumulate(sub_n: int, sub_src: List[int], sub_tgt: List[int]) -> None:
+        """Build a DRESS graph, fit, and bin edge values into *hist*."""
+        g = DRESS(sub_n, sub_src, sub_tgt, variant=variant)
+        g.fit(max_iterations=max_iterations, epsilon=epsilon)
+        for e in range(g.n_edges):
+            d = g._edge_dress[e]
+            b = int(d / epsilon)
+            if b < 0:
+                b = 0
+            elif b >= nbins:
+                b = nbins - 1
+            hist[b] += 1
+
+    # ── k = 0: Δ^0 — full graph ────────────────────────────────
+    if k == 0:
+        _fit_and_accumulate(N, list(src), list(tgt))
+        return DeltaDRESSResult(histogram=hist, hist_size=nbins)
+
+    # ── k >= N: no valid deletion subsets ───────────────────────
+    if k >= N:
+        return DeltaDRESSResult(histogram=hist, hist_size=nbins)
+
+    # ── k >= 1: iterative DFS over C(N, k) combinations ────────
+    combo = [0] * k
+    combo[0] = -1
+    depth = 0
+
+    while depth >= 0:
+        combo[depth] += 1
+
+        # Upper bound: ensure room for remaining slots.
+        if combo[depth] > N - k + depth:
+            depth -= 1
+            continue
+
+        if depth == k - 1:
+            # Complete k-subset: combo[0..k-1]
+            deleted = set(combo[:k])
+
+            # Build vertex remapping
+            node_map = [-1] * N
+            new_id = 0
+            for v in range(N):
+                if v not in deleted:
+                    node_map[v] = new_id
+                    new_id += 1
+            sub_n = new_id
+
+            # Build subgraph edge list
+            sub_src: List[int] = []
+            sub_tgt: List[int] = []
+            for e in range(E):
+                mu = node_map[src[e]]
+                mv = node_map[tgt[e]]
+                if mu >= 0 and mv >= 0:
+                    sub_src.append(mu)
+                    sub_tgt.append(mv)
+
+            if sub_src:
+                _fit_and_accumulate(sub_n, sub_src, sub_tgt)
+        else:
+            # Descend: seed next depth from current value
+            depth += 1
+            combo[depth] = combo[depth - 1]  # incremented at top
+
+    return DeltaDRESSResult(histogram=hist, hist_size=nbins)

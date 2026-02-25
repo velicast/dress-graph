@@ -33,6 +33,15 @@ pip install pybind11 numpy -q
 # --- dev / test dependencies ---
 pip install pytest mkdocs pymdown-extensions build twine -q
 
+# --- Emscripten SDK (WASM) ---
+if [[ -f "$HOME/emsdk/emsdk_env.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "$HOME/emsdk/emsdk_env.sh" 2>/dev/null
+    echo "Emscripten SDK activated ($(emcc --version | head -1))"
+else
+    echo "Note: emsdk not found at ~/emsdk — WASM target will be skipped."
+fi
+
 echo ""
 echo "Environment ready.  Activate with:"
 echo "  source $VENV/bin/activate"

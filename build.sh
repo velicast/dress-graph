@@ -6,13 +6,19 @@
 #   ./build.sh --no-test  # build only, skip tests
 #   ./build.sh c cpp      # build + test only the listed targets
 #
-# Targets: c cpp python rust go r julia wasm
+# Targets: c cpp igraph python rust go r julia wasm
 #
 # A target is silently skipped when its toolchain is not installed.
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
+
+# ── source emsdk if available and emcc is not already on PATH ───────
+if ! command -v emcc &>/dev/null && [[ -f "$HOME/emsdk/emsdk_env.sh" ]]; then
+    # shellcheck disable=SC1091
+    source "$HOME/emsdk/emsdk_env.sh" 2>/dev/null
+fi
 
 # ── parse flags ─────────────────────────────────────────────────────
 RUN_TESTS=1
@@ -26,7 +32,7 @@ done
 
 # Default: all targets
 if [[ ${#TARGETS[@]} -eq 0 ]]; then
-    TARGETS=(c cpp python rust go r julia wasm)
+    TARGETS=(c cpp igraph python rust go r julia wasm)
 fi
 
 PASS=0
@@ -55,19 +61,23 @@ want() { [[ " ${TARGETS[*]} " == *" $1 "* ]]; }
 vendor_sources() {
     # Rust
     mkdir -p rust/vendor/include/dress
-    cp libdress/src/dress.c        rust/vendor/dress.c
-    cp libdress/include/dress/dress.h rust/vendor/include/dress/dress.h
+    cp libdress/src/dress.c            rust/vendor/dress.c
+    cp libdress/src/delta_dress.c      rust/vendor/delta_dress.c
+    cp libdress/include/dress/dress.h       rust/vendor/include/dress/dress.h
+    cp libdress/include/dress/delta_dress.h rust/vendor/include/dress/delta_dress.h
 
     # R
     mkdir -p r/src/dress
-    cp libdress/src/dress.c        r/src/dress.c
-    cp libdress/include/dress/dress.h r/src/dress/dress.h
+    cp libdress/src/dress.c            r/src/dress.c
+    cp libdress/src/delta_dress.c      r/src/delta_dress.c
+    cp libdress/include/dress/dress.h       r/src/dress/dress.h
+    cp libdress/include/dress/delta_dress.h r/src/dress/delta_dress.h
 }
 
 # Remove vendored copies.
 unvendor_sources() {
     rm -rf rust/vendor
-    rm -f  r/src/dress.c
+    rm -f  r/src/dress.c r/src/delta_dress.c
     rm -rf r/src/dress
 }
 
@@ -99,6 +109,53 @@ build_c_cpp() {
                 -Ilibdress/include -Ilibdress++/include \
                 -Lbuild/libdress -ldress -lm -fopenmp 2>&1
             run_step "C++ tests" env LD_LIBRARY_PATH=build/libdress tests/cpp/test_dress
+        fi
+    fi
+}
+
+# ── C igraph wrapper ────────────────────────────────────────────────
+build_igraph() {
+    want igraph || return 0
+    if ! pkg-config --exists igraph 2>/dev/null; then
+        skip "igraph (pkg-config igraph not found)"; return
+    fi
+    header "C igraph wrapper"
+
+    local IGRAPH_CFLAGS IGRAPH_LIBS
+    IGRAPH_CFLAGS=$(pkg-config --cflags igraph)
+    IGRAPH_LIBS=$(pkg-config --libs igraph)
+
+    # Build + test: DRESS igraph wrapper
+    if [[ -f tests/c/test_dress_igraph.c ]]; then
+        gcc -O2 -I libdress/include -I libdress-igraph/include \
+            $IGRAPH_CFLAGS \
+            -o tests/c/test_dress_igraph \
+            tests/c/test_dress_igraph.c \
+            libdress-igraph/src/dress_igraph.c \
+            libdress/src/dress.c \
+            libdress/src/delta_dress.c \
+            $IGRAPH_LIBS -lm -fopenmp 2>&1
+        pass "libdress-igraph compiled"
+
+        if [[ $RUN_TESTS -eq 1 ]]; then
+            run_step "igraph DRESS tests" tests/c/test_dress_igraph
+        fi
+    fi
+
+    # Build + test: Δ^k-DRESS igraph wrapper
+    if [[ -f tests/c/test_delta_dress_igraph.c ]]; then
+        gcc -O2 -I libdress/include -I libdress-igraph/include \
+            $IGRAPH_CFLAGS \
+            -o tests/c/test_delta_dress_igraph \
+            tests/c/test_delta_dress_igraph.c \
+            libdress-igraph/src/dress_igraph.c \
+            libdress/src/dress.c \
+            libdress/src/delta_dress.c \
+            $IGRAPH_LIBS -lm -fopenmp 2>&1
+        pass "libdress-igraph delta compiled"
+
+        if [[ $RUN_TESTS -eq 1 ]]; then
+            run_step "igraph Δ^k-DRESS tests" tests/c/test_delta_dress_igraph
         fi
     fi
 }
@@ -228,7 +285,8 @@ build_wasm() {
     pass "WASM built"
 
     if [[ $RUN_TESTS -eq 1 ]] && command -v node &>/dev/null; then
-        run_step "WASM tests" bash -c 'cd wasm && node test.mjs 2>&1'
+        run_step "WASM tests" bash -c 'cd tests/wasm && node test.mjs 2>&1'
+        run_step "WASM delta tests" bash -c 'cd tests/wasm && node test_delta.mjs 2>&1'
     fi
 }
 
@@ -237,6 +295,7 @@ vendor_sources
 trap unvendor_sources EXIT
 
 (want c || want cpp) && build_c_cpp
+build_igraph
 build_python
 build_rust
 build_go

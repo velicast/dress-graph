@@ -51,6 +51,15 @@ extern "C" {
     );
 
     fn free_dress_graph(g: *mut c_void);
+
+    fn delta_fit(
+        g: *mut c_void,
+        k: c_int,
+        iterations: c_int,
+        epsilon: c_double,
+        precompute: c_int,
+        hist_size: *mut c_int,
+    ) -> *mut i64;
 }
 
 // ── Public types ────────────────────────────────────────────────────
@@ -85,6 +94,26 @@ impl fmt::Display for DressResult {
             self.sources.len(),
             self.iterations,
             self.delta,
+        )
+    }
+}
+
+/// Result of the Δ^k-DRESS fitting procedure.
+#[derive(Debug, Clone)]
+pub struct DeltaDressResult {
+    /// Histogram bin counts (length = `hist_size`).
+    pub histogram: Vec<i64>,
+    /// Number of bins: floor(2/epsilon) + 1.
+    pub hist_size: i32,
+}
+
+impl fmt::Display for DeltaDressResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let total: i64 = self.histogram.iter().sum();
+        write!(
+            f,
+            "DeltaDressResult(hist_size={}, total_values={})",
+            self.hist_size, total,
         )
     }
 }
@@ -276,6 +305,81 @@ impl DRESS {
             max_iterations: 100,
             epsilon: 1e-6,
             precompute_intercepts: true,
+        }
+    }
+
+    /// Run Δ^k-DRESS on a graph: enumerate all C(N,k) node-deletion
+    /// subsets, fit DRESS on each subgraph, and return the pooled histogram.
+    ///
+    /// * `n` – number of vertices
+    /// * `sources` / `targets` – edge list (0-based)
+    /// * `k` – deletion depth (0 = original graph)
+    /// * `max_iterations` – max DRESS iterations per subgraph
+    /// * `epsilon` – convergence tolerance and bin width
+    /// * `variant` – graph variant
+    /// * `precompute` – precompute intercepts in subgraphs
+    pub fn delta_fit(
+        n: i32,
+        sources: Vec<i32>,
+        targets: Vec<i32>,
+        k: i32,
+        max_iterations: i32,
+        epsilon: f64,
+        variant: Variant,
+        precompute: bool,
+    ) -> Result<DeltaDressResult, DressError> {
+        let e = sources.len();
+        if targets.len() != e {
+            return Err(DressError::LengthMismatch(
+                "sources and targets must have equal length".into(),
+            ));
+        }
+
+        unsafe {
+            let u_ptr = libc_malloc_copy_i32(&sources);
+            let v_ptr = libc_malloc_copy_i32(&targets);
+
+            let g = init_dress_graph(
+                n,
+                e as c_int,
+                u_ptr,
+                v_ptr,
+                std::ptr::null_mut(),
+                variant as c_int,
+                0, // precompute for the outer graph doesn't matter
+            );
+            if g.is_null() {
+                return Err(DressError::InitFailed);
+            }
+
+            let mut hsize: c_int = 0;
+            let h = delta_fit(
+                g,
+                k,
+                max_iterations,
+                epsilon,
+                precompute as c_int,
+                &mut hsize,
+            );
+
+            let histogram = if !h.is_null() && hsize > 0 {
+                std::slice::from_raw_parts(h, hsize as usize).to_vec()
+            } else {
+                vec![]
+            };
+
+            // Free the C-allocated histogram
+            if !h.is_null() {
+                extern "C" { fn free(ptr: *mut i64); }
+                free(h);
+            }
+
+            free_dress_graph(g);
+
+            Ok(DeltaDressResult {
+                histogram,
+                hist_size: hsize,
+            })
         }
     }
 }

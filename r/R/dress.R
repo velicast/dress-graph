@@ -107,6 +107,72 @@ dress_fit <- function(n_vertices,
         precompute)
 }
 
+# ---- Delta-k-DRESS ---------------------------------------------------
+
+#' Compute Delta-k-DRESS histogram
+#'
+#' Build a DRESS graph from an edge list and compute the Delta-k-DRESS
+#' distribution by exhaustively removing all k-vertex subsets and
+#' measuring the change in edge similarity values.
+#'
+#' @param n_vertices Integer. Number of vertices (vertex ids in 0..N-1).
+#' @param sources Integer vector of length E — edge source endpoints (0-based).
+#' @param targets Integer vector of length E — edge target endpoints (0-based).
+#' @param k Integer. Number of vertices to remove (0 = original graph).
+#' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
+#' @param max_iterations Maximum fitting iterations (default 100).
+#' @param epsilon Convergence threshold (default 1e-6).
+#' @param precompute Logical. Pre-compute intercept index (default FALSE).
+#'
+#' @return A list with components:
+#' \describe{
+#'   \item{\code{histogram}}{Numeric vector — bin counts of edge delta values.}
+#'   \item{\code{hist_size}}{Integer — number of bins (floor(2/epsilon) + 1).}
+#' }
+#'
+#' @examples
+#' # Triangle K3, delta-1
+#' res <- delta_dress_fit(3L, c(0L,1L,2L), c(1L,2L,0L), k = 1L)
+#' res$hist_size
+#'
+#' @useDynLib dress.graph, .registration = TRUE
+#' @export
+delta_dress_fit <- function(n_vertices,
+                            sources,
+                            targets,
+                            k                = 0L,
+                            variant          = DRESS_UNDIRECTED,
+                            max_iterations   = 100L,
+                            epsilon          = 1e-6,
+                            precompute       = FALSE) {
+
+  n_vertices     <- as.integer(n_vertices)
+  sources        <- as.integer(sources)
+  targets        <- as.integer(targets)
+  k              <- as.integer(k)
+  variant        <- as.integer(variant)
+  max_iterations <- as.integer(max_iterations)
+  epsilon        <- as.double(epsilon)
+  precompute     <- as.integer(precompute)
+
+  stopifnot(length(sources) == length(targets))
+  stopifnot(n_vertices >= 1L)
+  stopifnot(k >= 0L)
+  stopifnot(variant >= 0L && variant <= 3L)
+  stopifnot(max_iterations >= 1L)
+  stopifnot(epsilon > 0)
+
+  .Call(C_delta_dress_fit,
+        n_vertices,
+        sources,
+        targets,
+        k,
+        variant,
+        max_iterations,
+        epsilon,
+        precompute)
+}
+
 # ---- Library version -------------------------------------------------
 
 #' DRESS library version string

@@ -5,7 +5,7 @@ Uses the compiled C extension (``dress._core``) when available, otherwise
 falls back to the pure-Python implementation (``dress.core``).
 """
 
-from dress.core import DRESSResult
+from dress.core import DRESSResult, DeltaDRESSResult
 
 try:
     from dress._core import DRESS as _DRESS_cls  # noqa: F401
@@ -95,4 +95,64 @@ def dress_fit(
             n_vertices, sources, targets,
             weights=weights, variant=variant,
             max_iterations=max_iterations, epsilon=epsilon,
+        )
+
+
+def delta_dress_fit(
+    n_vertices,
+    sources,
+    targets,
+    k=0,
+    variant=UNDIRECTED,
+    max_iterations=100,
+    epsilon=1e-6,
+    precompute=False,
+):
+    """Compute the Δ^k-DRESS histogram.
+
+    Exhaustively removes all k-vertex subsets from the graph, runs DRESS
+    on each resulting subgraph, and accumulates every converged edge value
+    into a single histogram binned by *epsilon*.
+
+    Works identically whether the C extension or the pure-Python backend
+    is active.
+
+    Parameters
+    ----------
+    n_vertices : int
+        Number of vertices (0-indexed).
+    sources, targets : sequence of int
+        Edge endpoint arrays (same length).
+    k : int
+        Deletion depth — vertices removed per subset (default 0).
+    variant : Variant
+        ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
+    max_iterations : int
+        Maximum DRESS iterations per subgraph (default 100).
+    epsilon : float
+        Convergence threshold and histogram bin width (default 1e-6).
+    precompute : bool
+        Pre-compute common-neighbour index (default ``False``).
+
+    Returns
+    -------
+    DeltaDRESSResult
+        Dataclass with ``histogram`` (list of int) and ``hist_size``.
+    """
+    if _BACKEND == "c":
+        import dress._core as _core
+        _cv = _core.Variant(int(variant))
+        g = _DRESS_cls(n_vertices, list(sources), list(targets), _cv)
+        dr = g.delta_fit(k, max_iterations, epsilon, precompute)
+        return DeltaDRESSResult(
+            histogram=list(dr.histogram),
+            hist_size=dr.hist_size,
+        )
+    else:
+        from dress.core import delta_dress_fit as _py_delta
+        return _py_delta(
+            n_vertices, sources, targets,
+            k=k, variant=variant,
+            max_iterations=max_iterations, epsilon=epsilon,
+            precompute=precompute,
         )
