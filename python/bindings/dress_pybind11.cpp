@@ -152,7 +152,6 @@ FitResult
              py::arg("k"),
              py::arg("max_iterations"),
              py::arg("epsilon"),
-             py::arg("precompute") = false,
              R"doc(
 Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS
 on each subgraph, and accumulate edge values into a histogram.
@@ -165,8 +164,6 @@ max_iterations : int
     Maximum DRESS iterations per subgraph.
 epsilon : float
     Convergence tolerance and histogram bin width.
-precompute : bool
-    Precompute intercepts in each subgraph (default False).
 
 Returns
 -------

@@ -34,6 +34,7 @@ rm -rf python/build/
 rm -rf python/src/*.egg-info/
 rm -rf python/src/dress/*.so
 rm -f  python/_dress.c
+rm -f  python/_delta_dress.c
 find . -name '__pycache__' -not -path './.git/*' -exec rm -rf {} +
 find . -name '*.pyc'       -not -path './.git/*' -delete
 

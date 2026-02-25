@@ -283,16 +283,16 @@ function delta_dress_fit(N::Integer,
               (Cint, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cint),
               Cint(N), Cint(E),
               Ptr{Cint}(U_c), Ptr{Cint}(V_c), Ptr{Cdouble}(C_NULL),
-              Cint(variant), Cint(0))
+              Cint(variant), Cint(precompute))
 
     g == C_NULL && error("init_dress_graph returned NULL")
 
-    # delta_fit(g, k, iterations, epsilon, precompute, &hist_size) → *int64
+    # delta_fit(g, k, iterations, epsilon, &hist_size) → *int64
     hsize_ref = Ref{Cint}(0)
     h_ptr = ccall(_FN_DELTA[], Ptr{Int64},
-                  (Ptr{Cvoid}, Cint, Cint, Cdouble, Cint, Ptr{Cint}),
+                  (Ptr{Cvoid}, Cint, Cint, Cdouble, Ptr{Cint}),
                   g, Cint(k), Cint(max_iterations), Cdouble(epsilon),
-                  Cint(precompute), hsize_ref)
+                  hsize_ref)
 
     hsize = Int(hsize_ref[])
     histogram = if h_ptr != C_NULL && hsize > 0

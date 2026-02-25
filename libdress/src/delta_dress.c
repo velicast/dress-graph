@@ -101,7 +101,7 @@ static void accumulate_histogram(p_dress_graph_t sub,
 /* ------------------------------------------------------------------ */
 
 int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
-                   double epsilon, int precompute, int *hist_size)
+                   double epsilon, int *hist_size)
 {
     int N = g->N;
     int nbins = (int)(2.0 / epsilon) + 1;
@@ -122,7 +122,7 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
         memcpy(cp_V, g->V, E * sizeof(int));
 
         p_dress_graph_t sub = init_dress_graph(
-            N, E, cp_U, cp_V, NULL, g->variant, precompute);
+            N, E, cp_U, cp_V, NULL, g->variant, g->precompute_intercepts);
 
         fit(sub, iterations, epsilon, NULL, NULL);
         accumulate_histogram(sub, hist, nbins, epsilon);

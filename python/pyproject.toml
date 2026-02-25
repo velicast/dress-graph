@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dress-graph"
-version = "0.2.0"
+version = "0.2.1"
 description = "DRESS: A Continuous Framework for Structural Graph Refinement"
 authors = [{name = "Eduar Castrillo Velilla"}]
 requires-python = ">=3.7"

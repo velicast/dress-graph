@@ -105,7 +105,7 @@ SEXP C_dress_fit(SEXP n_vertices_,
 /*  dress_version                                                      */
 /* ------------------------------------------------------------------ */
 SEXP C_dress_version(void) {
-    return ScalarString(mkChar("0.2.0"));
+    return ScalarString(mkChar("0.2.1"));
 }
 
 /* ------------------------------------------------------------------ */
@@ -139,14 +139,14 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     memcpy(V, INTEGER(targets_), E * sizeof(int));
 
     p_dress_graph_t g = init_dress_graph(N, E, U, V, NULL,
-                                         (dress_variant_t)variant, 0);
+                                         (dress_variant_t)variant, precompute);
     if (!g) {
         error("delta_dress_fit: init_dress_graph returned NULL");
     }
 
     int hist_size = 0;
     int64_t *hist = delta_fit(g, k, max_iterations, epsilon,
-                              precompute, &hist_size);
+                              &hist_size);
 
     /* Build result list: histogram + hist_size */
     SEXP result = PROTECT(allocVector(VECSXP, 2));

@@ -199,23 +199,23 @@ func DeltaFit(n int, sources, targets []int32,
 		vSlice[i] = C.int(targets[i])
 	}
 
-	g := C.init_dress_graph(
-		C.int(n), C.int(e),
-		uPtr, vPtr, nil,
-		C.dress_variant_t(variant), C.int(0),
-	)
-	if g == nil {
-		return nil, fmt.Errorf("dress: init_dress_graph returned NULL")
-	}
-
 	precomp := C.int(0)
 	if precompute {
 		precomp = C.int(1)
 	}
 
+	g := C.init_dress_graph(
+		C.int(n), C.int(e),
+		uPtr, vPtr, nil,
+		C.dress_variant_t(variant), precomp,
+	)
+	if g == nil {
+		return nil, fmt.Errorf("dress: init_dress_graph returned NULL")
+	}
+
 	var histSize C.int
 	hPtr := C.delta_fit(g, C.int(k), C.int(maxIterations),
-		C.double(epsilon), precomp, &histSize)
+		C.double(epsilon), &histSize)
 
 	result := &DeltaResult{
 		HistSize:  int(histSize),
