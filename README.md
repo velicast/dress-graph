@@ -118,14 +118,14 @@ Full documentation (theory, applications, API reference):
 If you use DRESS in your research, please cite:
 
 ```bibtex
-@misc{castrillo2018dress,
-  title   = {Dynamic Structural Similarity on Graphs},
-  author  = {Eduar Castrillo and Elizabeth Le\'{o}n and Jonatan G\'{o}mez},
-  year    = {2018},
-  eprint  = {1805.01419},
+@misc{castrillo2025dress,
+  title   = {DRESS: A Continuous Framework for Structural Graph Refinement},
+  author  = {Eduar Castrillo Velilla},
+  year    = {2025},
+  eprint  = {2602.20833},
   archivePrefix = {arXiv},
-  primaryClass  = {cs.SI},
-  url     = {https://arxiv.org/abs/1805.01419}
+  primaryClass  = {cs.DS},
+  url     = {https://arxiv.org/abs/2602.20833}
 }
 ```
 
