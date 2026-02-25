@@ -83,7 +83,7 @@ DRESS achieves 100 % accuracy on standard isomorphism benchmarks (MiVIA, IsoBenc
 Original-DRESS **distinguishes beyond 1-WL**: it
 [distinguishes the prism graph from \(K_{3,3}\)](#dress-distinguishes-graphs-that-1-wl-cannot),
 a pair that 1-WL provably cannot separate
-(see [Theorem 1 in the k-DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)).
+(see [Theorem 1 in the k-DRESS paper](https://arxiv.org/abs/2602.20833)).
 It still fails on CFI constructions and strongly regular graphs with
 identical parameters.
 See [Properties — WL comparison](../theory/properties.md#weisfeilerleman-wl-color-refinement)
@@ -236,7 +236,7 @@ all edges are structurally indistinguishable.
 
 ## Higher-order DRESS for harder cases
 
-The [k-DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf) introduces Motif-DRESS and Δ-DRESS as principled extensions within the DRESS framework itself.
+The [k-DRESS paper](https://arxiv.org/abs/2602.20833) introduces Motif-DRESS and Δ-DRESS as principled extensions within the DRESS framework itself.
 
 ### Motif-DRESS (K4 clique)
 

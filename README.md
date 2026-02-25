@@ -10,7 +10,7 @@ requires no tuning.  Sorting the edge values produces a **graph fingerprint**
 that achieves 100 % accuracy on standard isomorphism benchmarks.
 
 For the theory, generalizations (Motif-DRESS, Δ-DRESS), see the research paper:
-[**research/k-DRESS.pdf**](research/k-DRESS.pdf)
+[**arXiv:2602.20833**](https://arxiv.org/abs/2602.20833)
 
 For the relationship between DRESS and the Weisfeiler-Leman hierarchy — each
 deletion level ℓ empirically matches (ℓ+2)-WL on CFI graphs:
@@ -107,8 +107,8 @@ Full documentation (theory, applications, API reference):
 
 ## Publications
 
-- E. Castrillo. *Δℓ-DRESS: Climbing the WL Hierarchy One Deletion at a Time.* [research/delta-k-DRESS.pdf](research/delta-k-DRESS.pdf)
-- E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [research/k-DRESS.pdf](research/k-DRESS.pdf)
+- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [research/delta-k-DRESS.pdf](research/delta-k-DRESS.pdf)
+- E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://arxiv.org/abs/2602.20833)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)
 - E. Castrillo, E. León, J. Gómez. *High-Quality Disjoint and Overlapping Community Structure in Large-Scale Complex Networks.* [arXiv:1805.12238](https://arxiv.org/abs/1805.12238)
