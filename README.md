@@ -61,16 +61,14 @@ pip install dress-graph
 ```
 
 ```python
-from dress import DRESS, UNDIRECTED
+from dress import dress_fit
 
-g = DRESS(
+result = dress_fit(
     n_vertices=4,
     sources=[0, 1, 2, 0],
     targets=[1, 2, 3, 3],
-    variant=UNDIRECTED,
 )
-result = g.fit()
-print(g.dress_values)  # DRESS value for each edge
+print(result.edge_dress)  # DRESS value for each edge
 ```
 
 ### Δ^k-DRESS (deletion-based refinement)
