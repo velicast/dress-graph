@@ -44,6 +44,8 @@ d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{x \in N[u] \cap N[v]}
   {\|u\|^{(t)} \cdot \|v\|^{(t)}}
 $$
 
+where $\|u\|^{(t)} = \sqrt{\displaystyle\sum_{x \in N[u]} \bar{w}_{ux}\, d_{ux}^{(t)}}$ is the node norm and $N[u] = N(u) \cup \{u\}$ is the closed neighborhood.
+
 ## Current Applications
 
 - **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
