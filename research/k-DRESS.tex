@@ -98,7 +98,7 @@ Since 1-WL cannot distinguish them and DRESS can, DRESS distinguishes beyond 1-W
 \paragraph{Remark.} This result holds for Original-DRESS alone---the simplest member of the DRESS family, using only triangle neighborhoods and $\mathcal{O}(E)$ computation per iteration. The generalizations that follow (Motif-DRESS, $\Delta$-DRESS) extend this advantage further to graphs that resist even 3-WL.
 
 \section{Motif-DRESS}
-Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by defining $\mathcal{N}(u,v)$ as the set of edges that co-occur with $(u,v)$ in a specific structural motif $M$, with $f = \text{sum}$, $g = \text{geometric norm}$, and an optional weight function $w(e)$:
+Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by defining $\mathcal{N}(u,v)$ as the set of edges that co-occur with $(u,v)$ in a specific structural motif $M$, with $f = \text{sum}$, $g = \text{geometric norm}$, and an optional symmetric weight function $w: E \to \mathbb{R}_{>0}$:
 
 \begin{equation}
 d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{e' \in \mathcal{N}_M(u,v)} w_{e'}\,d_{e'}^{(t)}}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
@@ -141,7 +141,7 @@ The argument proceeds in three steps:
     \item \textbf{Boundedness:} For any valid symmetric neighborhood operator $\mathcal{N}_M(e)$, the Cauchy--Schwarz inequality (or H\"older's inequality for Minkowski-$r$ variants) bounds the numerator by the denominator. Self-loop inclusion ensures the denominator is strictly positive. Thus $F(d)_{uv} \in [0, 2]$ for all $d > 0$.
     \item \textbf{Contraction on the Hilbert Projective Metric:} Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part---which follows from the Cauchy--Schwarz bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to $d^* \in [0, 2]^{|E|}$.
 \end{enumerate}
-A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
+A complete formal verification of the contraction constant is deferred to future work; all empirical tests in this paper confirm convergence within 20 iterations.
 \end{proof}
 
 \section{Generalized-DRESS}
