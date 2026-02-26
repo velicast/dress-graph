@@ -61,6 +61,22 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 - **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs — no GNN required.
 - **Edge Robustness**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
 
+## Benchmarks
+
+Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
+
+| Graph | Vertices | Edges | Iterations | Final δ |
+|-------|----------|-------|------------|---------|
+| Amazon product co-purchasing | 548,552 | 925,872 | 18 | 6.35e-7 |
+| Wiki-Vote | 8,298 | 103,689 | 17 | 8.31e-7 |
+| LiveJournal social network | 4,033,138 | 27,933,062 | 30 | 7.09e-7 |
+| Facebook (konect) | 59,216,215 | 92,522,012 | 26 | 6.84e-7 |
+| Facebook (UCI/UNI) | 58,790,783 | 92,208,195 | 26 | 6.84e-7 |
+
+- **Low iteration count.** Even on graphs with tens of millions of vertices and edges, DRESS converges in fewer than 31 iterations — consistent with the contraction-mapping guarantee.
+- **Scale independence.** Iteration count grows very slowly with graph size. A graph with 59 M vertices needs only ~1.5× the iterations of one with 8 K vertices.
+- **Uniform residual.** The final δ is consistently on the order of 10⁻⁷, indicating that convergence quality does not degrade with graph size.
+
 ## Quick start (Python)
 
 ```bash
