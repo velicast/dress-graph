@@ -13,7 +13,7 @@ For the theory, generalizations (Motif-DRESS, Δ-DRESS), see the research paper:
 
 For the relationship between DRESS and the Weisfeiler-Leman hierarchy — each
 deletion level ℓ empirically matches (ℓ+2)-WL on CFI graphs:
-[**research/delta-k-DRESS.pdf**](https://arxiv.org/abs/2602.21557)
+[**arxiv:2602.21557**](https://arxiv.org/abs/2602.21557)
 
 ## Key properties
 
