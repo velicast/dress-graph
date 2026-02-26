@@ -126,6 +126,8 @@ Full documentation (theory, applications, API reference):
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)
 - E. Castrillo, E. León, J. Gómez. *High-Quality Disjoint and Overlapping Community Structure in Large-Scale Complex Networks.* [arXiv:1805.12238](https://arxiv.org/abs/1805.12238)
 
+Original implementation (2018): [github.com/velicast/WMW](https://github.com/velicast/WMW)
+
 ## Citing
 
 If you use DRESS in your research, please cite:

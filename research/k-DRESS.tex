@@ -43,7 +43,7 @@ All experiments use a convergence tolerance of $\epsilon = 10^{-6}$ and a maximu
 
 \section{Original-DRESS}
 
-The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs} is a parameter-free, non-linear dynamical system that iteratively refines edge values based on common-neighbor aggregation:
+The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs} is a parameter-free, non-linear dynamical system that iteratively refines edge values based on common-neighbor aggregation. An open-source implementation has been publicly available since 2018.\footnote{\url{https://github.com/velicast/WMW}}
 
 \begin{equation}
 d_{uv}^{(t+1)} = \frac{\sum_{x \in N[u] \cap N[v]} \bigl(d_{ux}^{(t)} + d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
