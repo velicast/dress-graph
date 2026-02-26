@@ -29,7 +29,7 @@ The Weisfeiler--Leman (WL) hierarchy \cite{weisfeiler1968reduction} is the stand
 
 The CFI construction \cite{cai1992optimal} provides the canonical hard instances: for any base graph $G$, it produces a pair of non-isomorphic graphs $\text{CFI}(G)$ and $\text{CFI}'(G)$ that $k$-WL cannot distinguish whenever $k$ is below the treewidth of $G$. In particular, $\text{CFI}(K_n)$ requires $(n{-}1)$-WL, making these the hardest known instances for the WL hierarchy.
 
-In the companion paper \cite{castrillo2025dress}, we introduced the DRESS family of continuous structural refinement algorithms and showed that $\Delta$-DRESS---which runs DRESS on each single-node-deleted subgraph---empirically distinguishes strongly regular graphs that confound 3-WL. The connection to the Kelly--Ulam reconstruction conjecture \cite{kelly1942congruence, ulam1960collection} was noted: the multiset of node-deleted DRESS fingerprints is a continuous relaxation of the reconstruction deck.
+In the companion paper \cite{castrillo2026dress}, we introduced the DRESS family of continuous structural refinement algorithms and showed that $\Delta$-DRESS---which runs DRESS on each single-node-deleted subgraph---empirically distinguishes strongly regular graphs that confound 3-WL. The connection to the Kelly--Ulam reconstruction conjecture \cite{kelly1942congruence, ulam1960collection} was noted: the multiset of node-deleted DRESS fingerprints is a continuous relaxation of the reconstruction deck.
 
 In this paper, we generalize $\Delta$-DRESS to $\Delta^\ell$-DRESS by applying $\ell$ levels of iterated node deletion. We show that each deletion level adds approximately one WL level of discriminative power on the CFI family: $\Delta^0$ (Original-DRESS) already distinguishes $\text{CFI}(K_3)$, $\Delta^1$ reaches $\text{CFI}(K_4)$, $\Delta^2$ reaches $\text{CFI}(K_5)$, and $\Delta^3$ reaches $\text{CFI}(K_6)$.
 
@@ -52,13 +52,13 @@ The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs
 d_{uv}^{(t+1)} = \frac{\sum_{x \in N[u] \cap N[v]} \bigl(d_{ux}^{(t)} + d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
 \end{equation}
 
-where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the node norm and $N[u] = N(u) \cup \{u\}$ is the closed neighborhood. Self-loops are added to every node; the invariant $d_{uu} = 2$ holds at every iteration. The equation converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any positive initialization \cite{castrillo2025dress}.
+where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the node norm and $N[u] = N(u) \cup \{u\}$ is the closed neighborhood. Self-loops are added to every node; the invariant $d_{uu} = 2$ holds at every iteration. The equation converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any positive initialization \cite{castrillo2026dress}.
 
 The graph fingerprint can be represented equivalently as the sorted vector $\text{sort}(d^*)$ or as the histogram $h(d^*)$; both uniquely identify the multiset of converged edge values. Since DRESS values are bounded in $[0, 2]$ and convergence tolerance is $\epsilon = 10^{-6}$, each edge value maps to one of $\lceil 2/\epsilon \rceil = 2 \times 10^{6}$ integer bins (the bin count is determined by the convergence tolerance), so the histogram is a compact bin-count vector. In this work we use the histogram representation. Two graphs are declared non-isomorphic if their fingerprints differ.
 
 \subsection{\texorpdfstring{$\Delta$}{Delta}-DRESS}
 
-$\Delta$-DRESS \cite{castrillo2025dress} runs DRESS on each node-deleted subgraph:
+$\Delta$-DRESS \cite{castrillo2026dress} runs DRESS on each node-deleted subgraph:
 
 \begin{definition}[$\Delta$-DRESS]
 Given a graph $G = (V, E)$ and a DRESS variant $\mathcal{F}$, the $\Delta$-DRESS fingerprint is the histogram obtained by running $\mathcal{F}$ on each node-deleted subgraph and accumulating every edge similarity value into a single bin-count vector:
@@ -140,9 +140,9 @@ $K_{10}$& 2560  & 9-WL & $\times$      & $\times$      & ---            & ---   
 The results in Table~\ref{tab:cfi-results} reveal a clear staircase pattern:
 
 \begin{enumerate}
-    \item \textbf{$\Delta^0$ (Original-DRESS)} distinguishes $\text{CFI}(K_3)$, which requires 2-WL. This is a notable result: Original-DRESS---with no node deletion---already exceeds 1-WL on CFI instances, consistent with the prism vs.\ $K_{3,3}$ result in \cite{castrillo2025dress}. It fails on all larger CFI pairs.
+    \item \textbf{$\Delta^0$ (Original-DRESS)} distinguishes $\text{CFI}(K_3)$, which requires 2-WL. This is a notable result: Original-DRESS---with no node deletion---already exceeds 1-WL on CFI instances, consistent with the prism vs.\ $K_{3,3}$ result in \cite{castrillo2026dress}. It fails on all larger CFI pairs.
 
-    \item \textbf{$\Delta^1$} extends the range to $\text{CFI}(K_4)$ (3-WL). This is consistent with the results in \cite{castrillo2025dress}, where $\Delta$-DRESS was shown to distinguish SRG pairs that confound 3-WL. It fails on $\text{CFI}(K_5)$.
+    \item \textbf{$\Delta^1$} extends the range to $\text{CFI}(K_4)$ (3-WL). This is consistent with the results in \cite{castrillo2026dress}, where $\Delta$-DRESS was shown to distinguish SRG pairs that confound 3-WL. It fails on $\text{CFI}(K_5)$.
 
     \item \textbf{$\Delta^2$} reaches $\text{CFI}(K_5)$ (4-WL).
 
@@ -185,7 +185,7 @@ The pattern is strikingly regular: $\Delta^\ell$-DRESS empirically matches $(\el
 
     \item \textbf{Are there graph families where $\Delta^\ell$-DRESS fails for all constant $\ell$?} CFI graphs over graphs of unbounded treewidth would be natural candidates.
 
-    \item \textbf{Does combining $\Delta^\ell$ with other DRESS variants yield further gains?} The DRESS family includes Motif-DRESS and Generalized-DRESS \cite{castrillo2025dress}. Whether a stronger base variant $\mathcal{F}$ shifts the staircase upward or merely overlaps with the deletion mechanism is an open question.
+    \item \textbf{Does combining $\Delta^\ell$ with other DRESS variants yield further gains?} The DRESS family includes Motif-DRESS and Generalized-DRESS \cite{castrillo2026dress}. Whether a stronger base variant $\mathcal{F}$ shifts the staircase upward or merely overlaps with the deletion mechanism is an open question.
 \end{enumerate}
 
 \section{Conclusion}

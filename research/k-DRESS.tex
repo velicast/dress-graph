@@ -117,7 +117,7 @@ Different choices of motif $M$ yield different neighborhood operators:
 
 \subsection{Properties}
 
-\textbf{Complexity:} $\mathcal{O}(\text{Motif Extraction}) + \mathcal{O}\!\bigl(I \cdot \sum_{e} |\mathcal{N}_M(e)|\bigr)$, where $I$ is the number of iterations and $\sum_e |\mathcal{N}_M(e)|$ is the total size of all motif-neighborhood lists. For Original-DRESS (triangles), this reduces to $\mathcal{O}(I \cdot m \cdot \Delta)$. For motifs such as 4-cycles or $K_4$ cliques in sparse graphs, the motif-neighborhood lists can be significantly smaller, making Motif-DRESS faster than Original-DRESS.
+\textbf{Complexity:} $\mathcal{O}(\text{Motif Extraction}) + \mathcal{O}\!\bigl(I \cdot \sum_{e} |\mathcal{N}_M(e)|\bigr)$, where $I$ is the number of iterations and $\sum_e |\mathcal{N}_M(e)|$ is the total size of all motif-neighborhood lists. For Original-DRESS (triangles), this reduces to $\mathcal{O}(I \cdot m \cdot T)$, where $T$ is the number of triangles. For motifs such as 4-cycles or $K_4$ cliques in sparse graphs, the motif-neighborhood lists can be significantly smaller, making Motif-DRESS faster than Original-DRESS.
 
 \textbf{Invariant: $d_{uu} = 2$.} The self-similarity is invariant under iteration: since $\mathcal{N}_M(u,u)$ includes all edges incident to $u$ symmetrically, and $d_{ux} = d_{xu}$, substituting $v = u$ yields $d_{uu}^{(t+1)} = 2\|u\|^2 / \|u\|^2 = 2$ for all $t$. Thus $d_{uu} = 2$ is a fixed property of the equation, not a free parameter.
 
@@ -170,7 +170,7 @@ The multiset $\{\!\{ \text{DRESS}(G \setminus \{v\}) : v \in V \}\!\}$ is direct
 
 \subsection{Properties}
 
-\textbf{Complexity:} $\mathcal{O}(n \cdot I \cdot m \cdot \Delta)$, where $I$ is the number of iterations per deletion. The computation for each deleted subgraph is entirely independent, making $\Delta$-DRESS embarrassingly parallel.
+\textbf{Complexity:} $\mathcal{O}(n \cdot I \cdot m \cdot T)$, where $T$ is the number of triangles and $I$ is the number of iterations per deletion. The computation for each deleted subgraph is entirely independent, making $\Delta$-DRESS embarrassingly parallel.
 
 \subsection{Expressiveness}
 $\Delta$-DRESS empirically distinguishes the following non-isomorphic pairs:

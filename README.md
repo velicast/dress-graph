@@ -6,15 +6,14 @@ DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a
 nonlinear fixed-point system where every edge's value depends on its
 neighbours' values.  The result is bounded in [0, 2], deterministic, and
-requires no tuning.  Sorting the edge values produces a **graph fingerprint**
-that achieves 100 % accuracy on standard isomorphism benchmarks.
+requires no tuning.  Sorting the edge values produces a canonical **graph fingerprint**.
 
 For the theory, generalizations (Motif-DRESS, Δ-DRESS), see the research paper:
 [**arXiv:2602.20833**](https://arxiv.org/abs/2602.20833)
 
 For the relationship between DRESS and the Weisfeiler-Leman hierarchy — each
 deletion level ℓ empirically matches (ℓ+2)-WL on CFI graphs:
-[**research/delta-k-DRESS.pdf**](research/delta-k-DRESS.pdf)
+[**research/delta-k-DRESS.pdf**](https://arxiv.org/abs/2602.21557)
 
 ## Key properties
 
@@ -121,7 +120,7 @@ Full documentation (theory, applications, API reference):
 
 ## Publications
 
-- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [research/delta-k-DRESS.pdf](research/delta-k-DRESS.pdf)
+- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [research/delta-k-DRESS.pdf](https://arxiv.org/abs/2602.21557)
 - E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://arxiv.org/abs/2602.20833)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)
@@ -132,10 +131,10 @@ Full documentation (theory, applications, API reference):
 If you use DRESS in your research, please cite:
 
 ```bibtex
-@misc{castrillo2025dress,
+@misc{castrillo2026dress,
   title   = {DRESS: A Continuous Framework for Structural Graph Refinement},
   author  = {Eduar Castrillo Velilla},
-  year    = {2025},
+  year    = {2026},
   eprint  = {2602.20833},
   archivePrefix = {arXiv},
   primaryClass  = {cs.DS},

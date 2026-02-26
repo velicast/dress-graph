@@ -66,6 +66,12 @@ emsdk/
 .idea/
 
 # LaTeX build artifacts
-research/k-DRESS.aux
-research/k-DRESS.log
-research/k-DRESS.out
+research/*.aux
+research/*.log
+research/*.out
+research/*.bbl
+research/*.blg
+research/*.fls
+research/*.fdb_latexmk
+research/*.synctex.gz
+research/*.toc
