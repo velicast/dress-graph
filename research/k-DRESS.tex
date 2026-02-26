@@ -6,7 +6,7 @@
 \usepackage{hyperref}
 
 \title{DRESS: A Continuous Framework for Structural Graph Refinement}
-\author{Eduar Castrillo Velilla \\ \texttt{eduarcastrillo@gmail.com}}
+\author{Eduar Castrillo Velilla \\ \texttt{eduarcastrillo@gmail.com} \\ ORCID: \href{https://orcid.org/0009-0005-2492-0957}{0009-0005-2492-0957}}
 \date{}
 
 \newtheorem{theorem}{Theorem}
@@ -106,7 +106,7 @@ d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{e' \in \mathcal{N}_M(u,v)} w_{e'}\,d_{
 
 where $\|u\|^{(t)} = \sqrt{\sum_{e' \in \mathcal{N}_M(u,u)} w_{e'}\,d_{e'}^{(t)}}$ is the weighted node norm at time $t$.
 
-The weights $w(e)$ act as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $w \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
+The symmetric weight function $w(e)$ acts as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $w \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
 
 Different choices of motif $M$ yield different neighborhood operators:
 \begin{itemize}

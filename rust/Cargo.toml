@@ -2,7 +2,7 @@
 name    = "dress-graph"
 version = "0.2.1"
 edition = "2021"
-authors = ["Eduar Castrillo Velilla"]
+authors = ["Eduar Castrillo Velilla <https://orcid.org/0009-0005-2492-0957>"]
 license = "MIT"
 description = "Rust bindings for the DRESS Graph C library"
 repository  = "https://github.com/velicast/dress-graph"
