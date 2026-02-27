@@ -18,9 +18,9 @@ from __future__ import annotations
 
 from typing import Optional
 
-from dress.core import DRESS, DRESSResult, DeltaDRESSResult, Variant, UNDIRECTED
+from dress.core import DRESS, DRESSResult, DeltaDRESSResult, NablaDRESSResult, Variant, UNDIRECTED
 
-__all__ = ["dress_graph", "delta_dress_graph"]
+__all__ = ["dress_graph", "delta_dress_graph", "nabla_dress_graph"]
 
 
 def dress_graph(
@@ -160,4 +160,88 @@ def delta_dress_graph(
         max_iterations=max_iterations,
         epsilon=epsilon,
         precompute=precompute,
+    )
+
+
+def nabla_dress_graph(
+    G,
+    *,
+    k: int = 0,
+    nabla_weight: float = 2.0,
+    variant: Variant = UNDIRECTED,
+    weight: str = "weight",
+    max_iterations: int = 100,
+    epsilon: float = 1e-6,
+    precompute: bool = False,
+    keep_multisets: bool = False,
+) -> NablaDRESSResult:
+    """Compute the ∇^k-DRESS histogram on a NetworkX graph.
+
+    Exhaustively individualizes all k-vertex subsets by multiplying
+    incident edge weights by *nabla_weight*, runs DRESS on the same
+    topology, and accumulates every converged edge value into a single
+    histogram binned by *epsilon*.
+
+    Parameters
+    ----------
+    G : networkx.Graph or networkx.DiGraph
+        Input graph.
+    k : int
+        Individualization depth — vertices marked per subset (default 0).
+        ``k=0`` runs DRESS on the original graph (∇^0).
+    nabla_weight : float
+        Multiplicative factor for edges incident to marked vertices
+        (default 2.0).
+    variant : Variant
+        ``UNDIRECTED``, ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
+    weight : str
+        Edge attribute name for weights.  If the attribute is missing the
+        edge is treated as unweighted (weight = 1).
+    max_iterations : int
+        Maximum DRESS fitting iterations per round.
+    epsilon : float
+        Convergence threshold and histogram bin width.
+    precompute : bool
+        If ``True``, precompute common-neighbour index.
+    keep_multisets : bool
+        If ``True``, return per-subset DRESS values.
+
+    Returns
+    -------
+    NablaDRESSResult
+        Dataclass with ``histogram`` (list of int, length ``hist_size``)
+        and ``hist_size``.
+    """
+    from dress import nabla_dress_fit as _nabla_dress_fit
+
+    # Map node labels to 0-based integers
+    nodes = list(G.nodes())
+    node_to_idx = {n: i for i, n in enumerate(nodes)}
+    n_vertices = len(nodes)
+
+    sources = []
+    targets = []
+    weights = []
+    has_weights = False
+
+    for u, v, data in G.edges(data=True):
+        sources.append(node_to_idx[u])
+        targets.append(node_to_idx[v])
+        w = data.get(weight, 1.0)
+        weights.append(float(w))
+        if w != 1.0:
+            has_weights = True
+
+    return _nabla_dress_fit(
+        n_vertices,
+        sources,
+        targets,
+        weights=weights if has_weights else None,
+        k=k,
+        nabla_weight=nabla_weight,
+        variant=variant,
+        max_iterations=max_iterations,
+        epsilon=epsilon,
+        precompute=precompute,
+        keep_multisets=keep_multisets,
     )
