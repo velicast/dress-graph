@@ -1,12 +1,14 @@
 # Publications
 
-## Thesis
-
-**A fast heuristic algorithm for community detection in large-scale complex networks**
-Eduar Castrillo. MSc thesis, Universidad Nacional de Colombia, 2018.
-[bdigital.unal.edu.co/69933](http://bdigital.unal.edu.co/69933/)
-
 ## Papers
+
+**DRESS: A Continuous Framework for Structural Graph Refinement**
+E. Castrillo. arXiv preprint, 2026.
+[arXiv:2602.20833](https://arxiv.org/abs/2602.20833)
+
+**DRESS and the WL Hierarchy: Climbing One Deletion at a Time**
+E. Castrillo. arXiv preprint, 2026.
+[arXiv:2602.21557](https://arxiv.org/abs/2602.21557)
 
 **Dynamic Structural Similarity on Graphs**
 E. Castrillo, E. León, J. Gómez. arXiv preprint, 2018.
@@ -20,18 +22,24 @@ E. Castrillo, E. León, J. Gómez. ASONAM 2017.
 E. Castrillo, E. León, J. Gómez. arXiv preprint, 2018.
 [arXiv:1805.12238](https://arxiv.org/abs/1805.12238)
 
+## Thesis
+
+**A fast heuristic algorithm for community detection in large-scale complex networks**
+Eduar Castrillo. MSc thesis, Universidad Nacional de Colombia, 2018.
+[bdigital.unal.edu.co/69933](http://bdigital.unal.edu.co/69933/)
+
 ## Citing DRESS
 
 If you use DRESS in your research, please cite:
 
 ```bibtex
-@misc{castrillo2018dress,
-  title   = {Dynamic Structural Similarity on Graphs},
-  author  = {Eduar Castrillo and Elizabeth Le\'{o}n and Jonatan G\'{o}mez},
-  year    = {2018},
-  eprint  = {1805.01419},
+@misc{castrillo2026dress,
+  title   = {DRESS: A Continuous Framework for Structural Graph Refinement},
+  author  = {Eduar Castrillo Velilla},
+  year    = {2026},
+  eprint  = {2602.20833},
   archivePrefix = {arXiv},
-  primaryClass  = {cs.SI},
-  url     = {https://arxiv.org/abs/1805.01419}
+  primaryClass  = {cs.DS},
+  url     = {https://arxiv.org/abs/2602.20833}
 }
 ```

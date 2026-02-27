@@ -1,5 +1,6 @@
 #include "dress/delta_dress.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -13,8 +14,12 @@
 // Returns a freshly allocated dress graph with remapped vertex ids
 // (0 .. N-k-1) and only the edges whose both endpoints survive.
 // Returns NULL if the subgraph has zero edges.
+//
+// If `edge_map` is non-NULL (size E), fills edge_map[e] with the
+// subgraph edge index of original edge e, or -1 if edge e was removed.
 static p_dress_graph_t build_subgraph(p_dress_graph_t g,
-                                      const int *del, int k)
+                                      const int *del, int k,
+                                      int *edge_map)
 {
     int N = g->N;
     int E = g->E;
@@ -44,6 +49,10 @@ static p_dress_graph_t build_subgraph(p_dress_graph_t g,
     free(node_map);
 
     if (sub_E == 0) {
+        // Fill edge_map with -1 if requested.
+        if (edge_map) {
+            for (int e = 0; e < E; e++) edge_map[e] = -1;
+        }
         return NULL;
     }
 
@@ -71,7 +80,10 @@ static p_dress_graph_t build_subgraph(p_dress_graph_t g,
         if (mu >= 0 && mv >= 0) {
             sub_U[idx] = mu;
             sub_V[idx] = mv;
+            if (edge_map) edge_map[e] = idx;
             idx++;
+        } else {
+            if (edge_map) edge_map[e] = -1;
         }
     }
 
@@ -96,14 +108,45 @@ static void accumulate_histogram(p_dress_graph_t sub,
     }
 }
 
+// Fill one row of the multisets matrix.
+//   multisets[row * orig_E + e] = sub->edge_dress[ edge_map[e] ]
+//   or NAN when edge_map[e] == -1.
+static void fill_multiset_row(p_dress_graph_t sub,
+                               const int *edge_map, int orig_E,
+                               double *row)
+{
+    for (int e = 0; e < orig_E; e++) {
+        if (edge_map[e] >= 0)
+            row[e] = sub->edge_dress[edge_map[e]];
+        else
+            row[e] = NAN;
+    }
+}
+
 /* ------------------------------------------------------------------ */
 /*  Public API                                                         */
 /* ------------------------------------------------------------------ */
 
+/* Compute C(n, k) — binomial coefficient. */
+static int64_t binom(int n, int k)
+{
+    if (k < 0 || k > n) return 0;
+    if (k == 0 || k == n) return 1;
+    if (k > n - k) k = n - k;   /* C(n,k) = C(n, n-k) */
+    int64_t r = 1;
+    for (int i = 0; i < k; i++) {
+        r = r * (n - i) / (i + 1);
+    }
+    return r;
+}
+
 int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
-                   double epsilon, int *hist_size)
+                   double epsilon, int *hist_size,
+                   int keep_multisets, double **multisets,
+                   int64_t *num_subgraphs)
 {
     int N = g->N;
+    int E = g->E;
     int nbins = (int)(2.0 / epsilon) + 1;
 
     if (hist_size)
@@ -112,10 +155,21 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
     int64_t *hist = (int64_t *)calloc(nbins, sizeof(int64_t));
     if (!hist) return NULL;
 
+    /* Compute C(N, k) and optionally allocate multisets buffer. */
+    int64_t cnk = (k == 0) ? 1 : binom(N, k);
+    if (num_subgraphs) *num_subgraphs = cnk;
+
+    int wants_ms = keep_multisets && multisets;
+    double *ms = NULL;
+    if (wants_ms) {
+        ms = (double *)malloc((size_t)cnk * E * sizeof(double));
+        *multisets = ms;
+        if (!ms) wants_ms = 0;  /* allocation failed — fall back */
+    }
+
     /* ── k = 0: Δ^0 — run DRESS on the full graph ──────────────── */
     if (k == 0) {
         // Copy edge list (init_dress_graph takes ownership).
-        int E = g->E;
         int *cp_U = (int *)malloc(E * sizeof(int));
         int *cp_V = (int *)malloc(E * sizeof(int));
         memcpy(cp_U, g->U, E * sizeof(int));
@@ -126,6 +180,13 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
 
         fit(sub, iterations, epsilon, NULL, NULL);
         accumulate_histogram(sub, hist, nbins, epsilon);
+
+        if (wants_ms) {
+            // k=0: single subgraph (s=0), all edges survive, identity map.
+            for (int e = 0; e < E; e++)
+                ms[e] = sub->edge_dress[e];
+        }
+
         free_dress_graph(sub);
         return hist;
     }
@@ -136,25 +197,13 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
     }
 
     /* ── k >= 1: iterative DFS over C(N, k) combinations ───────── */
-    //
-    // combo[0 .. k-1] holds the current k-subset in sorted order.
-    // `depth` is the DFS stack pointer: combo[0..depth-1] are fixed,
-    // and combo[depth] is the value being explored.
-    //
-    // Invariant:  combo[i] < combo[i+1]  for all valid i.
-    //
-    // At each step:
-    //   1. Increment combo[depth].
-    //   2. If combo[depth] exceeds its upper bound (N - k + depth),
-    //      backtrack (depth--).
-    //   3. If depth == k-1, we have a complete combination — process it.
-    //   4. Otherwise, descend: depth++, seed combo[depth] from its
-    //      predecessor (will be incremented at step 1).
 
     int *combo = (int *)malloc(k * sizeof(int));
+    int *edge_map = wants_ms ? (int *)malloc(E * sizeof(int)) : NULL;
 
     int depth = 0;
     combo[0] = -1;              // will be incremented to 0 on first iter
+    int64_t s = 0;              // subgraph counter for multisets rows
 
     while (depth >= 0) {
         combo[depth]++;
@@ -167,12 +216,20 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
 
         if (depth == k - 1) {
             // ── complete k-subset: combo[0..k-1] ──
-            p_dress_graph_t sub = build_subgraph(g, combo, k);
+            p_dress_graph_t sub = build_subgraph(g, combo, k, edge_map);
             if (sub) {
                 fit(sub, iterations, epsilon, NULL, NULL);
                 accumulate_histogram(sub, hist, nbins, epsilon);
+                if (wants_ms)
+                    fill_multiset_row(sub, edge_map, E,
+                                      ms + s * E);
                 free_dress_graph(sub);
+            } else if (wants_ms) {
+                // Zero-edge subgraph: fill row with NAN.
+                double *row = ms + s * E;
+                for (int e = 0; e < E; e++) row[e] = NAN;
             }
+            s++;
         } else {
             // ── descend: seed next depth from current value ──
             depth++;
@@ -181,5 +238,6 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
     }
 
     free(combo);
+    free(edge_map);
     return hist;
 }

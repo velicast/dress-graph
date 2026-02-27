@@ -2,11 +2,34 @@
 
 **A Continuous Framework for Structural Graph Refinement**
 
-DRESS is a parameter-free, self-regularizing algorithm that computes a unique
-self-consistent edge similarity for any graph.  Given an edge list, DRESS
-iteratively solves a nonlinear fixed-point system where every edge's similarity
-value depends on its neighbors' values.  It converges to a unique, bounded
-solution in \([0, 2]\) with no tuning parameters.
+DRESS is a provably continuous relaxation of the Weisfeiler–Leman algorithm.
+At depth \(k\), higher-order DRESS is **provably at least as powerful as \((k{+}2)\)-WL**
+in expressiveness — the base algorithm (\(k{=}0\)) already matches 2-WL, and each
+level adds one WL dimension.
+Yet it is dramatically cheaper to compute: a single DRESS run costs
+\(\mathcal{O}(I \cdot m \cdot d_{\max})\) where \(I\) is the number of iterations,
+and depth-\(k\) requires \(\binom{n}{k}\) independent runs — a total of
+\(\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)\),
+compared to \(\mathcal{O}(n^{k+3})\) for \((k{+}2)\)-WL.
+Space complexity is \(\mathcal{O}(n + m)\), compared to \(\mathcal{O}(n^{k+2})\) for \((k{+}2)\)-WL.
+The algorithm is embarrassingly parallel in two orthogonal ways —
+across the \(\binom{n}{k}\) subproblems and across edge updates within each iteration —
+enabling distributed/cloud and multi-core/GPU/SIMD implementations.
+
+DRESS is a parameter-free algorithm that computes a unique, self-consistent
+edge similarity for any graph.  Given an edge list, it iteratively solves a
+nonlinear fixed-point system where every edge's similarity value depends on
+its neighbors' values.  It converges to a unique, bounded solution in
+\([0, 2]\) with no tuning parameters.  Sorting the edge values produces a
+canonical **graph fingerprint**.
+
+For the theory and generalizations (DRESS Family), see the research paper:
+[**arXiv:2602.20833**](https://arxiv.org/abs/2602.20833)
+
+For the relationship between DRESS and the Weisfeiler–Leman hierarchy:
+[**arXiv:2602.21557**](https://arxiv.org/abs/2602.21557)
+
+---
 
 This work is an independent continuation of research from the author's master's thesis:
 
@@ -36,15 +59,14 @@ and edge-importance ranking.
 | Property |
 |----------|
 | Bounded \([0, 2]\), self-similarity \(= 2\) |
+| Provably numerically stable (no overflows, no undefined behaviours) |
 | Parameter-free (self-regularizing, no damping factor) |
 | Scale invariant (degree-0 homogeneous) |
 | Unique deterministic fixed point |
-| Numerically stable (no overflow, no error amplification) |
 | Low complexity: \(O(E)\) per iteration, \(O(N + E)\) memory |
-| Graph fingerprinting (practical): MiVIA / IsoBench 100 % |
-| Community detection (improves SCAN) |
-| Weighted + directed support |
-| Massively parallelizable (per-edge independent updates) |
+| Massively parallelisable (\(\nabla^k\) subproblems and per-edge updates) |
+| Supports weighted graphs |
+| Supports directed graphs |
 
 ## The equation at a glance
 

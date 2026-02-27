@@ -1,6 +1,6 @@
 {
     "name": "dress-graph",
-    "version": "0.2.2",
+    "version": "0.3.0",
     "description": "DRESS — A Continuous Framework for Structural Graph Refinement (WebAssembly)",
     "type": "module",
     "main": "dress.js",

@@ -73,14 +73,14 @@ mod tests {
     #[test]
     fn test_delta_hist_size() {
         let r = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             0, 100, 1e-3, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(r.hist_size, 2001);
         assert_eq!(r.histogram.len(), r.hist_size as usize);
 
         let r2 = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             0, 100, 1e-6, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(r2.hist_size, 2000001);
@@ -89,7 +89,7 @@ mod tests {
     #[test]
     fn test_delta0_k3() {
         let r = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             0, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(hist_total(&r), 3);
@@ -103,7 +103,7 @@ mod tests {
     #[test]
     fn test_delta1_k3() {
         let r = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             1, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         // C(3,1)=3 subgraphs × 1 edge each = 3
@@ -113,7 +113,7 @@ mod tests {
     #[test]
     fn test_delta2_k3() {
         let r = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             2, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(hist_total(&r), 0);
@@ -122,7 +122,7 @@ mod tests {
     #[test]
     fn test_delta0_k4() {
         let r = DRESS::delta_fit(
-            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3], None,
             0, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(hist_total(&r), 6);
@@ -132,7 +132,7 @@ mod tests {
     #[test]
     fn test_delta1_k4() {
         let r = DRESS::delta_fit(
-            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3], None,
             1, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         // C(4,1)=4 × 3 edges = 12
@@ -143,7 +143,7 @@ mod tests {
     #[test]
     fn test_delta2_k4() {
         let r = DRESS::delta_fit(
-            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3], None,
             2, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         // C(4,2)=6 × 1 edge = 6
@@ -153,13 +153,13 @@ mod tests {
     #[test]
     fn test_delta_k_geq_n() {
         let r = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             3, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(hist_total(&r), 0);
 
         let r2 = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             10, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(hist_total(&r2), 0);
@@ -168,11 +168,11 @@ mod tests {
     #[test]
     fn test_delta_precompute() {
         let r1 = DRESS::delta_fit(
-            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3], None,
             1, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         let r2 = DRESS::delta_fit(
-            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3],
+            4, vec![0,0,0,1,1,2], vec![1,2,3,2,3,3], None,
             1, 100, EPS, Variant::Undirected, true,
         ).unwrap();
         assert_eq!(r1.hist_size, r2.hist_size);
@@ -182,7 +182,7 @@ mod tests {
     #[test]
     fn test_delta_path_p4() {
         let r = DRESS::delta_fit(
-            4, vec![0,1,2], vec![1,2,3],
+            4, vec![0,1,2], vec![1,2,3], None,
             0, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(hist_total(&r), 3);
@@ -193,7 +193,7 @@ mod tests {
     #[test]
     fn test_delta1_p4() {
         let r = DRESS::delta_fit(
-            4, vec![0,1,2], vec![1,2,3],
+            4, vec![0,1,2], vec![1,2,3], None,
             1, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         assert_eq!(hist_total(&r), 6);
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn test_delta_length_mismatch() {
         let r = DRESS::delta_fit(
-            3, vec![0, 1], vec![1, 2, 2],
+            3, vec![0, 1], vec![1, 2, 2], None,
             0, 100, EPS, Variant::Undirected, false,
         );
         assert!(r.is_err(), "mismatched lengths should return Err");
@@ -211,7 +211,7 @@ mod tests {
     #[test]
     fn test_delta_display() {
         let r = DRESS::delta_fit(
-            3, vec![0,1,0], vec![1,2,2],
+            3, vec![0,1,0], vec![1,2,2], None,
             0, 100, EPS, Variant::Undirected, false,
         ).unwrap();
         let s = format!("{}", r);

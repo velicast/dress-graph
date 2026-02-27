@@ -1,4 +1,4 @@
-# dress-graph (Python)
+# dress-graph (Go)
 
 **A Continuous Framework for Structural Graph Refinement**
 
@@ -15,23 +15,16 @@ The algorithm is embarrassingly parallel in two orthogonal ways — across the
 C(n,k) subproblems and across edge updates within each iteration — enabling
 distributed/cloud and multi-core/GPU/SIMD implementations.
 
-## Install
-
-```bash
-pip install dress-graph
-```
-
 ## Quick start
 
-```python
-from dress import dress_fit
+```go
+import "github.com/velicast/dress-graph/go"
 
-result = dress_fit(
-    n_vertices=4,
-    sources=[0, 1, 2, 0],
-    targets=[1, 2, 3, 3],
-)
-print(result.edge_dress)  # DRESS value for each edge
+result, _ := dress.Fit(4,
+    []int32{0, 1, 2, 0},
+    []int32{1, 2, 3, 3},
+    nil, dress.Undirected, 100, 1e-6, true)
+fmt.Println(result.EdgeDress)
 ```
 
 For the full API and documentation, see the [main repository](https://github.com/velicast/dress-graph).

@@ -1,4 +1,4 @@
-# dress-graph (Python)
+# dress-graph (WASM / JavaScript)
 
 **A Continuous Framework for Structural Graph Refinement**
 
@@ -15,23 +15,15 @@ The algorithm is embarrassingly parallel in two orthogonal ways — across the
 C(n,k) subproblems and across edge updates within each iteration — enabling
 distributed/cloud and multi-core/GPU/SIMD implementations.
 
-## Install
-
-```bash
-pip install dress-graph
-```
-
 ## Quick start
 
-```python
-from dress import dress_fit
+```javascript
+const dress = require('./dress_wasm.cjs');
 
-result = dress_fit(
-    n_vertices=4,
-    sources=[0, 1, 2, 0],
-    targets=[1, 2, 3, 3],
-)
-print(result.edge_dress)  # DRESS value for each edge
+dress.onReady(() => {
+  const result = dress.dressFit(4, [0, 1, 2, 0], [1, 2, 3, 3]);
+  console.log(result.edgeDress);
+});
 ```
 
 For the full API and documentation, see the [main repository](https://github.com/velicast/dress-graph).

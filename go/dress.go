@@ -22,6 +22,7 @@ package dress
 #include <stdlib.h>
 #include "dress/dress.h"
 #include "dress/delta_dress.h"
+#include "dress/nabla_dress.h"
 */
 import "C"
 import (
@@ -174,12 +175,13 @@ func (r *DeltaResult) String() string {
 // Parameters:
 //   - n: number of vertices
 //   - sources, targets: edge list (0-based, same length)
+//   - weights: per-edge weights (nil for unweighted)
 //   - k: deletion depth (0 = original graph)
 //   - variant: graph variant
 //   - maxIterations: maximum DRESS iterations per subgraph
 //   - epsilon: convergence tolerance and bin width
 //   - precompute: precompute intercepts in each subgraph
-func DeltaFit(n int, sources, targets []int32,
+func DeltaFit(n int, sources, targets []int32, weights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	precompute bool) (*DeltaResult, error) {
 
@@ -199,6 +201,15 @@ func DeltaFit(n int, sources, targets []int32,
 		vSlice[i] = C.int(targets[i])
 	}
 
+	var wPtr *C.double
+	if len(weights) > 0 {
+		wPtr = (*C.double)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.double(0)))))
+		wSlice := unsafe.Slice(wPtr, e)
+		for i := 0; i < e; i++ {
+			wSlice[i] = C.double(weights[i])
+		}
+	}
+
 	precomp := C.int(0)
 	if precompute {
 		precomp = C.int(1)
@@ -206,7 +217,7 @@ func DeltaFit(n int, sources, targets []int32,
 
 	g := C.init_dress_graph(
 		C.int(n), C.int(e),
-		uPtr, vPtr, nil,
+		uPtr, vPtr, wPtr,
 		C.dress_variant_t(variant), precomp,
 	)
 	if g == nil {
@@ -215,7 +226,8 @@ func DeltaFit(n int, sources, targets []int32,
 
 	var histSize C.int
 	hPtr := C.delta_fit(g, C.int(k), C.int(maxIterations),
-		C.double(epsilon), &histSize)
+		C.double(epsilon), &histSize,
+		C.int(0), (**C.double)(nil), (*C.int64_t)(nil))
 
 	result := &DeltaResult{
 		HistSize:  int(histSize),
@@ -232,4 +244,98 @@ func DeltaFit(n int, sources, targets []int32,
 
 	C.free_dress_graph(g)
 	return result, nil
+}
+
+// NablaResult holds the output of a ∇^k-DRESS fitting operation.
+type NablaResult struct {
+	Histogram []int64
+	HistSize  int
+}
+
+func (r *NablaResult) String() string {
+	var total int64
+	for _, v := range r.Histogram {
+		total += v
+	}
+	return fmt.Sprintf("NablaDressResult(hist_size=%d, total_values=%d)",
+		r.HistSize, total)
+}
+
+// NablaFit runs ∇^k-DRESS: enumerates all C(N,k) vertex subsets,
+// individualizes (marks) each subset by multiplying incident edge weights
+// by nablaWeight, runs DRESS, and returns the pooled histogram.
+//
+// Parameters:
+//   - n: number of vertices
+//   - sources, targets: edge list (0-based, same length)
+//   - weights: per-edge weights (nil for unweighted)
+//   - k: individualization depth (0 = original graph)
+//   - nablaWeight: multiplicative factor for marked edges (typically 2.0)
+//   - variant: graph variant
+//   - maxIterations: maximum DRESS iterations per round
+//   - epsilon: convergence tolerance and bin width
+//   - precompute: precompute intercepts
+func NablaFit(n int, sources, targets []int32, weights []float64,
+	k int, nablaWeight float64, variant Variant, maxIterations int,
+	epsilon float64, precompute bool) (*NablaResult, error) {
+
+	e := len(sources)
+	if len(targets) != e {
+		return nil, fmt.Errorf("dress: sources and targets must have equal length (%d vs %d)", e, len(targets))
+	}
+
+	// Allocate C arrays for init_dress_graph (takes ownership)
+	uPtr := (*C.int)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.int(0)))))
+	vPtr := (*C.int)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.int(0)))))
+
+	uSlice := unsafe.Slice(uPtr, e)
+	vSlice := unsafe.Slice(vPtr, e)
+	for i := 0; i < e; i++ {
+		uSlice[i] = C.int(sources[i])
+		vSlice[i] = C.int(targets[i])
+	}
+
+	var wPtr *C.double
+	if len(weights) > 0 {
+		wPtr = (*C.double)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.double(0)))))
+		wSlice := unsafe.Slice(wPtr, e)
+		for i := 0; i < e; i++ {
+			wSlice[i] = C.double(weights[i])
+		}
+	}
+
+	precomp := C.int(0)
+	if precompute {
+		precomp = C.int(1)
+	}
+
+	g := C.init_dress_graph(
+		C.int(n), C.int(e),
+		uPtr, vPtr, wPtr,
+		C.dress_variant_t(variant), precomp,
+	)
+	if g == nil {
+		return nil, fmt.Errorf("dress: init_dress_graph returned NULL")
+	}
+
+	var nablaHistSize C.int
+	nhPtr := C.nabla_fit(g, C.int(k), C.int(maxIterations),
+		C.double(epsilon), C.double(nablaWeight), &nablaHistSize,
+		C.int(0), (**C.double)(nil), (*C.int64_t)(nil))
+
+	nablaResult := &NablaResult{
+		HistSize:  int(nablaHistSize),
+		Histogram: make([]int64, int(nablaHistSize)),
+	}
+
+	if nhPtr != nil && nablaHistSize > 0 {
+		nhSlice := unsafe.Slice((*C.int64_t)(unsafe.Pointer(nhPtr)), int(nablaHistSize))
+		for i := 0; i < int(nablaHistSize); i++ {
+			nablaResult.Histogram[i] = int64(nhSlice[i])
+		}
+		C.free(unsafe.Pointer(nhPtr))
+	}
+
+	C.free_dress_graph(g)
+	return nablaResult, nil
 }

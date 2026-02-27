@@ -81,3 +81,40 @@ export interface DeltaDressResult {
  * all k-vertex subsets and measuring edge similarity changes.
  */
 export declare function deltaDressFit(opts: DeltaDressOptions): Promise<DeltaDressResult>;
+
+export interface NablaDressOptions {
+    /** Number of vertices (vertex ids must be in 0..numVertices-1) */
+    numVertices: number;
+    /** Edge source vertices (0-based) */
+    sources: Int32Array | number[];
+    /** Edge target vertices (0-based) */
+    targets: Int32Array | number[];
+    /** Optional edge weights (same length as sources) */
+    weights?: Float64Array | number[] | null;
+    /** Vertices to individualize per subset (default: 0 = original graph) */
+    k?: number;
+    /** Multiplicative factor for incident edges of marked vertices (default: 2.0) */
+    nablaWeight?: number;
+    /** Graph variant (default: Variant.UNDIRECTED) */
+    variant?: number;
+    /** Maximum fitting iterations (default: 100) */
+    maxIterations?: number;
+    /** Convergence threshold / bin width (default: 1e-6) */
+    epsilon?: number;
+    /** Pre-compute neighbourhood intercepts (default: false) */
+    precompute?: boolean;
+}
+
+export interface NablaDressResult {
+    /** Bin counts of edge values (as Float64 for BigInt-free access) */
+    histogram: Float64Array;
+    /** Number of histogram bins (floor(2/epsilon) + 1) */
+    histSize: number;
+}
+
+/**
+ * Compute the Nabla-k-DRESS histogram by exhaustively individualizing
+ * all k-vertex subsets (marking incident edges) and measuring edge
+ * similarity values.
+ */
+export declare function nablaDressFit(opts: NablaDressOptions): Promise<NablaDressResult>;

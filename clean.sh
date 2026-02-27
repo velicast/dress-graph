@@ -21,9 +21,12 @@ rm -rf CMakeFiles/
 
 # C/C++ test binaries
 rm -f tests/c/test_dress
-rm -f tests/cpp/test_dress
 rm -f tests/c/test_delta_dress
+rm -f tests/c/test_nabla_dress
 rm -f tests/c/test_delta_dress_igraph
+rm -f tests/cpp/test_dress
+rm -f tests/cpp/test_delta_dress
+rm -f tests/cpp/test_nabla_dress
 
 # Rust
 rm -rf rust/target/
@@ -35,6 +38,7 @@ rm -rf python/src/*.egg-info/
 rm -rf python/src/dress/*.so
 rm -f  python/_dress.c
 rm -f  python/_delta_dress.c
+rm -f  python/_nabla_dress.c
 find . -name '__pycache__' -not -path './.git/*' -exec rm -rf {} +
 find . -name '*.pyc'       -not -path './.git/*' -delete
 

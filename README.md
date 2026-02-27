@@ -2,29 +2,31 @@
 
 **A Continuous Framework for Structural Graph Refinement**
 
+DRESS is a provably continuous relaxation of the Weisfeiler–Leman algorithm.
+At depth $k$, higher-order DRESS is **provably at least as powerful as $(k{+}2)$-WL**
+in expressiveness — the base algorithm ($k{=}0$) already matches 2-WL, and each
+level adds one WL dimension.
+Yet it is dramatically cheaper to compute: a single DRESS run costs
+$\mathcal{O}(I \cdot m \cdot d_{\max})$ where $I$ is the number of iterations,
+and depth-$k$ requires $\binom{n}{k}$ independent runs — a total of
+$\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$,
+compared to $\mathcal{O}(n^{k+3})$ for $(k{+}2)$-WL.
+Space complexity is $\mathcal{O}(n + m)$, compared to $\mathcal{O}(n^{k+2})$ for $(k{+}2)$-WL.
+The algorithm is embarrassingly parallel in two orthogonal ways —
+across the $\binom{n}{k}$ subproblems and across edge updates within each iteration —
+enabling distributed/cloud and multi-core/GPU/SIMD implementations.
+
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a
 nonlinear fixed-point system where every edge's value depends on its
 neighbours' values.  The result is bounded in [0, 2], deterministic, and
 requires no tuning.  Sorting the edge values produces a canonical **graph fingerprint**.
 
-For the theory, generalizations (Motif-DRESS, Δ-DRESS), see the research paper:
+For the theory and generalizations (DRESS Family), see the research paper:
 [**arXiv:2602.20833**](https://arxiv.org/abs/2602.20833)
 
-For the relationship between DRESS and the Weisfeiler-Leman hierarchy — each
-deletion level ℓ empirically matches (ℓ+2)-WL on CFI graphs:
-[**arxiv:2602.21557**](https://arxiv.org/abs/2602.21557)
-
-## Key properties
-
-| Property |
-|----------|
-| Bounded [0, 2], self-similarity = 2 |
-| Parameter-free (no damping factor) |
-| Scale invariant (degree-0 homogeneous) |
-| Unique deterministic fixed point |
-| Low complexity: O(E) per iteration, O(N + E) memory |
-| Massively parallelisable (per-edge independent updates) |
+For the relationship between DRESS and the Weisfeiler–Leman hierarchy:
+[**arXiv:2602.21557**](https://arxiv.org/abs/2602.21557)
 
 ## The equation
 
@@ -52,14 +54,19 @@ $$
 
 and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 
-## Current Applications
+## Key properties
 
-- **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
-- **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
-- **Classification**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
-- **Retrieval**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
-- **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs — no GNN required.
-- **Edge Robustness**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
+| Property |
+|----------|
+| Bounded [0, 2], self-similarity = 2 |
+| Provably numerically stable (no overflows, no undefined behaviours) |
+| Parameter-free (no damping factor) |
+| Scale invariant (degree-0 homogeneous) |
+| Unique deterministic fixed point |
+| Low complexity: O(E) per iteration, O(N + E) memory |
+| Massively parallelisable (∇^k subproblems and per-edge updates) |
+| Supports weighted graphs |
+| Supports directed graphs |
 
 ## Benchmarks
 
@@ -76,6 +83,15 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 - **Low iteration count.** Even on graphs with tens of millions of vertices and edges, DRESS converges in fewer than 31 iterations — consistent with the contraction-mapping guarantee.
 - **Scale independence.** Iteration count grows very slowly with graph size. A graph with 59 M vertices needs only ~1.5× the iterations of one with 8 K vertices.
 - **Uniform residual.** The final δ is consistently on the order of 10⁻⁷, indicating that convergence quality does not degrade with graph size.
+
+## Current Applications
+
+- **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
+- **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
+- **Classification**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
+- **Retrieval**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
+- **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs — no GNN required.
+- **Edge Robustness**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
 
 ## Quick start (Python)
 
@@ -94,16 +110,16 @@ result = dress_fit(
 print(result.edge_dress)  # DRESS value for each edge
 ```
 
-### Δ^k-DRESS (deletion-based refinement)
+### ∇^k-DRESS (higher-order refinement)
 
 ```python
-from dress import delta_dress_fit
+from dress import nabla_dress_fit
 
-result = delta_dress_fit(
+result = nabla_dress_fit(
     n_vertices=4,
     sources=[0, 1, 2, 0],
     targets=[1, 2, 3, 3],
-    k=1,              # remove 1 vertex at a time
+    k=1,              # individualize 1 vertex at a time
     epsilon=1e-6,
 )
 print(result.histogram)   # histogram of edge DRESS values across all subgraphs
@@ -144,7 +160,7 @@ Full documentation (theory, applications, API reference):
 
 ## Publications
 
-- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [research/delta-k-DRESS.pdf](https://arxiv.org/abs/2602.21557)
+- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Vertex at a Time.* [arxiv:2602.21557](https://arxiv.org/abs/2602.21557)
 - E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://arxiv.org/abs/2602.20833)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)

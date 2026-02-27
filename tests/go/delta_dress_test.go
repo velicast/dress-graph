@@ -16,7 +16,7 @@ func histTotal(h []int64) int64 {
 
 func TestDeltaHistSize(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2},
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
 		0, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -28,7 +28,7 @@ func TestDeltaHistSize(t *testing.T) {
 
 func TestDeltaDelta0K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2},
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
 		0, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -45,7 +45,7 @@ func TestDeltaDelta0K3(t *testing.T) {
 
 func TestDeltaDelta1K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2},
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
 		1, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -59,7 +59,7 @@ func TestDeltaDelta1K3(t *testing.T) {
 
 func TestDeltaDelta2K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2},
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
 		2, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +72,7 @@ func TestDeltaDelta2K3(t *testing.T) {
 
 func TestDeltaDelta0K4(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3},
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
 		0, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -88,7 +88,7 @@ func TestDeltaDelta0K4(t *testing.T) {
 
 func TestDeltaDelta1K4(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3},
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
 		1, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +105,7 @@ func TestDeltaDelta1K4(t *testing.T) {
 
 func TestDeltaDelta2K4(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3},
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
 		2, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -119,7 +119,7 @@ func TestDeltaDelta2K4(t *testing.T) {
 
 func TestDeltaKGeN(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2},
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
 		3, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func TestDeltaKGeN(t *testing.T) {
 	}
 
 	r2, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2},
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
 		10, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -143,13 +143,13 @@ func TestDeltaKGeN(t *testing.T) {
 
 func TestDeltaPrecompute(t *testing.T) {
 	r1, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3},
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
 		1, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	r2, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3},
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
 		1, dress.Undirected, 100, 1e-3, true)
 	if err != nil {
 		t.Fatal(err)
@@ -166,7 +166,7 @@ func TestDeltaPrecompute(t *testing.T) {
 
 func TestDeltaDelta0Path(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 1, 2}, []int32{1, 2, 3},
+		[]int32{0, 1, 2}, []int32{1, 2, 3}, nil,
 		0, dress.Undirected, 100, 1e-3, false)
 	if err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func TestDeltaDelta0Path(t *testing.T) {
 
 func TestDeltaLengthMismatch(t *testing.T) {
 	_, err := dress.DeltaFit(3,
-		[]int32{0, 1}, []int32{1, 2, 2},
+		[]int32{0, 1}, []int32{1, 2, 2}, nil,
 		0, dress.Undirected, 100, 1e-3, false)
 	if err == nil {
 		t.Fatal("expected error for mismatched lengths")

@@ -16,7 +16,7 @@
 \maketitle
 
 \begin{abstract}
-The Weisfeiler-Lehman (WL) hierarchy is a cornerstone framework for graph isomorphism testing and structural analysis. However, scaling beyond 1-WL to 3-WL and higher requires tensor-based operations that scale as $\mathcal{O}(n^3)$ or $\mathcal{O}(n^4)$, making them computationally prohibitive for large graphs. In this paper, we start from the Original-DRESS equation (Castrillo, Le\'{o}n, and G\'{o}mez, 2018)---a parameter-free, continuous dynamical system on edges---and show that it distinguishes the prism graph from $K_{3,3}$, a pair that 1-WL provably cannot separate. We then generalize it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions, and further to Generalized-DRESS, an abstract template parameterized by the choice of neighborhood operator, aggregation function and norm. Finally, we introduce $\Delta$-DRESS, which runs DRESS on each node-deleted subgraph $G \setminus \{v\}$, connecting the framework to the Kelly--Ulam reconstruction conjecture. Both Motif-DRESS and $\Delta$-DRESS empirically distinguish Strongly Regular Graphs (SRGs)---such as the Rook and Shrikhande graphs---that confound 3-WL. Our results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL on well-known benchmark graphs, without the prohibitive $\mathcal{O}(n^4)$ computational cost.
+The Weisfeiler-Lehman (WL) hierarchy is a cornerstone framework for graph isomorphism testing and structural analysis. However, scaling beyond 1-WL to 3-WL and higher requires tensor-based operations that scale as $\mathcal{O}(n^3)$ or $\mathcal{O}(n^4)$, making them computationally prohibitive for large graphs. In this paper, we start from the Original-DRESS equation (Castrillo, Le\'{o}n, and G\'{o}mez, 2018)---a parameter-free, continuous dynamical system on edges---and show that it distinguishes the prism graph from $K_{3,3}$, a pair that 1-WL provably cannot separate. We then generalize it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions, and further to Generalized-DRESS, an abstract template parameterized by the choice of neighborhood operator, aggregation function and norm. Finally, we introduce $\nabla$-DRESS, which \emph{marks} each vertex by applying a multiplicative weight to its incident edges, connecting the framework directly to the WL hierarchy, and $\Delta$-DRESS, which runs DRESS on each vertex-deleted subgraph $G \setminus \{v\}$, connecting the framework to the Kelly--Ulam reconstruction conjecture. Both $\nabla$-DRESS and $\Delta$-DRESS empirically distinguish Strongly Regular Graphs (SRGs)---such as the Rook and Shrikhande graphs---that confound 3-WL. Our results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL on well-known benchmark graphs, without the prohibitive $\mathcal{O}(n^4)$ computational cost.
 \end{abstract}
 
 \section{Introduction}
@@ -30,28 +30,27 @@ In this work, we present a hierarchy of continuous structural refinement algorit
     \item \textbf{Original-DRESS vs.\ 1-WL} (Section~3): We show that Original-DRESS distinguishes graphs that 1-WL cannot, including the prism graph from $K_{3,3}$.
     \item \textbf{Motif-DRESS} (Section~4): A generalization that replaces triangle neighborhoods with arbitrary structural motifs. Original-DRESS is recovered as a special case with $M = K_3$.
     \item \textbf{Generalized-DRESS} (Section~5): The most abstract template, opening the aggregation function and norm as additional free parameters.
-    \item \textbf{$\Delta$-DRESS} (Section~6): Runs DRESS on each node-deleted subgraph $G \setminus \{v\}$, connecting the framework to the reconstruction conjecture and empirically distinguishing SRGs that confound 3-WL.
+    \item \textbf{$\nabla$-DRESS} (Section~6): Marks each vertex by applying a multiplicative weight to its incident edges, connecting the framework directly to the WL hierarchy.
+    \item \textbf{$\Delta$-DRESS} (Section~7): Runs DRESS on each vertex-deleted subgraph $G \setminus \{v\}$, connecting the framework to the reconstruction conjecture.
 \end{enumerate}
 
-We show that Original-DRESS distinguishes graphs that 1-WL cannot, and demonstrate empirically that Motif-DRESS and $\Delta$-DRESS distinguish graphs beyond the reach of 3-WL, while maintaining scalability well below $\mathcal{O}(n^3)$ for sparse graphs.
-
-\paragraph{Isomorphism Test.} Throughout this paper, the \textbf{graph fingerprint} is the sorted vector of converged edge values $\operatorname{sort}(d^*)$. Two graphs are declared non-isomorphic if and only if their fingerprints differ element-wise beyond a numerical tolerance $\epsilon$. This applies uniformly to all DRESS variants. An equivalent representation is the \textbf{histogram} $h(d^*)$: since all DRESS values lie in $[0, 2]$ and the convergence tolerance is $\epsilon = 10^{-6}$, each value maps to one of $\lceil 2/\epsilon \rceil = 2 \times 10^{6}$ integer bins, yielding a fixed-size bin-count vector that uniquely identifies the same multiset. In general, the number of bins is determined by the convergence tolerance: a tolerance of $\epsilon$ over the range $[0, 2]$ gives $\lceil 2/\epsilon \rceil$ bins. The histogram is particularly useful when fingerprints from multiple subgraphs must be pooled (see $\Delta$-DRESS, Section~6).
+\paragraph{Isomorphism Test.} Throughout this paper, the \textbf{graph fingerprint} is the sorted vector of converged edge values $\operatorname{sort}(d^*)$. Two graphs are declared non-isomorphic if and only if their fingerprints differ element-wise beyond a numerical tolerance $\epsilon$. This applies uniformly to all DRESS variants. An equivalent representation is the \textbf{histogram} $h(d^*)$: since all DRESS values lie in $[0, 2]$ (see the convergence proof in Section~4.3) and the convergence tolerance is $\epsilon = 10^{-6}$, each value maps to one of $\lceil 2/\epsilon \rceil = 2 \times 10^{6}$ integer bins, yielding a fixed-size bin-count vector that uniquely identifies the same multiset. In general, the number of bins is determined by the convergence tolerance: a tolerance of $\epsilon$ over the range $[0, 2]$ gives $\lceil 2/\epsilon \rceil$ bins. The histogram is particularly useful when fingerprints from multiple subgraphs must be pooled (see $\nabla$-DRESS and $\Delta$-DRESS, Sections~6--7).
 
 All experiments use a convergence tolerance of $\epsilon = 10^{-6}$ and a maximum of 20 iterations; in every case convergence was reached before the iteration limit.
 
-\paragraph{Related Work.} Higher-order GNN architectures that exceed 1-WL expressiveness include $k$-GNN \cite{morris2019weisfeiler}, GIN \cite{xu2019how}, PPGN \cite{maron2019provably}, and Ring-GNN \cite{chen2019equivalence}. Subgraph-based approaches such as GNN-AK+ \cite{zhao2022from} and ESAN \cite{bevilacqua2022equivariant} achieve higher expressiveness by running message-passing networks on node-deleted or node-marked subgraphs; $\Delta$-DRESS (Section~6) shares the node-deletion strategy but replaces learned message passing with deterministic fixed-point iteration. All of the above are \textbf{supervised} methods that require labeled training data and learnable parameters. In contrast, DRESS is a deterministic, unsupervised framework that produces canonical fingerprints via fixed-point iteration, without any learning or parameter tuning.
+\paragraph{Related Work.} Higher-order GNN architectures that exceed 1-WL expressiveness include $k$-GNN \cite{morris2019weisfeiler}, GIN \cite{xu2019how}, PPGN \cite{maron2019provably}, and Ring-GNN \cite{chen2019equivalence}. Subgraph-based approaches such as GNN-AK+ \cite{zhao2022from} and ESAN \cite{bevilacqua2022equivariant} achieve higher expressiveness by running message-passing networks on vertex-deleted or vertex-marked subgraphs; $\Delta$-DRESS (Section~7) shares the vertex-deletion strategy but replaces learned message passing with deterministic fixed-point iteration. All of the above are \textbf{supervised} methods that require labeled training data and learnable parameters. In contrast, DRESS is a deterministic, unsupervised framework that produces canonical fingerprints via fixed-point iteration, without any learning or parameter tuning.
 
 \section{Original-DRESS}
 
-The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs} is a parameter-free, non-linear dynamical system that iteratively refines edge values based on common-neighbor aggregation. An open-source implementation has been publicly available since 2018.\footnote{\url{https://github.com/velicast/WMW}}
+The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs} is a parameter-free, non-linear dynamical system that iteratively refines edge values based on common-neighbor aggregation.
 
 \begin{equation}
 d_{uv}^{(t+1)} = \frac{\sum_{x \in N[u] \cap N[v]} \bigl(d_{ux}^{(t)} + d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
 \end{equation}
 
-where $N[u] = N(u) \cup \{u\}$ denotes the closed neighborhood of $u$, and $\|u\| = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the node norm. The self-similarity $d_{uu} = 2$ is invariant under iteration. This equation converges to a unique fixed point, providing a continuous structural fingerprint for the graph.
+where $N[u] = N(u) \cup \{u\}$ denotes the closed neighborhood of $u$, and $\|u\| = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the vertex norm. The self-similarity $d_{uu} = 2$ is invariant under iteration. This equation converges to a unique fixed point, providing a continuous structural fingerprint for the graph.
 
-\textbf{Self-loops.} Self-loops are added to every node before iteration (i.e., the algorithm uses the closed neighborhood $N[u] = N(u) \cup \{u\}$). The self-loop edge $(u,u)$ participates in both the aggregation and the node norm; without it, an isolated edge with no common neighbors would produce $\|u\| \cdot \|v\| = 0$, making the iteration undefined.
+\textbf{Self-loops.} Self-loops are added to every vertex before iteration (i.e., the algorithm uses the closed neighborhood $N[u] = N(u) \cup \{u\}$). The self-loop edge $(u,u)$ participates in both the aggregation and the vertex norm; without it, an isolated edge with no common neighbors would produce $\|u\| \cdot \|v\| = 0$, making the iteration undefined.
 
 \textbf{Initialization.} The equation is scale-invariant (degree-0 homogeneous), so the fixed point is independent of the initial scale. Any uniform initialization $d^{(0)}_{uv} = c$ for all edges, with $c > 0$, converges to the same unique fixed point $d^*$. In practice, $c = 1$ is used.
 
@@ -95,7 +94,7 @@ $K_{3,3}$ & $\{2/\sqrt{3} \approx 1.155\}$ & all 9 edges identical \\
 Since 1-WL cannot distinguish them and DRESS can, DRESS distinguishes beyond 1-WL on this instance.
 \end{proof}
 
-\paragraph{Remark.} This result holds for Original-DRESS alone---the simplest member of the DRESS family, using only triangle neighborhoods and $\mathcal{O}(E)$ computation per iteration. The generalizations that follow (Motif-DRESS, $\Delta$-DRESS) extend this advantage further to graphs that resist even 3-WL.
+\paragraph{Remark.} This result holds for Original-DRESS alone---the simplest member of the DRESS family, using only triangle neighborhoods and $\mathcal{O}(E)$ computation per iteration. The generalizations that follow (Motif-DRESS, $\nabla$-DRESS, $\Delta$-DRESS) extend this advantage further to graphs that resist even 3-WL.
 
 \section{Motif-DRESS}
 Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by defining $\mathcal{N}(u,v)$ as the set of edges that co-occur with $(u,v)$ in a specific structural motif $M$, with $f = \text{sum}$, $g = \text{geometric norm}$, and an optional symmetric weight function $w: E \to \mathbb{R}_{>0}$:
@@ -104,7 +103,7 @@ Original-DRESS is limited to triangle neighborhoods. What if we use other struct
 d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{e' \in \mathcal{N}_M(u,v)} w_{e'}\,d_{e'}^{(t)}}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
 \end{equation}
 
-where $\|u\|^{(t)} = \sqrt{\sum_{e' \in \mathcal{N}_M(u,u)} w_{e'}\,d_{e'}^{(t)}}$ is the weighted node norm at time $t$.
+where $\|u\|^{(t)} = \sqrt{\sum_{e' \in \mathcal{N}_M(u,u)} w_{e'}\,d_{e'}^{(t)}}$ is the weighted vertex norm at time $t$.
 
 The symmetric weight function $w(e)$ acts as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $w \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
 
@@ -131,7 +130,7 @@ All experiments below use the $K_4$ clique motif. The specific SRG pairs tested 
 \subsection{Proof Sketch of Convergence}
 
 \begin{theorem}[Convergence of Motif-DRESS]
-Let $F: \mathbb{R}_+^{|E|} \to \mathbb{R}_+^{|E|}$ be the Motif-DRESS update operator. If the aggregation function and the node norm satisfy the degree-0 homogeneity condition ($p = 2q$), then $F$ converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any non-negative initial state $d^{(0)} > 0$.
+Let $F: \mathbb{R}_+^{|E|} \to \mathbb{R}_+^{|E|}$ be the Motif-DRESS update operator. If the aggregation function and the vertex norm satisfy the degree-0 homogeneity condition ($p = 2q$), then $F$ converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any non-negative initial state $d^{(0)} > 0$.
 \end{theorem}
 
 \begin{proof}[Proof sketch]
@@ -155,46 +154,77 @@ where:
 \begin{itemize}
     \item $\mathcal{N}(u,v)$ is a \textbf{symmetric neighborhood operator}---the set of edges aggregated for edge $(u,v)$,
     \item $f$ is the \textbf{aggregation function} over edges in $\mathcal{N}(u,v)$,
-    \item $g(u)$ is the \textbf{node norm}.
+    \item $g(u)$ is the \textbf{vertex norm}.
 \end{itemize}
 
 Original-DRESS and Motif-DRESS are both special cases: Original-DRESS fixes $\mathcal{N}$ to triangles, $f = \text{sum}$, $g = \text{geometric norm}$; Motif-DRESS generalizes $\mathcal{N}$ to arbitrary motifs while keeping the same $f$ and $g$. Generalized-DRESS opens all three parameters, enabling variants such as Cosine-DRESS (cosine similarity aggregation) or Minkowski-$r$ norms.
 
-\section{$\Delta$-DRESS}
-$\Delta$-DRESS breaks symmetry by running DRESS on each node-deleted subgraph $G \setminus \{v\}$ for every $v \in V$. The graph fingerprint is the sorted multiset of $n$ converged edge-value vectors (one per deletion), compared by flattening and sorting without any summarization.
+\section{$\nabla$-DRESS: Individualization}
 
-Deleting a node from a regular graph produces an irregular subgraph where DRESS can now distinguish structure that was hidden by the uniform regularity.
+$\nabla$-DRESS breaks symmetry by \emph{marking} a vertex: applying a distinguished multiplicative weight $\alpha \neq 1$ on its incident edges, while preserving the full graph topology.
+
+Formally, given a graph $G = (V, E, w)$, a DRESS variant $\mathcal{F}$, and an individualization weight $\alpha \neq 1$, the individualized graph $G^{(\alpha, v)}$ is obtained by multiplying the weight of every edge incident to $v$ by $\alpha$:
+\[
+w^{(\alpha,v)}(e) = \begin{cases} \alpha \cdot w(e) & \text{if } v \in e, \\ w(e) & \text{otherwise.} \end{cases}
+\]
+The $\nabla$-DRESS fingerprint is then the multiset of per-vertex DRESS fingerprints:
+\[
+\nabla\text{-DRESS}(\mathcal{F}, G, \alpha) = \{\!\{ \operatorname{sort}(\mathcal{F}(G^{(\alpha,v)})) : v \in V \}\!\}
+\]
+Equivalently, a pooled histogram can be formed by accumulating all converged edge values across all $n$ individualizations.
+
+Individualizing a vertex in a regular graph breaks the uniform degree structure---marked edges receive a distinct weight, causing the DRESS iteration to resolve structural differences that were invisible under uniform weights.
+
+\subsection{Connection to the WL Hierarchy}
+The key theoretical advantage of $\nabla$-DRESS is its direct connection to the WL hierarchy: $(j{+}1)$-WL is equivalent to running $j$-WL over all single-vertex individualizations~\cite{cai1992optimal, grohe2017descriptive}. The companion paper~\cite{castrillo2026kdress} develops this connection formally.
+
+\subsection{Properties}
+
+\textbf{Complexity:} $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$. For each vertex, $\nabla$-DRESS patches only the incident edge weights (an $\mathcal{O}(d_{\max})$ operation), then runs a standard DRESS iteration on the full graph. The $n$ individualized runs are entirely independent, making $\nabla$-DRESS embarrassingly parallel.
+
+\textbf{Weight parameter:} The individualization weight $\alpha$ can be any value $\neq 1$; the default is $\alpha = 2$. Because DRESS is a contraction on the Hilbert projective metric, the fixed point is a continuous function of the weights, so the specific value of $\alpha$ affects the numerical fingerprint but not the qualitative distinguishing ability (any $\alpha \neq 1$ breaks the same symmetries).
+
+\subsection{Expressiveness}
+$\nabla$-DRESS empirically distinguishes the following non-isomorphic pairs:
+\begin{itemize}
+    \item \textbf{Rook vs.\ Shrikhande:} Successfully distinguished (SRG$(16,6,2,2)$; confounds 3-WL).
+    \item \textbf{Chang Graphs:} Distinguished all 6 pairs among T(8) and the three Chang graphs (SRG$(28,12,6,4)$; confound 3-WL).
+    \item \textbf{$2 \times C_4$ vs.\ $C_8$:} Successfully distinguished (both 2-regular on 8 vertices).
+    \item \textbf{Petersen vs.\ Pentagonal Prism:} Successfully distinguished (both 3-regular on 10 vertices).
+\end{itemize}
+
+\section{$\Delta$-DRESS: Deletion}
+$\Delta$-DRESS breaks symmetry by running DRESS on each vertex-deleted subgraph $G \setminus \{v\}$ for every $v \in V$. The $\Delta$-DRESS fingerprint is the multiset of per-vertex DRESS fingerprints, or equivalently a pooled histogram accumulating all converged edge values across all $n$ deletions.
+
+Deleting a vertex from a regular graph produces an irregular subgraph where DRESS can now distinguish structure that was hidden by the uniform regularity.
 
 \subsection{Connection to the Reconstruction Conjecture}
-The multiset $\{\!\{ \text{DRESS}(G \setminus \{v\}) : v \in V \}\!\}$ is directly analogous to the \textit{deck} in the Kelly--Ulam reconstruction conjecture, which posits that graphs with $n \ge 3$ are determined (up to isomorphism) by their multiset of node-deleted subgraphs. $\Delta$-DRESS computes a continuous relaxation of this deck.
+The multiset $\{\!\{ \text{DRESS}(G \setminus \{v\}) : v \in V \}\!\}$ is directly analogous to the \textit{deck} in the Kelly--Ulam reconstruction conjecture, which posits that graphs with $n \ge 3$ are determined (up to isomorphism) by their multiset of vertex-deleted subgraphs. $\Delta$-DRESS computes a continuous relaxation of this deck.
+
+\subsection{Relationship to $\nabla$-DRESS}
+Vertex individualization is at least as informative as vertex deletion: from the individualized graph $G^{(\alpha,v)}$, one can identify the marked edges and recover the structure of $G \setminus \{v\}$, but not vice versa. The Reconstruction Conjecture~\cite{kelly1942congruence, ulam1960collection} asserts that for $n \geq 3$, the deck of vertex-deleted subgraphs determines the graph up to isomorphism; if true, the two operators are equivalent in discriminative power.
 
 \subsection{Properties}
 
 \textbf{Complexity:} $\mathcal{O}(n \cdot I \cdot m \cdot T)$, where $T$ is the number of triangles and $I$ is the number of iterations per deletion. The computation for each deleted subgraph is entirely independent, making $\Delta$-DRESS embarrassingly parallel.
 
 \subsection{Expressiveness}
-$\Delta$-DRESS empirically distinguishes the following non-isomorphic pairs:
-\begin{itemize}
-    \item \textbf{Rook vs.\ Shrikhande:} Successfully distinguished (SRG$(16,6,2,2)$; confounds 3-WL).
-    \item \textbf{Chang Graphs:} Distinguished all 6 pairs among T(8) and the three Chang graphs (SRG$(28,12,6,4)$; confound 3-WL).
-    \item \textbf{$2 \times C_4$ vs.\ $C_8$:} Successfully distinguished (both 2-regular on 8 nodes).
-    \item \textbf{Petersen vs.\ Pentagonal Prism:} Successfully distinguished (both 3-regular on 10 nodes).
-\end{itemize}
+$\Delta$-DRESS empirically produces identical outcomes to $\nabla$-DRESS on all tested graph pairs, including all SRG pairs listed above.
 
 \section{Family Structure}
-The DRESS variants introduced in this paper form a nested hierarchy with an orthogonal composition operator:
+The DRESS variants introduced in this paper form a nested hierarchy with two orthogonal composition operators:
 \[
 \text{Generalized-DRESS} \supset \text{Motif-DRESS} \supset \text{Original-DRESS}
 \]
 
-$\Delta(\cdot)$ is an \textbf{orthogonal wrapper} applicable to any of the above: given any DRESS variant $\mathcal{F}$,
+$\nabla(\cdot)$ and $\Delta(\cdot)$ are \textbf{orthogonal wrappers} applicable to any of the above: given any DRESS variant $\mathcal{F}$,
 \[
-\Delta\text{-DRESS}(\mathcal{F}) = \{\!\{ \mathcal{F}(G \setminus \{v\}) : v \in V \}\!\}
+\nabla\text{-DRESS}(\mathcal{F}, \alpha) = \{\!\{ \mathcal{F}(G^{(\alpha,v)}) : v \in V \}\!\} \qquad \Delta\text{-DRESS}(\mathcal{F}) = \{\!\{ \mathcal{F}(G \setminus \{v\}) : v \in V \}\!\}
 \]
-The node-deletion strategy is independent of the choice of $\mathcal{N}$, $f$, and $g$. All experiments in Section~6 use $\mathcal{F} = \text{Original-DRESS}$, but $\Delta$-Motif-DRESS or $\Delta$-Cosine-DRESS are equally valid and may offer complementary expressiveness. The deletion strategy generalizes naturally to $\Delta^k$-DRESS, which runs DRESS on all $\binom{n}{k}$ node-deleted subgraphs; we leave the exploration of this hierarchy to future work.
+Both strategies are independent of the choice of $\mathcal{N}$, $f$, and $g$. $\nabla$-DRESS breaks symmetry by weight individualization; $\Delta$-DRESS by deletion. Both generalize to depth $k$: $\nabla^k$ individualizes all $\binom{n}{k}$ vertex subsets, and $\Delta^k$ runs DRESS on all $\binom{n}{k}$ vertex-deleted subgraphs. The exploration of this iterated hierarchy and its relationship to the WL hierarchy is developed in the companion paper~\cite{castrillo2026kdress}.
 
 \section{Conclusion}
-We presented the DRESS family, a hierarchy of continuous structural refinement algorithms. Starting from Original-DRESS---a single equation proposed in 2018---we showed it distinguishes graphs that 1-WL cannot (Theorem~\ref{thm:dress-gt-1wl}). We then generalized it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions. Generalized-DRESS abstracts further, opening the aggregation function and norm as free parameters. $\Delta$-DRESS extends the framework by running DRESS on each node-deleted subgraph, connecting it to the Kelly--Ulam reconstruction conjecture and empirically distinguishing Strongly Regular Graphs that confound 3-WL, while maintaining scalability well below $\mathcal{O}(n^3)$ for sparse graphs. These results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL, without the prohibitive computational cost of higher-order WL tests. An open-source implementation with bindings for C, C++, Python, Rust, Go, Julia, R, MATLAB, and WebAssembly is publicly available at \url{https://github.com/velicast/dress-graph}.
+We presented the DRESS family, a hierarchy of continuous structural refinement algorithms. Starting from Original-DRESS---a single equation proposed in 2018---we showed it distinguishes graphs that 1-WL cannot (Theorem~\ref{thm:dress-gt-1wl}). We then generalized it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions. Generalized-DRESS abstracts further, opening the aggregation function and norm as free parameters. $\nabla$-DRESS extends the framework via vertex individualization (multiplicative weight marking), connecting directly to the WL hierarchy, while $\Delta$-DRESS extends it by running DRESS on each vertex-deleted subgraph, connecting it to the Kelly--Ulam reconstruction conjecture. Both empirically distinguish Strongly Regular Graphs that confound 3-WL, while maintaining scalability well below $\mathcal{O}(n^3)$ for sparse graphs. These results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL, without the prohibitive computational cost of higher-order WL tests. An open-source implementation with bindings for C, C++, Python, Rust, Go, Julia, R, MATLAB, and WebAssembly is publicly available at \url{https://github.com/velicast/dress-graph}.
 
 \bibliographystyle{plain}
 \bibliography{refs}

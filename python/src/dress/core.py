@@ -26,9 +26,11 @@ from typing import List, Optional, Sequence
 __all__ = [
     "dress_fit",
     "delta_dress_fit",
+    "nabla_dress_fit",
     "DRESS",
     "DRESSResult",
     "DeltaDRESSResult",
+    "NablaDRESSResult",
     "FitResult",
     "Variant",
     "UNDIRECTED",
@@ -75,11 +77,30 @@ class DeltaDRESSResult:
 
     histogram: List[int]
     hist_size: int
+    multisets: object = None     # Optional 2D array (C(N,k) x E), NaN = removed
+    num_subgraphs: int = 0
 
     def __repr__(self) -> str:
         total = sum(self.histogram)
         return (
             f"DeltaDRESSResult(hist_size={self.hist_size}, "
+            f"total_count={total})"
+        )
+
+
+@dataclass
+class NablaDRESSResult:
+    """Result of :func:`nabla_dress_fit`."""
+
+    histogram: List[int]
+    hist_size: int
+    multisets: object = None     # Optional 2D array (C(N,k) x E)
+    num_subsets: int = 0
+
+    def __repr__(self) -> str:
+        total = sum(self.histogram)
+        return (
+            f"NablaDRESSResult(hist_size={self.hist_size}, "
             f"total_count={total})"
         )
 
@@ -607,6 +628,7 @@ def delta_dress_fit(
     n_vertices: int,
     sources: Sequence[int],
     targets: Sequence[int],
+    weights: Optional[Sequence[float]] = None,
     k: int = 0,
     variant: Variant = UNDIRECTED,
     max_iterations: int = 100,
@@ -625,6 +647,8 @@ def delta_dress_fit(
         Number of vertices (0-indexed).
     sources, targets : sequence of int
         Edge endpoint arrays (same length).
+    weights : sequence of float, optional
+        Per-edge weights (``None`` for unweighted, i.e. all 1).
     k : int
         Deletion depth — number of vertices removed per subset.
         ``k=0`` runs DRESS on the original graph (Δ^0).
@@ -650,10 +674,15 @@ def delta_dress_fit(
 
     src = list(sources)
     tgt = list(targets)
+    wgt: Optional[List[float]] = list(weights) if weights is not None else None
 
-    def _fit_and_accumulate(sub_n: int, sub_src: List[int], sub_tgt: List[int]) -> None:
+    def _fit_and_accumulate(sub_n: int, sub_src: List[int], sub_tgt: List[int],
+                            sub_wgt: Optional[List[float]] = None) -> None:
         """Build a DRESS graph, fit, and bin edge values into *hist*."""
-        g = DRESS(sub_n, sub_src, sub_tgt, variant=variant)
+        if sub_wgt is not None:
+            g = DRESS(sub_n, sub_src, sub_tgt, weights=sub_wgt, variant=variant)
+        else:
+            g = DRESS(sub_n, sub_src, sub_tgt, variant=variant)
         g.fit(max_iterations=max_iterations, epsilon=epsilon)
         for e in range(g.n_edges):
             d = g._edge_dress[e]
@@ -666,7 +695,8 @@ def delta_dress_fit(
 
     # ── k = 0: Δ^0 — full graph ────────────────────────────────
     if k == 0:
-        _fit_and_accumulate(N, list(src), list(tgt))
+        _fit_and_accumulate(N, list(src), list(tgt),
+                            list(wgt) if wgt is not None else None)
         return DeltaDRESSResult(histogram=hist, hist_size=nbins)
 
     # ── k >= N: no valid deletion subsets ───────────────────────
@@ -702,18 +732,139 @@ def delta_dress_fit(
             # Build subgraph edge list
             sub_src: List[int] = []
             sub_tgt: List[int] = []
+            sub_wgt_list: Optional[List[float]] = [] if wgt is not None else None
             for e in range(E):
                 mu = node_map[src[e]]
                 mv = node_map[tgt[e]]
                 if mu >= 0 and mv >= 0:
                     sub_src.append(mu)
                     sub_tgt.append(mv)
+                    if sub_wgt_list is not None:
+                        sub_wgt_list.append(wgt[e])
 
             if sub_src:
-                _fit_and_accumulate(sub_n, sub_src, sub_tgt)
+                _fit_and_accumulate(sub_n, sub_src, sub_tgt, sub_wgt_list)
         else:
             # Descend: seed next depth from current value
             depth += 1
             combo[depth] = combo[depth - 1]  # incremented at top
 
     return DeltaDRESSResult(histogram=hist, hist_size=nbins)
+
+
+def nabla_dress_fit(
+    n_vertices: int,
+    sources: Sequence[int],
+    targets: Sequence[int],
+    weights: Optional[Sequence[float]] = None,
+    k: int = 0,
+    nabla_weight: float = 2.0,
+    variant: Variant = UNDIRECTED,
+    max_iterations: int = 100,
+    epsilon: float = 1e-6,
+    precompute: bool = False,
+) -> NablaDRESSResult:
+    """Compute the ∇^k-DRESS histogram.
+
+    Exhaustively individualizes all k-vertex subsets from the graph by
+    multiplying incident edge weights by *nabla_weight*, runs DRESS on
+    the same topology, and accumulates every converged edge value into a
+    single histogram binned by *epsilon*.
+
+    Parameters
+    ----------
+    n_vertices : int
+        Number of vertices (0-indexed).
+    sources, targets : sequence of int
+        Edge endpoint arrays (same length).
+    weights : sequence of float, optional
+        Per-edge weights (``None`` for unweighted, i.e. all 1).
+    k : int
+        Individualization depth — number of vertices marked per subset.
+        ``k=0`` runs DRESS on the original graph (∇^0).
+    nabla_weight : float
+        Multiplicative factor for edges incident to marked vertices
+        (default 2.0).
+    variant : Variant
+        ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
+    max_iterations : int
+        Maximum DRESS iterations per round (default 100).
+    epsilon : float
+        Convergence threshold and histogram bin width (default 1e-6).
+    precompute : bool
+        Pre-compute common-neighbour index (default ``False``).
+
+    Returns
+    -------
+    NablaDRESSResult
+        Dataclass with ``histogram`` (list of int, length ``hist_size``)
+        and ``hist_size``.
+    """
+    N = n_vertices
+    E = len(sources)
+    nbins = int(2.0 / epsilon) + 1
+    hist: List[int] = [0] * nbins
+
+    src = list(sources)
+    tgt = list(targets)
+    wgt: Optional[List[float]] = list(weights) if weights is not None else None
+    base_weights: List[float] = [1.0] * E if wgt is None else list(wgt)
+
+    # Build incidence index: for each vertex, which edge indices touch it?
+    inci: List[List[int]] = [[] for _ in range(N)]
+    for e in range(E):
+        inci[src[e]].append(e)
+        inci[tgt[e]].append(e)
+
+    def _fit_nabla(edge_weights: List[float]) -> None:
+        """Build a DRESS graph with given weights, fit, and bin values."""
+        g = DRESS(N, list(src), list(tgt), weights=list(edge_weights),
+                  variant=variant)
+        g.fit(max_iterations=max_iterations, epsilon=epsilon)
+        for e in range(g.n_edges):
+            d = g._edge_dress[e]
+            b = int(d / epsilon)
+            if b < 0:
+                b = 0
+            elif b >= nbins:
+                b = nbins - 1
+            hist[b] += 1
+
+    # ── k = 0: ∇^0 — full graph, no marking ──────────────────────
+    if k == 0:
+        _fit_nabla(base_weights)
+        return NablaDRESSResult(histogram=hist, hist_size=nbins)
+
+    # ── k >= N: no valid subsets ──────────────────────────────────
+    if k >= N:
+        return NablaDRESSResult(histogram=hist, hist_size=nbins)
+
+    # ── k >= 1: iterative DFS over C(N, k) combinations ──────────
+    combo = [0] * k
+    combo[0] = -1
+    depth = 0
+
+    while depth >= 0:
+        combo[depth] += 1
+
+        # Upper bound: ensure room for remaining slots.
+        if combo[depth] > N - k + depth:
+            depth -= 1
+            continue
+
+        if depth == k - 1:
+            # Complete k-subset: combo[0..k-1]
+            # Apply nabla weights: multiply incident edge weights
+            marked_weights = list(base_weights)
+            for j in range(k):
+                v = combo[j]
+                for ei in inci[v]:
+                    marked_weights[ei] *= nabla_weight
+
+            _fit_nabla(marked_weights)
+        else:
+            # Descend: seed next depth from current value
+            depth += 1
+            combo[depth] = combo[depth - 1]  # incremented at top
+
+    return NablaDRESSResult(histogram=hist, hist_size=nbins)

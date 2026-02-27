@@ -63,6 +63,8 @@ PYBIND11_MODULE(_core, m) {
             "Result returned by DRESS.delta_fit()")
         .def_readonly("hist_size",  &DRESS::DeltaFitResult::hist_size,
                       "Number of histogram bins (floor(2/epsilon) + 1)")
+        .def_readonly("num_subgraphs", &DRESS::DeltaFitResult::num_subgraphs,
+                      "Number of subgraphs (rows in multisets), 0 if not requested")
         .def_property_readonly("histogram", [](const DRESS::DeltaFitResult& r) {
             return py::array_t<int64_t>(
                 {static_cast<py::ssize_t>(r.histogram.size())},
@@ -70,10 +72,65 @@ PYBIND11_MODULE(_core, m) {
                 r.histogram.data()
             );
         }, "Histogram as NumPy int64 array (copy)")
+        .def_property_readonly("multisets", [](const DRESS::DeltaFitResult& r)
+                -> py::object {
+            if (r.multisets.empty())
+                return py::none();
+            // Return as 2D NumPy array (num_subgraphs x E)
+            py::ssize_t nrows = r.num_subgraphs;
+            py::ssize_t ncols = nrows > 0
+                ? static_cast<py::ssize_t>(r.multisets.size()) / nrows
+                : 0;
+            py::array_t<double> arr(
+                {nrows, ncols},
+                {static_cast<py::ssize_t>(ncols * sizeof(double)),
+                 static_cast<py::ssize_t>(sizeof(double))},
+                r.multisets.data()
+            );
+            return std::move(arr);
+        }, "Per-subgraph DRESS values as 2D NumPy array (C(N,k) x E), or None")
         .def("__repr__", [](const DRESS::DeltaFitResult& r) {
             int64_t total = 0;
             for (auto v : r.histogram) total += v;
             return "DeltaFitResult(hist_size=" + std::to_string(r.hist_size)
+                 + ", total_values=" + std::to_string(total) + ")";
+        });
+
+    // ---- NablaFitResult ----
+
+    py::class_<DRESS::NablaFitResult>(m, "NablaFitResult",
+            "Result returned by DRESS.nabla_fit()")
+        .def_readonly("hist_size",  &DRESS::NablaFitResult::hist_size,
+                      "Number of histogram bins (floor(2/epsilon) + 1)")
+        .def_readonly("num_subsets", &DRESS::NablaFitResult::num_subsets,
+                      "Number of subsets C(N,k) (rows in multisets)")
+        .def_property_readonly("histogram", [](const DRESS::NablaFitResult& r) {
+            return py::array_t<int64_t>(
+                {static_cast<py::ssize_t>(r.histogram.size())},
+                {sizeof(int64_t)},
+                r.histogram.data()
+            );
+        }, "Histogram as NumPy int64 array (copy)")
+        .def_property_readonly("multisets", [](const DRESS::NablaFitResult& r)
+                -> py::object {
+            if (r.multisets.empty())
+                return py::none();
+            py::ssize_t nrows = r.num_subsets;
+            py::ssize_t ncols = nrows > 0
+                ? static_cast<py::ssize_t>(r.multisets.size()) / nrows
+                : 0;
+            py::array_t<double> arr(
+                {nrows, ncols},
+                {static_cast<py::ssize_t>(ncols * sizeof(double)),
+                 static_cast<py::ssize_t>(sizeof(double))},
+                r.multisets.data()
+            );
+            return std::move(arr);
+        }, "Per-subset DRESS values as 2D NumPy array (C(N,k) x E), or None")
+        .def("__repr__", [](const DRESS::NablaFitResult& r) {
+            int64_t total = 0;
+            for (auto v : r.histogram) total += v;
+            return "NablaFitResult(hist_size=" + std::to_string(r.hist_size)
                  + ", total_values=" + std::to_string(total) + ")";
         });
 
@@ -152,6 +209,7 @@ FitResult
              py::arg("k"),
              py::arg("max_iterations"),
              py::arg("epsilon"),
+             py::arg("keep_multisets") = false,
              R"doc(
 Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS
 on each subgraph, and accumulate edge values into a histogram.
@@ -164,11 +222,46 @@ max_iterations : int
     Maximum DRESS iterations per subgraph.
 epsilon : float
     Convergence tolerance and histogram bin width.
+keep_multisets : bool
+    If True, also return per-subgraph edge DRESS values in a
+    2D array of shape (C(N,k), E).  NaN marks removed edges.
 
 Returns
 -------
 DeltaFitResult
-    Result with `histogram` (NumPy int64 array) and `hist_size` fields.
+    Result with `histogram`, `hist_size`, and optionally `multisets`.
+)doc")
+
+        .def("nabla_fit", &DRESS::nablaFit,
+             py::arg("k"),
+             py::arg("max_iterations"),
+             py::arg("epsilon"),
+             py::arg("nabla_weight") = 2.0,
+             py::arg("keep_multisets") = false,
+             R"doc(
+Run Nabla^k-DRESS: enumerate all C(N,k) vertex subsets,
+anchor nabla_weight to edges incident to the subset, fit DRESS on
+the same topology, and accumulate edge values into a histogram.
+
+Parameters
+----------
+k : int
+    Individualization depth (0 = original graph, 1 = single vertex, etc.)
+max_iterations : int
+    Maximum DRESS iterations per individualization.
+epsilon : float
+    Convergence tolerance and histogram bin width.
+nabla_weight : float
+    Weight assigned to edges incident to the individualized vertices.
+    Default is 2.0.
+keep_multisets : bool
+    If True, also return per-subset edge DRESS values in a
+    2D array of shape (C(N,k), E).
+
+Returns
+-------
+NablaFitResult
+    Result with `histogram`, `hist_size`, and optionally `multisets`.
 )doc")
 
         // --- scalar accessors ---

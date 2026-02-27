@@ -24,6 +24,7 @@
 
 #include "dress/dress.h"
 #include "dress/delta_dress.h"
+#include "dress/nabla_dress.h"
 #include <igraph/igraph.h>
 #include <stdint.h>
 
@@ -151,6 +152,66 @@ void dress_igraph_delta_free(dress_igraph_delta_result_t *result);
  * initialized by the caller.
  */
 int dress_igraph_delta_to_vector(const dress_igraph_delta_result_t *result,
+                                 igraph_vector_t *out);
+
+/* ------------------------------------------------------------------ */
+/*  ∇^k-DRESS result structure                                         */
+/* ------------------------------------------------------------------ */
+
+typedef struct dress_igraph_nabla_result_t {
+    int64_t *histogram;  /* [hist_size] bin counts (caller frees via nabla_free) */
+    int      hist_size;  /* number of bins = floor(2/epsilon) + 1               */
+} dress_igraph_nabla_result_t;
+
+/* ------------------------------------------------------------------ */
+/*  ∇^k-DRESS API                                                      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * dress_igraph_nabla_compute
+ *
+ * Run ∇^k-DRESS on an igraph graph and write results into `result`.
+ *
+ * Parameters:
+ *   graph        — pointer to a valid igraph_t (not modified)
+ *   weight_attr  — name of an edge attribute holding weights, or NULL
+ *   variant      — DRESS_VARIANT_UNDIRECTED / DIRECTED / FORWARD / BACKWARD
+ *   k            — individualization depth: vertices marked per subset
+ *   max_iters    — maximum DRESS iterations per marked subgraph
+ *   epsilon      — convergence threshold and histogram bin width
+ *   nabla_weight — multiplicative weight for edges incident to the
+ *                  individualized vertices (default: 2.0)
+ *   precompute   — 1 to precompute neighborhood intercepts, 0 otherwise
+ *   result       — output struct (caller-allocated, contents filled in)
+ *
+ * Returns 0 on success, non-zero on error.
+ */
+int dress_igraph_nabla_compute(const igraph_t *graph,
+                               const char *weight_attr,
+                               dress_variant_t variant,
+                               int k,
+                               int max_iters,
+                               double epsilon,
+                               double nabla_weight,
+                               int precompute,
+                               dress_igraph_nabla_result_t *result);
+
+/*
+ * dress_igraph_nabla_free
+ *
+ * Free all heap memory inside a dress_igraph_nabla_result_t.
+ * The struct itself is not freed (it may be stack-allocated).
+ */
+void dress_igraph_nabla_free(dress_igraph_nabla_result_t *result);
+
+/*
+ * dress_igraph_nabla_to_vector
+ *
+ * Copy the histogram from a nabla result into an igraph_vector_t,
+ * ordered by bin index [0..hist_size-1].  The igraph_vector_t must be
+ * initialized by the caller.
+ */
+int dress_igraph_nabla_to_vector(const dress_igraph_nabla_result_t *result,
                                  igraph_vector_t *out);
 
 #ifdef __cplusplus

@@ -83,7 +83,7 @@ DRESS achieves 100 % accuracy on standard isomorphism benchmarks (MiVIA, IsoBenc
 Original-DRESS **distinguishes beyond 1-WL**: it
 [distinguishes the prism graph from \(K_{3,3}\)](#dress-distinguishes-graphs-that-1-wl-cannot),
 a pair that 1-WL provably cannot separate
-(see [Theorem 1 in the k-DRESS paper](https://arxiv.org/abs/2602.20833)).
+(see [Theorem 1 in the DRESS paper](https://arxiv.org/abs/2602.20833)).
 It still fails on CFI constructions and strongly regular graphs with
 identical parameters.
 See [Properties — WL comparison](../theory/properties.md#weisfeilerleman-wl-color-refinement)
@@ -236,7 +236,7 @@ all edges are structurally indistinguishable.
 
 ## Higher-order DRESS for harder cases
 
-The [k-DRESS paper](https://arxiv.org/abs/2602.20833) introduces Motif-DRESS and Δ-DRESS as principled extensions within the DRESS framework itself.
+The [DRESS paper](https://arxiv.org/abs/2602.20833) introduces Motif-DRESS and Δ-DRESS, and the [WL hierarchy paper](https://arxiv.org/abs/2602.21557) introduces ∇^k-DRESS as the primary higher-order variant.
 
 ### Motif-DRESS (K4 clique)
 
@@ -270,4 +270,8 @@ The specific SRG pairs tested above are known to be indistinguishable by 3-WL; e
 | Chang-1 vs Chang-3 | **PASS** | |
 | Chang-2 vs Chang-3 | **PASS** | |
 
+### ∇^k-DRESS (Higher-Order Refinement)
 
+∇^k-DRESS individualizes $k$ vertices at a time (reweighting their edges to break symmetry) instead of deleting them, preserving the full graph structure. This is provably at least as powerful as $(k{+}2)$-WL. See [the full ∇^k-DRESS treatment](../theory/nabla-k-dress.md) for CFI benchmark results and complexity analysis.
+
+See also [Δ^k-DRESS (Iterated Deletion)](../theory/delta-ell-dress.md) for the generalization of Δ-DRESS to arbitrary depth.

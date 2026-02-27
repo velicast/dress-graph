@@ -2,8 +2,8 @@
 
 ## Core concepts
 
-All bindings expose the same underlying algorithm through two main function
-calls: **`dress_fit()`** and **`delta_dress_fit()`**.
+All bindings expose the same underlying algorithm through three main function
+calls: **`dress_fit()`**, **`delta_dress_fit()`**, and **`nabla_dress_fit()`**.
 
 **`dress_fit()`** — Pass in the graph (vertices, edges, optional
 weights), and get back a result struct containing every output array.
@@ -24,7 +24,15 @@ each subgraph, and accumulates edge values into a histogram.
 result = delta_dress_fit(n_vertices, sources, targets, [k], [epsilon], ...)
 ```
 
-The result contains a histogram of integer counts and its size.
+**`nabla_dress_fit()`** — Compute the \(\nabla^k\)-DRESS histogram.
+Enumerates all \(\binom{N}{k}\) vertex-individualization subsets, runs DRESS on
+each subproblem, and accumulates edge values into a histogram.
+
+```
+result = nabla_dress_fit(n_vertices, sources, targets, [k], [epsilon], ...)
+```
+
+Both `delta_dress_fit` and `nabla_dress_fit` return a histogram of integer counts and its size.
 Each bin \(i\) counts edge values in \([i \cdot \varepsilon,\; (i+1) \cdot \varepsilon)\),
 with the top bin (index \(\lfloor 2/\varepsilon \rfloor\)) holding
 exact value 2.0.  The number of bins is \(\lfloor 2/\varepsilon \rfloor + 1\).
@@ -52,7 +60,7 @@ exact value 2.0.  The number of bins is \(\lfloor 2/\varepsilon \rfloor + 1\).
 | `iterations` | int | Number of iterations performed |
 | `delta` | float | Final maximum per-edge change |
 
-### `delta_dress_fit` result
+### `delta_dress_fit` / `nabla_dress_fit` result
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -107,6 +115,23 @@ g->N, g->E         /* vertex / edge count */
 int64_t *delta_fit(p_dress_graph_t g,
                    int k,              /* deletion depth (0 = original) */
                    int iterations,     /* max DRESS iterations per subgraph */
+                   double epsilon,     /* convergence tol / bin width */
+                   int *hist_size,     /* [out] number of bins */
+                   int keep_multisets,     /* if non-zero, allocate multisets */
+                   double **multisets,     /* [out] internally-allocated C(N,k)*E, or NULL */
+                   int64_t *num_subgraphs);/* [out] C(N,k), or NULL */
+```
+
+#### ∇^k-DRESS (C)
+
+```c
+#include "dress/nabla_dress.h"
+
+/* Compute the ∇^k-DRESS histogram (individualization).
+   Returns a malloc'd int64_t array; caller must free(). */
+int64_t *nabla_fit(p_dress_graph_t g,
+                   int k,              /* individualization depth */
+                   int iterations,     /* max DRESS iterations per subproblem */
                    double epsilon,     /* convergence tol / bin width */
                    int *hist_size);    /* [out] number of bins */
 ```
@@ -200,12 +225,15 @@ g.edgeTargets()        // const int*
 ```cpp
 // Method on the DRESS class
 DRESS::DeltaFitResult deltaFit(int k, int maxIterations,
-                                double epsilon);
+                                double epsilon,
+                                bool keepMultisets = false);
 
 // Result struct
 struct DeltaFitResult {
     std::vector<int64_t> histogram;   // bin counts
     int                  hist_size;   // floor(2/epsilon) + 1
+    std::vector<double>  multisets;   // C(N,k)*E row-major, NaN = removed
+    int64_t              num_subgraphs; // C(N,k)
 };
 ```
 
@@ -259,6 +287,26 @@ result.hist_size    # int, floor(2/epsilon) + 1
 ```
 
 The same function is available in pure Python via `from dress.core import delta_dress_fit`.
+
+#### ∇^k-DRESS (Python)
+
+```python
+from dress import nabla_dress_fit
+
+result = nabla_dress_fit(
+    n_vertices, sources, targets,
+    k=1,                    # individualization depth (default 0)
+    variant=UNDIRECTED,     # graph variant
+    max_iterations=100,     # per-subproblem iterations
+    epsilon=1e-6,           # convergence tol / bin width
+    precompute=False,       # precompute intercepts
+)
+
+result.histogram    # list[int], length = hist_size
+result.hist_size    # int, floor(2/epsilon) + 1
+```
+
+The same function is available in pure Python via `from dress.core import nabla_dress_fit`.
 
 For advanced use (e.g. re-fitting with different parameters), the
 low-level `DRESS` class is also available:
@@ -359,6 +407,26 @@ r.histogram     // Vec<i64>
 r.hist_size     // i32
 ```
 
+#### ∇^k-DRESS (Rust)
+
+```rust
+use dress_graph::{DRESS, Variant, NablaDressResult, DressError};
+
+let result: Result<NablaDressResult, DressError> =
+    DRESS::nabla_fit(
+        n, sources, targets,
+        k,                          // individualization depth
+        max_iterations,             // per-subproblem
+        epsilon,                    // convergence tol / bin width
+        Variant::Undirected,
+        precompute,                 // bool
+    );
+
+let r = result.unwrap();
+r.histogram     // Vec<i64>
+r.hist_size     // i32
+```
+
 ### Go
 
 ```go
@@ -395,6 +463,24 @@ result, err := dress.DeltaFit(
     dress.Undirected,       // Variant
     100,                    // maxIterations
     1e-3,                   // epsilon (bin width)
+    false,                  // precompute
+)
+
+result.Histogram   // []int64
+result.HistSize    // int
+```
+
+#### ∇^k-DRESS (Go)
+
+```go
+result, err := dress.NablaFit(
+    n,                      // int, number of vertices
+    sources,                // []int32
+    targets,                // []int32
+    k,                      // int, individualization depth
+    dress.Undirected,       // Variant
+    100,                    // maxIterations
+    1e-6,                   // epsilon
     false,                  // precompute
 )
 
@@ -447,6 +533,26 @@ result.histogram   // Float64Array (int64 counts cast to double)
 result.histSize    // number
 ```
 
+#### ∇^k-DRESS (WASM)
+
+```javascript
+import { nablaDressFit } from './dress.js';
+
+const result = await nablaDressFit({
+    numVertices: n,
+    sources,                              // Int32Array or number[]
+    targets,                              // Int32Array or number[]
+    k: 1,                                 // individualization depth (default 0)
+    variant: Variant.UNDIRECTED,          // default
+    maxIterations: 100,                   // default
+    epsilon: 1e-6,                        // bin width
+    precompute: false,                    // default
+});
+
+result.histogram   // Float64Array (int64 counts cast to double)
+result.histSize    // number
+```
+
 ### Julia
 
 ```julia
@@ -476,6 +582,20 @@ result = delta_dress_fit(N, sources, targets;
                          variant = UNDIRECTED,
                          max_iterations = 100,
                          epsilon = 1e-3,
+                         precompute = false)
+
+result.histogram    # Vector{Int64}
+result.hist_size    # Int
+```
+
+#### ∇^k-DRESS (Julia)
+
+```julia
+result = nabla_dress_fit(N, sources, targets;
+                         k = 1,                     # individualization depth
+                         variant = UNDIRECTED,
+                         max_iterations = 100,
+                         epsilon = 1e-6,
                          precompute = false)
 
 result.histogram    # Vector{Int64}
@@ -526,6 +646,24 @@ result$histogram    # numeric [hist_size]
 result$hist_size    # integer
 ```
 
+#### ∇^k-DRESS (R)
+
+```r
+result <- nabla_dress_fit(
+  n_vertices,
+  sources,
+  targets,
+  k              = 1L,              # individualization depth
+  variant        = DRESS_UNDIRECTED,
+  max_iterations = 100L,
+  epsilon        = 1e-6,
+  precompute     = FALSE
+)
+
+result$histogram    # numeric [hist_size]
+result$hist_size    # integer
+```
+
 ### MATLAB / Octave
 
 ```matlab
@@ -554,6 +692,20 @@ result = delta_dress_fit(n_vertices, sources, targets, ...
     'Variant',       0,      ...   % 0=UNDIRECTED
     'MaxIterations', 100,    ...
     'Epsilon',       1e-3,   ...   % bin width
+    'Precompute',    false);
+
+result.histogram    % double [hist_size x 1]
+result.hist_size    % int32
+```
+
+#### ∇^k-DRESS (MATLAB / Octave)
+
+```matlab
+result = nabla_dress_fit(n_vertices, sources, targets, ...
+    'K',             1,      ...   % individualization depth (default 0)
+    'Variant',       0,      ...   % 0=UNDIRECTED
+    'MaxIterations', 100,    ...
+    'Epsilon',       1e-6,   ...   % bin width
     'Precompute',    false);
 
 result.histogram    % double [hist_size x 1]

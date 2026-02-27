@@ -33,6 +33,23 @@ print(f"Histogram size: {result.hist_size}")
 print(f"Total edge-values: {sum(result.histogram)}")
 ```
 
+### ∇^k-DRESS (Python)
+
+```python
+from dress import nabla_dress_fit
+
+result = nabla_dress_fit(
+    n_vertices=4,
+    sources=[0, 1, 2, 0],
+    targets=[1, 2, 3, 3],
+    k=1,            # individualize 1 vertex at a time
+    epsilon=1e-6,
+)
+
+print(f"Histogram size: {result.hist_size}")
+print(f"Total edge-values: {sum(result.histogram)}")
+```
+
 ## Rust
 
 ```rust
@@ -68,6 +85,23 @@ let r = DRESS::delta_fit(
 println!("hist_size: {}", r.hist_size);
 let total: i64 = r.histogram.iter().sum();
 println!("total edge-values: {}", total);
+```
+
+### ∇^k-DRESS (Rust)
+
+```rust
+use dress_graph::{DRESS, Variant};
+
+let r = DRESS::nabla_fit(
+    4, vec![0, 1, 2, 0], vec![1, 2, 3, 3],
+    1,        // k = 1
+    100,      // max iterations
+    1e-6,     // epsilon
+    Variant::Undirected,
+    false,    // precompute
+).unwrap();
+
+println!("hist_size: {}", r.hist_size);
 ```
 
 ## C
@@ -124,7 +158,38 @@ int main(void) {
                                          DRESS_VARIANT_UNDIRECTED, 0);
 
     int hist_size;
-    int64_t *hist = delta_fit(g, 1, 100, 1e-3, &hist_size);
+    int64_t *hist = delta_fit(g, 1, 100, 1e-3, &hist_size, 0, NULL, NULL);
+
+    int64_t total = 0;
+    for (int i = 0; i < hist_size; i++) total += hist[i];
+    printf("hist_size: %d, total: %ld\n", hist_size, total);
+
+    free(hist);
+    free_dress_graph(g);
+    return 0;
+}
+```
+
+### ∇^k-DRESS (C)
+
+```c
+#include "dress/dress.h"
+#include "dress/nabla_dress.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void) {
+    int N = 4, E = 4;
+    int *U = malloc(E * sizeof *U);
+    int *V = malloc(E * sizeof *V);
+    U[0]=0; V[0]=1; U[1]=1; V[1]=2;
+    U[2]=2; V[2]=3; U[3]=0; V[3]=3;
+
+    p_dress_graph_t g = init_dress_graph(N, E, U, V, NULL,
+                                         DRESS_VARIANT_UNDIRECTED, 0);
+
+    int hist_size;
+    int64_t *hist = nabla_fit(g, 1, 100, 1e-6, &hist_size);
 
     int64_t total = 0;
     for (int i = 0; i < hist_size; i++) total += hist[i];
@@ -174,6 +239,22 @@ int main() {
 }
 ```
 
+### ∇^k-DRESS (C++)
+
+```cpp
+#include <cstdio>
+#include "dress/dress.hpp"
+
+int main() {
+    DRESS g(4, {0,1,2,0}, {1,2,3,3}, DRESS_VARIANT_UNDIRECTED, false);
+    auto r = g.nablaFit(1, 100, 1e-6);
+
+    int64_t total = 0;
+    for (auto c : r.histogram) total += c;
+    printf("hist_size: %d, total: %ld\n", r.hist_size, total);
+}
+```
+
 ## Go
 
 ```go
@@ -201,6 +282,19 @@ r, err := dress.DeltaFit(4,
 total := int64(0)
 for _, c := range r.Histogram { total += c }
 fmt.Printf("hist_size: %d, total: %d\n", r.HistSize, total)
+```
+
+### ∇^k-DRESS (Go)
+
+```go
+r, err := dress.NablaFit(4,
+    []int32{0, 1, 2, 0},
+    []int32{1, 2, 3, 3},
+    1,                   // k
+    dress.Undirected,
+    100, 1e-6, false)
+
+fmt.Printf("hist_size: %d\n", r.HistSize)
 ```
 
 ## JavaScript (WASM)
@@ -237,6 +331,22 @@ for (const c of r.histogram) total += c;
 console.log(`hist_size: ${r.histSize}, total: ${total}`);
 ```
 
+### ∇^k-DRESS (WASM)
+
+```javascript
+import { nablaDressFit } from './dress.js';
+
+const r = await nablaDressFit({
+    numVertices: 4,
+    sources: [0, 1, 2, 0],
+    targets: [1, 2, 3, 3],
+    k: 1,
+    epsilon: 1e-6,
+});
+
+console.log(`hist_size: ${r.histSize}`);
+```
+
 ## R
 
 ```r
@@ -262,6 +372,14 @@ cat("hist_size:", r$hist_size, "\n")
 cat("total:", sum(r$histogram), "\n")
 ```
 
+### ∇^k-DRESS (R)
+
+```r
+r <- nabla_dress_fit(4L, c(0L,1L,2L,0L), c(1L,2L,3L,3L),
+                     k = 1L, epsilon = 1e-6)
+cat("hist_size:", r$hist_size, "\n")
+```
+
 ## Julia
 
 ```julia
@@ -283,6 +401,14 @@ println("hist_size: ", r.hist_size)
 println("total: ", sum(r.histogram))
 ```
 
+### ∇^k-DRESS (Julia)
+
+```julia
+r = nabla_dress_fit(4, Int32[0,1,2,0], Int32[1,2,3,3];
+                    k=1, epsilon=1e-6)
+println("hist_size: ", r.hist_size)
+```
+
 ## MATLAB / Octave
 
 ```matlab
@@ -298,4 +424,12 @@ disp(result.edge_dress);
 r = delta_dress_fit(4, int32([0 1 2 0]), int32([1 2 3 3]), ...
                     'K', 1, 'Epsilon', 1e-3);
 fprintf('hist_size: %d, total: %d\n', r.hist_size, sum(r.histogram));
+```
+
+### ∇^k-DRESS (MATLAB / Octave)
+
+```matlab
+r = nabla_dress_fit(4, int32([0 1 2 0]), int32([1 2 3 3]), ...
+                    'K', 1, 'Epsilon', 1e-6);
+fprintf('hist_size: %d\n', r.hist_size);
 ```

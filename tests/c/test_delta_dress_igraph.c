@@ -253,10 +253,13 @@ static void test_delta_to_vector(void)
     ASSERT_EQ_INT((int)igraph_vector_size(&vec), result.hist_size,
                   "vector size == hist_size");
 
+    int vec_match = 1;
     for (int i = 0; i < result.hist_size; i++) {
-        ASSERT(VECTOR(vec)[i] == (double)result.histogram[i],
-               "vector matches histogram");
+        if (VECTOR(vec)[i] != (double)result.histogram[i]) {
+            vec_match = 0; break;
+        }
     }
+    ASSERT(vec_match, "vector matches histogram for all bins");
 
     igraph_vector_destroy(&vec);
     dress_igraph_delta_free(&result);
@@ -292,17 +295,16 @@ static void test_cross_validate_with_c_api(void)
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
     int hist_size = 0;
-    int64_t *histogram = delta_fit(dg, 1, 100, 1e-6, &hist_size);
+    int64_t *histogram = delta_fit(dg, 1, 100, 1e-6, &hist_size, 0, NULL, NULL);
     free_dress_graph(dg);
 
     /* Compare histogram sizes */
     ASSERT_EQ_INT(ig_result.hist_size, hist_size, "same hist_size");
 
     /* Compare every bin */
-    for (int i = 0; i < hist_size; i++) {
-        ASSERT(ig_result.histogram[i] == histogram[i],
-               "igraph matches raw C delta histogram");
-    }
+    ASSERT(memcmp(ig_result.histogram, histogram,
+                  (size_t)hist_size * sizeof(int64_t)) == 0,
+           "igraph matches raw C delta histogram for all bins");
 
     free(histogram);
     dress_igraph_delta_free(&ig_result);
@@ -326,10 +328,9 @@ static void test_delta_precompute(void)
                                1, 100, 1e-6, 1, &r_yes);
 
     ASSERT_EQ_INT(r_no.hist_size, r_yes.hist_size, "same hist_size");
-    for (int i = 0; i < r_no.hist_size; i++) {
-        ASSERT(r_no.histogram[i] == r_yes.histogram[i],
-               "precompute gives same histogram");
-    }
+    ASSERT(memcmp(r_no.histogram, r_yes.histogram,
+                  (size_t)r_no.hist_size * sizeof(int64_t)) == 0,
+           "precompute gives same histogram for all bins");
 
     dress_igraph_delta_free(&r_no);
     dress_igraph_delta_free(&r_yes);

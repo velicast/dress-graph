@@ -3,6 +3,7 @@
 
 #include "dress/dress.h"
 #include "dress/delta_dress.h"
+#include "dress/nabla_dress.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -120,6 +121,8 @@ public:
     struct DeltaFitResult {
         std::vector<int64_t> histogram;   // bin-count vector of length hist_size
         int                  hist_size;   // floor(2/epsilon) + 1
+        std::vector<double>  multisets;   // C(N,k) * E row-major, NaN = removed
+        int64_t              num_subgraphs; // C(N,k) — number of rows
     };
 
     // Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets,
@@ -129,17 +132,81 @@ public:
     //   k              – deletion depth (0 = original graph)
     //   maxIterations  – max DRESS iterations per subgraph
     //   epsilon        – convergence tolerance and bin width
+    //   keepMultisets  – if true, also return per-subgraph edge values
     //
-    // Returns a DeltaFitResult with the histogram and its size.
-    DeltaFitResult deltaFit(int k, int maxIterations, double epsilon) {
+    // Returns a DeltaFitResult with the histogram (and optionally multisets).
+    DeltaFitResult deltaFit(int k, int maxIterations, double epsilon,
+                            bool keepMultisets = false) {
         ensureValid();
         int hsize = 0;
+        int E = g_->E;
+
+        double *ms_ptr = nullptr;
+        int64_t cnk = 0;
         int64_t *h = ::delta_fit(g_, k, maxIterations, epsilon,
-                                 &hsize);
+                                 &hsize,
+                                 keepMultisets ? 1 : 0,
+                                 keepMultisets ? &ms_ptr : nullptr,
+                                 &cnk);
         if (!h) throw std::runtime_error("DRESS: delta_fit returned NULL");
+
         DeltaFitResult result;
         result.hist_size = hsize;
         result.histogram.assign(h, h + hsize);
+        result.num_subgraphs = cnk;
+        if (keepMultisets && ms_ptr) {
+            result.multisets.assign(ms_ptr, ms_ptr + cnk * E);
+            std::free(ms_ptr);
+        }
+        std::free(h);
+        return result;
+    }
+
+    // ------- individualized fitting (Indi^k-DRESS) -------
+
+    struct NablaFitResult {
+        std::vector<int64_t> histogram;   // bin-count vector of length hist_size
+        int                  hist_size;   // floor(2/epsilon) + 1
+        std::vector<double>  multisets;   // C(N,k) * E row-major
+        int64_t              num_subsets;  // C(N,k) — number of rows
+    };
+
+    // Run Nabla^k-DRESS: enumerate all C(N,k) vertex subsets,
+    // anchor nabla_weight to edges incident to the subset, fit DRESS,
+    // and accumulate into a histogram.
+    //
+    // Parameters:
+    //   k              – individualization depth (0 = original graph)
+    //   maxIterations  – max DRESS iterations per subset
+    //   epsilon        – convergence tolerance and bin width
+    //   nablaWeight     – weight for incident edges (default 2.0)
+    //   keepMultisets  – if true, also return per-subset edge values
+    //
+    // Returns an NablaFitResult with the histogram (and optionally multisets).
+    NablaFitResult nablaFit(int k, int maxIterations, double epsilon,
+                          double nablaWeight = 2.0,
+                          bool keepMultisets = false) {
+        ensureValid();
+        int hsize = 0;
+        int E = g_->E;
+
+        double *ms_ptr = nullptr;
+        int64_t cnk = 0;
+        int64_t *h = ::nabla_fit(g_, k, maxIterations, epsilon, nablaWeight,
+                                &hsize,
+                                keepMultisets ? 1 : 0,
+                                keepMultisets ? &ms_ptr : nullptr,
+                                &cnk);
+        if (!h) throw std::runtime_error("DRESS: nabla_fit returned NULL");
+
+        NablaFitResult result;
+        result.hist_size = hsize;
+        result.histogram.assign(h, h + hsize);
+        result.num_subsets = cnk;
+        if (keepMultisets && ms_ptr) {
+            result.multisets.assign(ms_ptr, ms_ptr + cnk * E);
+            std::free(ms_ptr);
+        }
         std::free(h);
         return result;
     }

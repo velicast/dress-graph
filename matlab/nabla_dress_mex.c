@@ -1,15 +1,16 @@
 /*
- * delta_dress_mex.c — MATLAB MEX gateway for delta-k-DRESS.
+ * nabla_dress_mex.c — MATLAB MEX gateway for nabla-k-DRESS.
  *
  * Compile from the matlab/ directory:
  *
  *   mex -O -I../libdress/include CFLAGS="$CFLAGS -fopenmp" LDFLAGS="$LDFLAGS -fopenmp" ...
- *       delta_dress_mex.c ../libdress/src/dress.c ../libdress/src/delta_dress.c -lm
+ *       nabla_dress_mex.c ../libdress/src/dress.c ../libdress/src/nabla_dress.c -lm
  *
  * Usage in MATLAB:
  *
- *   result = delta_dress_mex(n_vertices, sources, targets, ...
- *                            k, variant, max_iterations, epsilon, precompute);
+ *   result = nabla_dress_mex(n_vertices, sources, targets, weights, ...
+ *                            k, nabla_weight, variant, max_iterations, ...
+ *                            epsilon, precompute);
  *
  *   result is a struct with fields:
  *     .histogram  — double [hist_size x 1]  bin counts (double for MATLAB compat)
@@ -21,7 +22,7 @@
 #include "matrix.h"
 #endif
 #include "dress/dress.h"
-#include "dress/delta_dress.h"
+#include "dress/nabla_dress.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -32,7 +33,7 @@
 static double get_scalar_double(const mxArray *arg, const char *name)
 {
     if (!mxIsDouble(arg) || mxIsComplex(arg) || mxGetNumberOfElements(arg) != 1)
-        mexErrMsgIdAndTxt("delta_dress:invalidInput",
+        mexErrMsgIdAndTxt("nabla_dress:invalidInput",
                           "%s must be a real scalar double.", name);
     return mxGetScalar(arg);
 }
@@ -49,7 +50,7 @@ static int get_scalar_int(const mxArray *arg, const char *name)
         v = mxGetScalar(arg);
         return (int)v;
     }
-    mexErrMsgIdAndTxt("delta_dress:invalidInput",
+    mexErrMsgIdAndTxt("nabla_dress:invalidInput",
                       "%s must be a scalar integer (int32 or double).", name);
     return 0;
 }
@@ -64,12 +65,12 @@ static int *to_int_array(const mxArray *arg, int expected_len, const char *name)
     int i;
 
     if ((int)n != expected_len)
-        mexErrMsgIdAndTxt("delta_dress:invalidInput",
+        mexErrMsgIdAndTxt("nabla_dress:invalidInput",
                           "%s must have %d elements.", name, expected_len);
 
     out = (int *)malloc(expected_len * sizeof(int));
     if (!out)
-        mexErrMsgIdAndTxt("delta_dress:malloc", "malloc failed for %s.", name);
+        mexErrMsgIdAndTxt("nabla_dress:malloc", "malloc failed for %s.", name);
 
     if (mxIsInt32(arg)) {
         memcpy(out, mxGetData(arg), expected_len * sizeof(int));
@@ -79,7 +80,7 @@ static int *to_int_array(const mxArray *arg, int expected_len, const char *name)
             out[i] = (int)p[i];
     } else {
         free(out);
-        mexErrMsgIdAndTxt("delta_dress:invalidInput",
+        mexErrMsgIdAndTxt("nabla_dress:invalidInput",
                           "%s must be int32 or double.", name);
     }
     return out;
@@ -91,14 +92,17 @@ static int *to_int_array(const mxArray *arg, int expected_len, const char *name)
 
 /*
  * MATLAB signature:
- *   result = delta_dress_mex(n_vertices, sources, targets, ...
- *                            k, variant, max_iterations, epsilon, precompute)
+ *   result = nabla_dress_mex(n_vertices, sources, targets, weights, ...
+ *                            k, nabla_weight, variant, max_iterations, ...
+ *                            epsilon, precompute)
  *
  * Inputs:
  *   n_vertices       — scalar int: number of vertices
  *   sources          — int32 or double [E x 1]: edge sources (0-based)
  *   targets          — int32 or double [E x 1]: edge targets (0-based)
- *   k                — scalar int: vertices to remove (0 = original graph)
+ *   weights          — double [E x 1] or []: edge weights
+ *   k                — scalar int: vertices to individualize (0 = original)
+ *   nabla_weight     — scalar double: multiplicative factor for marked edges
  *   variant          — scalar int: 0..3
  *   max_iterations   — scalar int: max fitting iterations
  *   epsilon          — scalar double: convergence / bin width
@@ -112,7 +116,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[])
 {
     int N, E, k, variant_val, max_iterations, precompute;
-    double epsilon;
+    double epsilon, nabla_weight;
     int    *U, *V;
     double *W = NULL;
     p_dress_graph_t g;
@@ -123,14 +127,13 @@ void mexFunction(int nlhs, mxArray *plhs[],
     mxArray *m_hist, *m_hsize;
 
     /* ---- argument count check ---- */
-    if (nrhs < 8 || nrhs > 9)
-        mexErrMsgIdAndTxt("delta_dress:nrhs",
-            "8 or 9 inputs required:\n"
-            "  delta_dress_mex(n_vertices, sources, targets, weights, k, "
-            "variant, max_iterations, epsilon, precompute)\n"
-            "  weights may be [] for unweighted.");
+    if (nrhs != 10)
+        mexErrMsgIdAndTxt("nabla_dress:nrhs",
+            "10 inputs required:\n"
+            "  nabla_dress_mex(n_vertices, sources, targets, weights, k, "
+            "nabla_weight, variant, max_iterations, epsilon, precompute)");
     if (nlhs > 1)
-        mexErrMsgIdAndTxt("delta_dress:nlhs", "At most one output.");
+        mexErrMsgIdAndTxt("nabla_dress:nlhs", "At most one output.");
 
     /* ---- unpack scalars ---- */
     N              = get_scalar_int(prhs[0], "n_vertices");
@@ -143,38 +146,39 @@ void mexFunction(int nlhs, mxArray *plhs[],
     /* ---- unpack weights (prhs[3], may be empty) ---- */
     if (!mxIsEmpty(prhs[3])) {
         W = (double *)malloc(E * sizeof(double));
-        if (!W) { free(U); free(V); mexErrMsgIdAndTxt("delta_dress:oom", "malloc failed"); }
+        if (!W) { free(U); free(V); mexErrMsgIdAndTxt("nabla_dress:oom", "malloc failed"); }
         double *src_w = mxGetPr(prhs[3]);
         for (int i = 0; i < E; i++) W[i] = src_w[i];
     }
 
     k              = get_scalar_int(prhs[4], "k");
-    variant_val    = get_scalar_int(prhs[5], "variant");
-    max_iterations = get_scalar_int(prhs[6], "max_iterations");
-    epsilon        = get_scalar_double(prhs[7], "epsilon");
-    precompute     = (nrhs > 8) ? get_scalar_int(prhs[8], "precompute") : 0;
+    nabla_weight   = get_scalar_double(prhs[5], "nabla_weight");
+    variant_val    = get_scalar_int(prhs[6], "variant");
+    max_iterations = get_scalar_int(prhs[7], "max_iterations");
+    epsilon        = get_scalar_double(prhs[8], "epsilon");
+    precompute     = get_scalar_int(prhs[9], "precompute");
 
     /* ---- validate ---- */
     if (variant_val < 0 || variant_val > 3) {
         free(U); free(V); free(W);
-        mexErrMsgIdAndTxt("delta_dress:invalidVariant",
+        mexErrMsgIdAndTxt("nabla_dress:invalidVariant",
                           "variant must be 0..3.");
     }
     if (k < 0) {
         free(U); free(V); free(W);
-        mexErrMsgIdAndTxt("delta_dress:invalidK", "k must be >= 0.");
+        mexErrMsgIdAndTxt("nabla_dress:invalidK", "k must be >= 0.");
     }
 
     /* ---- build graph (takes ownership of U, V, W) ---- */
     g = init_dress_graph(N, E, U, V, W,
                          (dress_variant_t)variant_val, precompute);
     if (!g)
-        mexErrMsgIdAndTxt("delta_dress:initFailed",
+        mexErrMsgIdAndTxt("nabla_dress:initFailed",
                           "init_dress_graph returned NULL.");
 
-    /* ---- compute delta-k-dress ---- */
-    hist = delta_fit(g, k, max_iterations, epsilon, &hist_size,
-                    0, NULL, NULL);
+    /* ---- compute nabla-k-dress ---- */
+    hist = nabla_fit(g, k, max_iterations, epsilon, nabla_weight,
+                     &hist_size, 0, NULL, NULL);
 
     /* ---- pack output struct ---- */
     plhs[0] = mxCreateStructMatrix(1, 1, 2, field_names);

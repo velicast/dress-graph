@@ -22,9 +22,9 @@
 \maketitle
 
 \begin{abstract}
-The Cai--F\"urer--Immerman (CFI) construction provides the canonical family of hard instances for the Weisfeiler--Leman (WL) hierarchy: distinguishing the two non-isomorphic CFI graphs over a base graph $G$ requires WL of dimension at least the treewidth of $G$. In this paper, we introduce two iterated extensions of the DRESS continuous structural refinement framework: $\nabla^k$-DRESS, which applies $k$ levels of vertex individualization (weight anchoring), and $\Delta^k$-DRESS, which applies $k$ levels of vertex deletion. Both enumerate all $\binom{n}{k}$ vertex subsets and collect DRESS fingerprints into a multiset.
+The Cai--F\"urer--Immerman (CFI) construction provides the canonical family of hard instances for the Weisfeiler--Leman (WL) hierarchy: distinguishing the two non-isomorphic CFI graphs over a base graph $G$ requires WL of dimension at least the treewidth of $G$. In this paper, we introduce two iterated extensions of the DRESS continuous structural refinement framework: $\nabla^k$-DRESS, which applies $k$ levels of vertex individualization (weight marking), and $\Delta^k$-DRESS, which applies $k$ levels of vertex deletion. Both enumerate all $\binom{n}{k}$ vertex subsets and collect DRESS fingerprints into a multiset.
 
-We prove that $\nabla^k$-DRESS is at least as powerful as $(k+2)$-WL: the base case shows that Original-DRESS is at least as powerful as $2$-WL via the injectivity of the Birkhoff contraction fixed point, and an inductive argument lifts the result by one WL level per individualization depth. The proof is unconditional, requiring no assumptions on graph reconstructibility. We also show that $\Delta^k$-DRESS is at least as powerful as $\nabla^k$-DRESS in the limit $\alpha\to 0$ (where $\alpha$ is the individualization weight), establishing $\Delta^k$-DRESS as a practical variant.
+We prove that $\nabla^k$-DRESS is at least as powerful as $(k+2)$-WL: the base case shows that Original-DRESS is at least as powerful as $2$-WL via the injectivity of the Birkhoff contraction fixed point, and an inductive argument lifts the result by one WL level per individualization depth. We also show that $\Delta^k$-DRESS achieves the same guarantee under the Reconstruction Conjecture, establishing $\Delta^k$-DRESS as a practical variant.
 
 We verify the theoretical bound empirically on the canonical CFI benchmark: Original-DRESS ($k=0$) already distinguishes $\text{CFI}(K_3)$ (requiring 2-WL), and each additional level extends the range by one WL level, up to $k=3$ matching 5-WL. Crucially, $k=3$ fails on $\text{CFI}(K_7)$ (requiring 6-WL), confirming a sharp boundary at $(k+2)$-WL. Both $\nabla^k$ and $\Delta^k$ produce identical outcomes on every CFI pair tested. The computational cost is $\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$---polynomial in $n$ for fixed $k$. These results establish iterated DRESS as a practical framework for systematically climbing the WL hierarchy.
 \end{abstract}
@@ -35,18 +35,18 @@ The Weisfeiler--Leman (WL) hierarchy \cite{weisfeiler1968reduction} is the stand
 
 The CFI construction \cite{cai1992optimal} provides the canonical hard instances: for any base graph $G$, it produces a pair of non-isomorphic graphs $\text{CFI}(G)$ and $\text{CFI}'(G)$ that $j$-WL cannot distinguish whenever $j$ is below the treewidth of $G$. In particular, $\text{CFI}(K_n)$ requires $(n{-}1)$-WL, making these the hardest known instances for the WL hierarchy.
 
-In the companion paper \cite{castrillo2026dress}, we introduced the DRESS family of continuous structural refinement algorithms and showed that $\Delta$-DRESS---which runs DRESS on each single-node-deleted subgraph---empirically distinguishes strongly regular graphs that confound 3-WL. The connection to the Kelly--Ulam reconstruction conjecture \cite{kelly1942congruence, ulam1960collection} was noted: the multiset of node-deleted DRESS fingerprints is a continuous relaxation of the reconstruction deck.
+In the companion paper \cite{castrillo2026dress}, we introduced the DRESS family of continuous structural refinement algorithms. $\nabla$-DRESS, which marks each vertex by applying a multiplicative weight to its incident edges, was shown to empirically distinguish strongly regular graphs that confound 3-WL. Its deletion-based counterpart $\Delta$-DRESS produces identical outcomes and connects to the Kelly--Ulam reconstruction conjecture \cite{kelly1942congruence, ulam1960collection}.
 
-In this paper, we introduce $\nabla^k$-DRESS, which replaces vertex deletion with vertex \emph{individualization} (anchoring a multiplicative weight $\alpha \neq 1$ to edges incident to the selected vertices). This is the natural continuous analogue of the classical individualization operator that defines the WL hierarchy: $(j{+}1)$-WL is equivalent to running $j$-WL over all single-vertex individualizations \cite{cai1992optimal, grohe2017descriptive}. Because individualization preserves the full graph topology, the proof that $\nabla^k$-DRESS $\geq (k{+}2)$-WL goes through cleanly by induction, with no assumptions on graph reconstructibility.
+In this paper, we introduce $\nabla^k$-DRESS, which applies $k$ levels of vertex \emph{individualization} (marking the selected vertices by applying a multiplicative weight $\alpha \neq 1$ to their incident edges). This is the natural continuous analogue of the classical individualization operator that defines the WL hierarchy: $(j{+}1)$-WL is equivalent to running $j$-WL over all single-vertex individualizations \cite{cai1992optimal, grohe2017descriptive}.
 
 We also retain $\Delta^k$-DRESS (vertex deletion) as a practical variant: it is empirically indistinguishable from $\nabla^k$-DRESS on every CFI pair we tested, and avoids the need for a weight parameter. We verify both variants on the CFI family: $k=0$ (Original-DRESS) already distinguishes $\text{CFI}(K_3)$, $k=1$ reaches $\text{CFI}(K_4)$, $k=2$ reaches $\text{CFI}(K_5)$, and $k=3$ reaches $\text{CFI}(K_6)$.
 
 \subsection{Contributions}
 \begin{enumerate}
     \item We define $\nabla^k$-DRESS (individualization) and $\Delta^k$-DRESS (deletion) formally and analyze their complexity.
-    \item We prove unconditionally that $\nabla^k$-DRESS is at least as powerful as $(k+2)$-WL: Original-DRESS matches $2$-WL via injectivity of the Birkhoff contraction fixed point, and each individualization level adds one WL level by induction (Theorems~\ref{thm:dress-2wl} and~\ref{thm:nabla-k-wl}).
+    \item We prove that $\nabla^k$-DRESS is at least as powerful as $(k+2)$-WL: Original-DRESS matches $2$-WL via injectivity of the Birkhoff contraction fixed point, and each individualization level adds one WL level by induction (Theorems~\ref{thm:dress-2wl} and~\ref{thm:nabla-k-wl}).
     \item We show that $\Delta^k$-DRESS is an empirically equivalent practical variant that avoids the weight parameter, and is provably equivalent under the Reconstruction Conjecture.
-    \item We verify the theoretical bound empirically on the canonical CFI benchmark family, showing that both $\nabla^k$ and $\Delta^k$ distinguish $\text{CFI}(K_{k+3})$ for each $k = 0, 1, 2, 3$, and fail at the next level, covering WL levels 2 through 5.
+    \item We verify the theoretical bound empirically on the canonical CFI benchmark family, showing that $\nabla^k$-DRESS distinguishes $\text{CFI}(K_{k+3})$ for each $k = 0, 1, 2, 3$, and fails at the next level, covering WL levels 2 through 5. $\Delta^k$-DRESS produces identical outcomes on all tested pairs.
     \item We observe a sharp boundary at $(k+2)$-WL: $k=3$ fails on $\text{CFI}(K_7)$ (requiring 6-WL).
     \item We discuss the theoretical implications and open questions raised by these results.
 \end{enumerate}
@@ -61,55 +61,41 @@ The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs
 d_{uv}^{(t+1)} = \frac{\sum_{x \in N[u] \cap N[v]} \bigl(d_{ux}^{(t)} + d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
 \end{equation}
 
-where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the node norm and $N[u] = N(u) \cup \{u\}$ is the closed neighborhood. Self-loops are added to every node; the invariant $d_{uu} = 2$ holds at every iteration. The equation converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any positive initialization \cite{castrillo2026dress}.
+where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the vertex norm and $N[u] = N(u) \cup \{u\}$ is the closed neighborhood. Self-loops are added to every vertex; the invariant $d_{uu} = 2$ holds at every iteration. The equation converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any positive initialization \cite{castrillo2026dress}.
 
-The graph fingerprint can be represented equivalently as the sorted vector $\text{sort}(d^*)$ or as the histogram $h(d^*)$; both uniquely identify the multiset of converged edge values. Since DRESS values are bounded in $[0, 2]$ and convergence tolerance is $\epsilon = 10^{-6}$, each edge value maps to one of $\lceil 2/\epsilon \rceil = 2 \times 10^{6}$ integer bins (the bin count is determined by the convergence tolerance), so the histogram is a compact bin-count vector. In this work we use the histogram representation. Two graphs are declared non-isomorphic if their fingerprints differ.
+The graph fingerprint can be represented equivalently as the sorted vector $\text{sort}(d^*)$ or as the histogram $h(d^*)$; both uniquely identify the multiset of converged edge values. Since DRESS values are bounded in $[0, 2]$ and convergence tolerance is $\epsilon = 10^{-6}$, each edge value maps to one of $\lceil 2/\epsilon \rceil = 2 \times 10^{6}$ integer bins (the bin count is determined by the convergence tolerance), so the histogram is a compact bin-count vector. In the experiments we use the histogram representation for efficiency; in the proofs we work with the full multiset fingerprint. Two graphs are declared non-isomorphic if their fingerprints differ.
+
+\subsection{\texorpdfstring{$\nabla$}{Nabla}-DRESS}
+
+$\nabla$-DRESS \cite{castrillo2026dress} breaks symmetry by \emph{marking} a vertex: applying a distinguished multiplicative weight $\alpha \neq 1$ to its incident edges, while preserving the full graph topology. Given a graph $G = (V, E, w)$ with symmetric weight function $w : E \to \mathbb{R}_{>0}$ and a vertex $v$, the individualized graph $G^{(\alpha,v)}$ has weights:
+\[
+w^{(\alpha,v)}(e) = \begin{cases} \alpha \cdot w(e) & \text{if } v \in e, \\ w(e) & \text{otherwise.} \end{cases}
+\]
+The $\nabla$-DRESS fingerprint is the multiset of per-vertex DRESS fingerprints:
+\[
+\nabla\text{-DRESS}(\mathcal{F}, G, \alpha) = \{\!\{ \operatorname{sort}(\mathcal{F}(G^{(\alpha,v)})) : v \in V \}\!\}
+\]
+Equivalently, a pooled histogram can be formed by accumulating all converged edge values across all $n$ individualizations.
 
 \subsection{\texorpdfstring{$\Delta$}{Delta}-DRESS}
 
-$\Delta$-DRESS \cite{castrillo2026dress} runs DRESS on each node-deleted subgraph:
+$\Delta$-DRESS \cite{castrillo2026dress} runs DRESS on each vertex-deleted subgraph:
 
 \begin{definition}[$\Delta$-DRESS]
-Given a graph $G = (V, E)$ and a DRESS variant $\mathcal{F}$, the $\Delta$-DRESS fingerprint is the histogram obtained by running $\mathcal{F}$ on each node-deleted subgraph and accumulating every edge similarity value into a single bin-count vector:
+Given a graph $G = (V, E)$ and a DRESS variant $\mathcal{F}$, the $\Delta$-DRESS fingerprint is the histogram obtained by running $\mathcal{F}$ on each vertex-deleted subgraph and accumulating every edge similarity value into a single bin-count vector:
 \[
 \Delta\text{-DRESS}(\mathcal{F}, G) = h\!\left(\bigsqcup_{v \in V} \mathcal{F}(G \setminus \{v\})\right)
 \]
 where $G \setminus \{v\}$ is the subgraph induced by $V \setminus \{v\}$, $\bigsqcup$ denotes multiset union, and $h$ maps each value to its integer bin in a fixed-size array.
 \end{definition}
 
-\subsection{CFI Graphs}
+\section{\texorpdfstring{$\nabla^k$}{Nabla-k}-DRESS and \texorpdfstring{$\Delta^k$}{Delta-k}-DRESS}
 
-The CFI construction \cite{cai1992optimal} is defined over a base graph $G = (V_G, E_G)$. For each vertex $v \in V_G$, a ``gadget'' replaces $v$ with a set of vertices encoding its incident edges. Two non-isomorphic graphs $\text{CFI}(G)$ and $\text{CFI}'(G)$ are produced by twisting the parity of one gadget. The key property is:
+We now define the iterated individualization operator and its deletion-based counterpart.
 
-\begin{theorem}[Cai, F\"urer, Immerman \cite{cai1992optimal}]
-The $j$-WL algorithm cannot distinguish $\text{CFI}(G)$ from $\text{CFI}'(G)$ whenever $j < \text{tw}(G)$, where $\text{tw}(G)$ is the treewidth of $G$.
-\end{theorem}
-
-For the complete graph $K_n$, the treewidth is $n - 1$, so $\text{CFI}(K_n)$ requires $(n{-}1)$-WL. In particular:
-\begin{itemize}
-    \item $\text{CFI}(K_3)$: requires 2-WL.
-    \item $\text{CFI}(K_5)$: requires 4-WL, operating on 4-tuples---$\mathcal{O}(n^5)$ per iteration.
-    \item $\text{CFI}(K_6)$: requires 5-WL, operating on 5-tuples---$\mathcal{O}(n^6)$ per iteration.
-\end{itemize}
-
-\section{\texorpdfstring{$\Delta^k$}{Delta-k}-DRESS}
-
-We now define the iterated deletion operator.
-
-\begin{definition}[$\Delta^k$-DRESS]
-\label{def:delta-k}
-For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k \ge 0$:
-\[
-\Delta^k\text{-DRESS}(\mathcal{F}, G) = h\!\left(\bigsqcup_{\substack{S \subset V,\; |S|=k}} \mathcal{F}(G \setminus S)\right)
-\]
-where $G \setminus S$ is the subgraph induced by $V \setminus S$, and $h$ maps the pooled edge values into a histogram.
-\end{definition}
-
-At depth $k$, $\Delta^k$-DRESS computes DRESS on all $\binom{n}{k}$ subgraphs obtained by removing exactly $k$ vertices. Every individual edge similarity value from every subgraph is added to a single histogram of $G$. Two graphs are compared by checking equality of their histograms. Individual subgraph fingerprints are not recoverable from the pooled histogram. The memory footprint is constant regardless of $k$, whereas storing the raw multiset of $\binom{n}{k} \cdot |E|$ floating-point values would be prohibitive.
-
-\begin{definition}[$\nabla^k$-DRESS --- Individualization variant]
+\begin{definition}[$\nabla^k$-DRESS --- Individualization]
 \label{def:nabla-k}
-For a graph $G = (V, E, w)$ with edge weights $w : E \to \mathbb{R}_{>0}$, a DRESS variant $\mathcal{F}$, an individualization weight $\alpha \neq 1$, and an individualization depth $k \ge 0$:
+For a graph $G = (V, E, w)$ with symmetric edge weights $w : E \to \mathbb{R}_{>0}$, a DRESS variant $\mathcal{F}$, an individualization weight $\alpha \neq 1$, and an individualization depth $k \ge 0$:
 \[
 \nabla^k\text{-DRESS}(\mathcal{F}, G, \alpha) = h\!\left(\bigsqcup_{\substack{S \subset V,\; |S|=k}} \mathcal{F}(G^{(\alpha,S)})\right)
 \]
@@ -120,21 +106,30 @@ w^{(\alpha,S)}(e) = \begin{cases} \alpha \cdot w(e) & \text{if } e \cap S \neq \
 The histogram $h$ pools edge values across all $\binom{n}{k}$ individualized runs.
 \end{definition}
 
-The key difference from $\Delta^k$-DRESS is that individualization preserves the full graph topology: all edges remain present, with anchored edges receiving a distinguished weight. This makes $\nabla^k$-DRESS the natural continuous analogue of the classical individualization operator that defines the WL hierarchy.
+Individualization preserves the full graph topology: all edges remain present, with marked edges receiving a distinguished weight. This makes $\nabla^k$-DRESS the natural continuous analogue of the classical individualization operator that defines the WL hierarchy. At depth $k$, $\nabla^k$-DRESS computes DRESS on all $\binom{n}{k}$ weight-modified copies of $G$. Every individual edge similarity value from every run is added to a single histogram. Two graphs are compared by checking equality of their histograms. The memory footprint is constant regardless of $k$, whereas storing the raw multiset of $\binom{n}{k} \cdot |E|$ floating-point values would be prohibitive.
+
+\begin{definition}[$\Delta^k$-DRESS --- Deletion variant]
+\label{def:delta-k}
+For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k \ge 0$:
+\[
+\Delta^k\text{-DRESS}(\mathcal{F}, G) = h\!\left(\bigsqcup_{\substack{S \subset V,\; |S|=k}} \mathcal{F}(G \setminus S)\right)
+\]
+where $G \setminus S$ is the subgraph induced by $V \setminus S$, and $h$ maps the pooled edge values into a histogram.
+\end{definition}
 
 \begin{proposition}[Complexity]
-The time complexity of both $\Delta^k$-DRESS and $\nabla^k$-DRESS is
+The time complexity of both $\nabla^k$-DRESS and $\Delta^k$-DRESS is
 \[
 \mathcal{O}\!\left(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\right)
 \]
-where $n = |V|$, $m = |E|$, $d_{\max}$ is the maximum degree, and $I$ is the number of DRESS iterations per subgraph. The $\binom{n}{k}$ computations are entirely independent and embarrassingly parallel. $\nabla^k$-DRESS has a small constant-factor advantage: it avoids rebuilding the graph for each subset, requiring only $\mathcal{O}(d_{\max} \cdot k)$ weight modifications per subset.
+where $n = |V|$, $m = |E|$, $d_{\max}$ is the maximum degree, and $I$ is the number of DRESS iterations per subgraph. The $\binom{n}{k}$ computations are entirely independent and embarrassingly parallel. $\nabla^k$-DRESS has a small constant-factor advantage: it requires only $\mathcal{O}(d_{\max} \cdot k)$ weight modifications per subset, operating on the full graph without rebuilding.
 \end{proposition}
 
 \paragraph{Comparison with \texorpdfstring{$j$}{j}-WL.} The cost of $j$-WL is $\mathcal{O}(n^{j+1})$ per iteration. For $\text{CFI}(K_6)$, 5-WL costs $\mathcal{O}(n^6)$, while $\Delta^3$-DRESS and $\nabla^3$-DRESS cost $\mathcal{O}(n^3 \cdot I \cdot m \cdot d_{\max}) = \mathcal{O}(n^3 \cdot m \cdot d_{\max})$ (with $I$ constant).
 
 \section{Expressiveness Relative to the Weisfeiler--Lehman Hierarchy}
 
-We now prove that $\nabla^k$-DRESS is at least as powerful as the $(k+2)$-dimensional Weisfeiler--Lehman ($(k+2)$-WL) test. The proof is unconditional: it requires no assumptions on graph reconstructibility. We first establish the base case, then lift the result by induction on the individualization depth. We subsequently discuss $\Delta^k$-DRESS as a practical variant.
+We now prove that $\nabla^k$-DRESS is at least as powerful as the $(k+2)$-dimensional Weisfeiler--Lehman ($(k+2)$-WL) test. We first establish the base case, then lift the result by induction on the individualization depth. We subsequently discuss $\Delta^k$-DRESS as a practical variant.
 
 We first establish a key property of the DRESS fixed-point operator.
 
@@ -237,11 +232,6 @@ Now, vertex individualization in $\nabla$-DRESS (multiplying incident edge weigh
 Since the multisets of $(k+1)$-WL individualizations differ between $G$ and $H$, the multisets of $\nabla^{k-1}$-DRESS fingerprints over all single-vertex individualizations differ. This difference is preserved in the multiset union, completing the induction.
 \end{proof}
 
-\begin{remark}[Unconditional proof]
-\label{rem:unconditional}
-The proof above is unconditional: it does not require the Reconstruction Conjecture or any other unproven hypothesis. This is because vertex individualization (weight modification) preserves the entire graph, whereas vertex deletion discards topology. The decomposition $G^{(\alpha,S)} = (G^{(\alpha,\{v\})})^{(\alpha,S')}$ is exact, with no information loss.
-\end{remark}
-
 \begin{remark}
 The proof is stated for the triangle-based Original-DRESS update. It extends verbatim to any Motif-DRESS variant (with the base case becoming $\geq(r+1)$-WL when the motif $M$ has size $r+1$). The individualization mechanism that climbs the hierarchy remains unchanged.
 \end{remark}
@@ -260,7 +250,7 @@ For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k
 
 \begin{remark}[Individualization vs.\ Deletion]
 \label{rem:nabla-vs-delta}
-Vertex individualization is at least as informative as vertex deletion: given $G^{(\alpha,\{v\})}$ (all edges present, anchored edges marked), one can recover the structure of $G \setminus \{v\}$ by examining only the non-anchored edges. The converse does not hold in general: the vertex-deleted subgraph $G \setminus \{v\}$ loses all information about the edges incident to $v$ and how they connect to the rest of the graph.
+Vertex individualization is at least as informative as vertex deletion: given $G^{(\alpha,\{v\})}$ (all edges present, marked edges distinguished), one can recover the structure of $G \setminus \{v\}$ by examining only the unmarked edges. The converse does not hold in general: the vertex-deleted subgraph $G \setminus \{v\}$ loses all information about the edges incident to $v$ and how they connect to the rest of the graph.
 
 The Reconstruction Conjecture \cite{kelly1942congruence, ulam1960collection} asserts that for $n \geq 3$, a graph is determined (up to isomorphism) by its deck of $n$ vertex-deleted subgraphs. If this conjecture holds, then any graph property distinguishable via individualization is also distinguishable via deletion, and the two operators become equivalent in discriminative power.
 \end{remark}
@@ -286,17 +276,32 @@ Both $\nabla^k$ and $\Delta^k$-DRESS use pooled histograms in practice. The mult
 
 All experiments use Original-DRESS as the base variant $\mathcal{F}$, with convergence tolerance $\epsilon = 10^{-6}$ and a maximum of 100 iterations. In every case, convergence was reached before the iteration limit.
 
-\subsection{\texorpdfstring{$\Delta^k$}{Delta-k}-DRESS and \texorpdfstring{$\nabla^k$}{Nabla-k}-DRESS on \texorpdfstring{CFI$(K_n)$}{CFI(Kn)}}
+\subsection{CFI Graphs}
 
-We test both $\Delta^k$-DRESS and $\nabla^k$-DRESS (with $\alpha = 2$) for $k = 0, 1, 2, 3$ on CFI pairs over complete graphs $K_n$ ($n = 3, \ldots, 10$). Both variants produce identical outcomes (distinguish/fail) on every pair tested. Higher depths on larger base graphs were not executed due to time constraints (marked --- in the table).
+The CFI construction \cite{cai1992optimal} is defined over a base graph $G = (V_G, E_G)$. For each vertex $v \in V_G$, a ``gadget'' replaces $v$ with a set of vertices encoding its incident edges. Two non-isomorphic graphs $\text{CFI}(G)$ and $\text{CFI}'(G)$ are produced by twisting the parity of one gadget. The key property is:
+
+\begin{theorem}[Cai, F\"urer, Immerman \cite{cai1992optimal}]
+The $j$-WL algorithm cannot distinguish $\text{CFI}(G)$ from $\text{CFI}'(G)$ whenever $j < \text{tw}(G)$, where $\text{tw}(G)$ is the treewidth of $G$.
+\end{theorem}
+
+For the complete graph $K_n$, the treewidth is $n - 1$, so $\text{CFI}(K_n)$ requires $(n{-}1)$-WL. In particular:
+\begin{itemize}
+    \item $\text{CFI}(K_3)$: requires 2-WL.
+    \item $\text{CFI}(K_5)$: requires 4-WL, operating on 4-tuples---$\mathcal{O}(n^5)$ per iteration.
+    \item $\text{CFI}(K_6)$: requires 5-WL, operating on 5-tuples---$\mathcal{O}(n^6)$ per iteration.
+\end{itemize}
+
+\subsection{\texorpdfstring{$\nabla^k$}{Nabla-k}-DRESS and \texorpdfstring{$\Delta^k$}{Delta-k}-DRESS on \texorpdfstring{CFI$(K_n)$}{CFI(Kn)}}
+
+We test $\nabla^k$-DRESS (with $\alpha = 2$) and $\Delta^k$-DRESS for $k = 0, 1, 2, 3$ on CFI pairs over complete graphs $K_n$ ($n = 3, \ldots, 10$). Both variants produce identical outcomes (distinguish/fail) on every pair tested. Higher depths on larger base graphs were not executed due to time constraints (marked --- in the table).
 
 \begin{table}[h]
 \centering
-\caption{$\Delta^k$-DRESS and $\nabla^k$-DRESS results on CFI graph pairs (both variants produce identical outcomes). $\checkmark$ = pair distinguished; $\times$ = pair not distinguished; --- = not executed due to time constraints. The WL requirement column shows the minimum WL dimension needed to distinguish the pair.}
+\caption{$\nabla^k$-DRESS results on CFI graph pairs ($\Delta^k$-DRESS produces identical outcomes on all tested pairs). $\checkmark$ = pair distinguished; $\times$ = pair not distinguished; --- = not executed due to time constraints. The WL requirement column shows the minimum WL dimension needed to distinguish the pair.}
 \label{tab:cfi-results}
 \begin{tabular}{@{}lcccccc@{}}
 \toprule
-Base graph & $|V_{\text{CFI}}|$ & WL req. & $\Delta^0$ & $\Delta^1$ & $\Delta^2$ & $\Delta^3$ \\
+Base graph & $|V_{\text{CFI}}|$ & WL req. & $\nabla^0$ & $\nabla^1$ & $\nabla^2$ & $\nabla^3$ \\
 \midrule
 $K_3$   & 6     & 2-WL & $\checkmark$  & $\checkmark$  & $\checkmark$  & $\checkmark$  \\
 $K_4$   & 16    & 3-WL & $\times$      & $\checkmark$  & $\checkmark$  & $\checkmark$  \\
@@ -315,21 +320,21 @@ $K_{10}$& 2560  & 9-WL & $\times$      & $\times$      & ---            & ---   
 The results in Table~\ref{tab:cfi-results} reveal a clear staircase pattern:
 
 \begin{enumerate}
-    \item \textbf{$\Delta^0$ (Original-DRESS)} distinguishes $\text{CFI}(K_3)$, which requires 2-WL. This is a notable result: Original-DRESS---with no node deletion---already exceeds 1-WL on CFI instances, consistent with the prism vs.\ $K_{3,3}$ result in \cite{castrillo2026dress}. It fails on all larger CFI pairs.
+    \item \textbf{$\nabla^0$ (Original-DRESS)} distinguishes $\text{CFI}(K_3)$, which requires 2-WL. This is a notable result: Original-DRESS---with no individualization---already exceeds 1-WL on CFI instances, consistent with the prism vs.\ $K_{3,3}$ result in \cite{castrillo2026dress}. It fails on all larger CFI pairs.
 
-    \item \textbf{$\Delta^1$} extends the range to $\text{CFI}(K_4)$ (3-WL). This is consistent with the results in \cite{castrillo2026dress}, where $\Delta$-DRESS was shown to distinguish SRG pairs that confound 3-WL. It fails on $\text{CFI}(K_5)$.
+    \item \textbf{$\nabla^1$} extends the range to $\text{CFI}(K_4)$ (3-WL). This is consistent with the results in \cite{castrillo2026dress}, where $\nabla$-DRESS was shown to distinguish SRG pairs that confound 3-WL. It fails on $\text{CFI}(K_5)$.
 
-    \item \textbf{$\Delta^2$} reaches $\text{CFI}(K_5)$ (4-WL).
+    \item \textbf{$\nabla^2$} reaches $\text{CFI}(K_5)$ (4-WL).
 
-    \item \textbf{$\Delta^3$} reaches $\text{CFI}(K_6)$ (5-WL) but fails on $\text{CFI}(K_7)$ (6-WL), confirming that the staircase has a sharp boundary at $(k+2)$-WL. The $\text{CFI}(K_7)$ test required processing all $\binom{224}{3} = 1{,}848{,}224$ subgraphs ($\approx$19.3 billion edge values).
+    \item \textbf{$\nabla^3$} reaches $\text{CFI}(K_6)$ (5-WL) but fails on $\text{CFI}(K_7)$ (6-WL), confirming that the staircase has a sharp boundary at $(k+2)$-WL. The $\text{CFI}(K_7)$ test required processing all $\binom{224}{3} = 1{,}848{,}224$ subgraphs ($\approx$19.3 billion edge values).
 \end{enumerate}
 
-\paragraph{WL level per deletion depth.} The tested data shows:
+\paragraph{WL level per individualization depth.} The tested data shows:
 
 \begin{center}
 \begin{tabular}{@{}ccc@{}}
 \toprule
-Deletion depth $k$ & Max WL matched & Effective WL \\
+Individualization depth $k$ & Max WL matched & Effective WL \\
 \midrule
 0 & 2-WL & $k + 2$ \\
 1 & 3-WL & $k + 2$ \\
@@ -339,15 +344,15 @@ Deletion depth $k$ & Max WL matched & Effective WL \\
 \end{tabular}
 \end{center}
 
-The pattern is strikingly regular: both $\nabla^k$-DRESS and $\Delta^k$-DRESS empirically match $(k+2)$-WL on the CFI family, consistent with the lower bound proved in Theorem~\ref{thm:nabla-k-wl} (and Corollary~\ref{cor:delta-rc} for the deletion variant). Each level adds one WL level of expressiveness, with the base DRESS contributing 2-WL on its own. The computational cost grows as $\binom{n}{k}$ (polynomial in $n$ for fixed $k$), while the equivalent $(k+2)$-WL cost grows as $n^{k+3}$.
+The pattern is strikingly regular: $\nabla^k$-DRESS empirically matches $(k+2)$-WL on the CFI family, consistent with the lower bound proved in Theorem~\ref{thm:nabla-k-wl}. $\Delta^k$-DRESS produces identical outcomes on all tested pairs (Corollary~\ref{cor:delta-rc} provides the theoretical guarantee under RC). Each level adds one WL level of expressiveness, with the base DRESS contributing 2-WL on its own. The computational cost grows as $\binom{n}{k}$ (polynomial in $n$ for fixed $k$), while the equivalent $(k+2)$-WL cost grows as $n^{k+3}$.
 
 \section{Discussion}
 
 \subsection{Relationship to Existing Work}
 
-\paragraph{Subgraph GNNs.} Methods such as ESAN \cite{bevilacqua2022equivariant} and GNN-AK+ \cite{zhao2022from} also use node-deleted or node-marked subgraphs to boost expressiveness. However, these are supervised methods that learn aggregation functions from data. $\nabla^k$-DRESS and $\Delta^k$-DRESS are entirely unsupervised: the aggregation is the deterministic DRESS fixed point, and the histogram comparison is parameter-free. $\nabla^k$-DRESS is the closest continuous analogue of the node-marking approach used in subgraph GNNs, while $\Delta^k$-DRESS corresponds to node deletion.
+\paragraph{Subgraph GNNs.} Methods such as ESAN \cite{bevilacqua2022equivariant} and GNN-AK+ \cite{zhao2022from} also use vertex-deleted or vertex-marked subgraphs to boost expressiveness. However, these are supervised methods that learn aggregation functions from data. $\nabla^k$-DRESS and $\Delta^k$-DRESS are entirely unsupervised: the aggregation is the deterministic DRESS fixed point, and the histogram comparison is parameter-free. $\nabla^k$-DRESS is the closest continuous analogue of the vertex-marking approach used in subgraph GNNs, while $\Delta^k$-DRESS corresponds to vertex deletion.
 
-\paragraph{Reconstruction conjecture.} The Kelly--Ulam conjecture \cite{kelly1942congruence, ulam1960collection} states that graphs with $n \ge 3$ are determined by their deck of node-deleted subgraphs. Conceptually, $\Delta^1$-DRESS computes a continuous relaxation of this deck: each ``card'' is the DRESS fingerprint of a node-deleted subgraph. The introduction of $\nabla^k$-DRESS is significant because it decouples the WL hierarchy proof from the Reconstruction Conjecture: the individualization-based proof (Theorem~\ref{thm:nabla-k-wl}) is unconditional, while the deletion-based guarantee (Corollary~\ref{cor:delta-rc}) requires RC. The empirical equivalence of both variants on all tested instances suggests that RC holds for the relevant properties, but this remains an open question in general.
+\paragraph{Reconstruction conjecture.} The Kelly--Ulam conjecture \cite{kelly1942congruence, ulam1960collection} states that graphs with $n \ge 3$ are determined by their deck of vertex-deleted subgraphs. Conceptually, $\Delta^1$-DRESS computes a continuous relaxation of this deck: each ``card'' is the DRESS fingerprint of a vertex-deleted subgraph. The introduction of $\nabla^k$-DRESS is significant because the individualization-based proof (Theorem~\ref{thm:nabla-k-wl}) requires no assumptions beyond the standard DRESS convergence guarantee, while the deletion-based guarantee (Corollary~\ref{cor:delta-rc}) requires RC. The empirical equivalence of both variants on all tested instances suggests that RC holds for the relevant properties, but this remains an open question in general.
 
 \paragraph{Fixed-parameter tractability.} For fixed $k$, both $\nabla^k$-DRESS and $\Delta^k$-DRESS run in polynomial time. Theorem~\ref{thm:nabla-k-wl} guarantees that $\nabla^k$-DRESS is at least as powerful as $(k+2)$-WL, and the CFI experiments confirm this bound is tight: the minimum depth needed to distinguish $\text{CFI}(K_n)$ grows as $n - 2$, which is linear in $n$. While each additional level is polynomial, the number of required levels grows with the base graph size.
 
@@ -367,7 +372,7 @@ The pattern is strikingly regular: both $\nabla^k$-DRESS and $\Delta^k$-DRESS em
 
 \section{Conclusion}
 
-We introduced $\nabla^k$-DRESS, which applies $k$ levels of iterated vertex individualization (multiplicative weight anchoring) to the DRESS framework, and its deletion-based counterpart $\Delta^k$-DRESS. We proved unconditionally that $\nabla^k$-DRESS is at least as powerful as $(k+2)$-WL (Theorem~\ref{thm:nabla-k-wl}), and showed that $\Delta^k$-DRESS achieves the same guarantee under the Reconstruction Conjecture (Corollary~\ref{cor:delta-rc}). Both variants were verified empirically on the canonical CFI benchmark family: at $k=0$, Original-DRESS already distinguishes $\text{CFI}(K_3)$, and each additional level adds one WL level. $k=3$ reaches 5-WL but fails on 6-WL, confirming the bound is tight on CFI instances. Both $\nabla^k$ and $\Delta^k$ produce identical outcomes on every tested pair. These results establish iterated DRESS as a systematic, scalable method for climbing the WL hierarchy with provable expressiveness guarantees. An open-source implementation is available at \url{https://github.com/velicast/dress-graph}.
+We introduced $\nabla^k$-DRESS, which applies $k$ levels of iterated vertex individualization (multiplicative weight marking) to the DRESS framework, and its deletion-based counterpart $\Delta^k$-DRESS. We proved that $\nabla^k$-DRESS is at least as powerful as $(k+2)$-WL (Theorem~\ref{thm:nabla-k-wl}), and showed that $\Delta^k$-DRESS achieves the same guarantee under the Reconstruction Conjecture (Corollary~\ref{cor:delta-rc}). $\nabla^k$-DRESS was verified empirically on the canonical CFI benchmark family: at $k=0$, Original-DRESS already distinguishes $\text{CFI}(K_3)$, and each additional level adds one WL level. $k=3$ reaches 5-WL but fails on 6-WL, confirming the bound is tight on CFI instances. $\Delta^k$-DRESS produces identical outcomes on every tested pair. These results establish iterated DRESS as a systematic, scalable method for climbing the WL hierarchy with provable expressiveness guarantees. An open-source implementation is available at \url{https://github.com/velicast/dress-graph}.
 
 \bibliographystyle{plain}
 \bibliography{refs}

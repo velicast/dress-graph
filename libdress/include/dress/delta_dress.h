@@ -26,6 +26,14 @@ extern "C" {
 //   epsilon    - convergence tolerance for DRESS and histogram bin width.
 //                The histogram has ceil(2 / epsilon) bins.
 //   hist_size  - [out] if non-NULL, set to floor(2 / epsilon) + 1 on return.
+//   keep_multisets - if non-zero, allocate and fill a flat matrix of
+//                per-subgraph edge DRESS values.
+//   multisets  - [out] on return, *multisets points to a heap-allocated
+//                flat array of size C(N,k) * E.  Row r, edge e is at
+//                (*multisets)[r * E + e].  Removed edges are NAN.
+//                The caller must free(*multisets).  Ignored (and set to
+//                NULL) when keep_multisets is 0.  May be NULL itself.
+//   num_subgraphs - [out] if non-NULL, set to C(N,k) on return.
 //
 // Returns:
 //   A heap-allocated int64_t array of length floor(2 / epsilon) + 1.
@@ -38,7 +46,9 @@ extern "C" {
 //   where d_max is the maximum degree.  Each subgraph is independent;
 //   the outer loop is embarrassingly parallel (not parallelised here).
 int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
-                   double epsilon, int *hist_size);
+                   double epsilon, int *hist_size,
+                   int keep_multisets, double **multisets,
+                   int64_t *num_subgraphs);
 
 #ifdef __cplusplus
 }
