@@ -23,10 +23,10 @@ neighbours' values.  The result is bounded in [0, 2], deterministic, and
 requires no tuning.  Sorting the edge values produces a canonical **graph fingerprint**.
 
 For the theory and generalizations (DRESS Family), see the research paper:
-[**arXiv:2602.20833**](https://arxiv.org/abs/2602.20833)
+[**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 
 For the relationship between DRESS and the Weisfeiler–Leman hierarchy:
-[**arXiv:2602.21557**](https://arxiv.org/abs/2602.21557)
+[**arXiv:2602.21557**](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
 
 ## The equation
 
@@ -160,8 +160,8 @@ Full documentation (theory, applications, API reference):
 
 ## Publications
 
-- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Vertex at a Time.* [arxiv:2602.21557](https://arxiv.org/abs/2602.21557)
-- E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://arxiv.org/abs/2602.20833)
+- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Vertex at a Time.* [arxiv:2602.21557](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
+- E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)
 - E. Castrillo, E. León, J. Gómez. *High-Quality Disjoint and Overlapping Community Structure in Large-Scale Complex Networks.* [arXiv:1805.12238](https://arxiv.org/abs/1805.12238)

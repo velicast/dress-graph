@@ -4,11 +4,11 @@
 
 **DRESS: A Continuous Framework for Structural Graph Refinement**
 E. Castrillo. arXiv preprint, 2026.
-[arXiv:2602.20833](https://arxiv.org/abs/2602.20833)
+[arXiv:2602.20833](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 
 **DRESS and the WL Hierarchy: Climbing One Deletion at a Time**
 E. Castrillo. arXiv preprint, 2026.
-[arXiv:2602.21557](https://arxiv.org/abs/2602.21557)
+[arXiv:2602.21557](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
 
 **Dynamic Structural Similarity on Graphs**
 E. Castrillo, E. León, J. Gómez. arXiv preprint, 2018.

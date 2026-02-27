@@ -24,10 +24,10 @@ its neighbors' values.  It converges to a unique, bounded solution in
 canonical **graph fingerprint**.
 
 For the theory and generalizations (DRESS Family), see the research paper:
-[**arXiv:2602.20833**](https://arxiv.org/abs/2602.20833)
+[**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 
 For the relationship between DRESS and the Weisfeiler–Leman hierarchy:
-[**arXiv:2602.21557**](https://arxiv.org/abs/2602.21557)
+[**arXiv:2602.21557**](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
 
 ---
 
