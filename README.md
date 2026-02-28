@@ -150,7 +150,9 @@ r2 = dress_fit(6, k33_s, k33_t)
 
 print("Prism edge_dress:", sorted(r1.edge_dress))
 print("K3,3  edge_dress:", sorted(r2.edge_dress))
-print("Distinguished:", sorted(r1.edge_dress) != sorted(r2.edge_dress))
+fp1 = sorted(round(val, 6) for val in r1.edge_dress)
+fp2 = sorted(round(val, 6) for val in r2.edge_dress)
+print("Distinguished:", fp1 != fp2)
 ```
 
 ## Language bindings
