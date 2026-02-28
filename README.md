@@ -84,7 +84,7 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 - **Scale independence.** Iteration count grows very slowly with graph size. A graph with 59 M vertices needs only ~1.5× the iterations of one with 8 K vertices.
 - **Uniform residual.** The final δ is consistently on the order of 10⁻⁷, indicating that convergence quality does not degrade with graph size.
 
-## Current Applications
+## Current Experimented Applications
 
 - **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
 - **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.

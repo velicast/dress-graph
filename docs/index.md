@@ -93,7 +93,7 @@ self-loop with \(\bar{w}_{uu} = 2\), \(d_{uu} = 2\)), and \(\bar{w}\) is the
 
 See [The DRESS Equation](theory/equation.md) for the full derivation.
 
-## Current Applications
+## Current Experimented Applications
 
 - **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
 - **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
