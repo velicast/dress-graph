@@ -126,6 +126,31 @@ print(result.histogram)   # histogram of edge DRESS values across all subgraphs
 print(result.hist_size)   # number of bins
 ```
 
+```python
+#------------------------
+# pip install dress-graph
+#------------------------
+
+"""Prism vs K3,3 (both 3-regular on 6 nodes). Confound 1-WL."""
+
+from dress import dress_fit
+
+# Prism (C3 □ K2): triangles 0-1-2 and 3-4-5, spokes 0-3 1-4 2-5
+prism_s = [0, 1, 2, 0, 1, 2, 3, 4, 5]
+prism_t = [1, 2, 0, 3, 4, 5, 4, 5, 3]
+
+# K3,3: bipartite {0,1,2} ↔ {3,4,5}
+k33_s = [0, 0, 0, 1, 1, 1, 2, 2, 2]
+k33_t = [3, 4, 5, 3, 4, 5, 3, 4, 5]
+
+r1 = dress_fit(6, prism_s, prism_t)
+r2 = dress_fit(6, k33_s, k33_t)
+
+print("Prism edge_dress:", sorted(r1.edge_dress))
+print("K3,3  edge_dress:", sorted(r2.edge_dress))
+print("Distinguished:", sorted(r1.edge_dress) != sorted(r2.edge_dress))
+```
+
 ## Language bindings
 
 DRESS is implemented in C with bindings for:
