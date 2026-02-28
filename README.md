@@ -22,6 +22,8 @@ nonlinear fixed-point system where every edge's value depends on its
 neighbours' values.  The result is bounded in [0, 2], deterministic, and
 requires no tuning.  Sorting the edge values produces a canonical **graph fingerprint**.
 
+The arXiv papers are outdated and will be updated next week. The latest versions including the proof in Paper 2, are in the GitHub repo.
+
 For the theory and generalizations (DRESS Family), see the research paper:
 [**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 
