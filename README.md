@@ -2,7 +2,7 @@
 
 **A Continuous Framework for Structural Graph Refinement**
 
-DRESS is a provably continuous relaxation of the Weisfeiler–Leman algorithm.
+DRESS is a provably (Under Reconstruction Conjecture) continuous relaxation of the Weisfeiler–Leman algorithm.
 At depth $k$, higher-order DRESS is **provably at least as powerful as $(k{+}2)$-WL**
 in expressiveness — the base algorithm ($k{=}0$) already matches 2-WL, and each
 level adds one WL dimension.
