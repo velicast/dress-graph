@@ -80,7 +80,7 @@ weighted property graphs natively.
 
 ---
 
-## 5. Canonical Labelling
+## 5. Canonical Labeling
 
 Tools like nauty use color refinement to produce an initial partition,
 then branch and backtrack.  Running DRESS first yields a finer initial
@@ -155,7 +155,7 @@ Advantages over ECFP:
 - **Metric.** Distance between DRESS fingerprints is a meaningful
   structural dissimilarity.
 
-**Potential applications:** virtual screening, QSAR modelling, chemical
+**Potential applications:** virtual screening, QSAR modeling, chemical
 space visualisation.
 
 ---
@@ -182,7 +182,7 @@ without expensive exact computation.
 | Graph kernels | histogram kernel | **Wasserstein kernel** (no \(h\) hyperparameter) |
 | Symmetry breaking | orbit partition | **continuous tie-breaking** |
 | Query optimization | discrete bins | **regression features** |
-| Canonical labelling | initial partition | **finer initial ordering** |
+| Canonical labeling | initial partition | **finer initial ordering** |
 | Compression | quotient graph | **weighted quotient** (cohesion measure) |
 | Role extraction | binary same/different | **continuous role similarity** |
 | Molecular fingerprints | bit vector (ECFP) | **continuous, collision-free, metric** |

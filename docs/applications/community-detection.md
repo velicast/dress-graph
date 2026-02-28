@@ -17,7 +17,7 @@ structural similarity threshold \(\varepsilon\) to identify core nodes.
 Replacing SCAN's raw similarity metric with DRESS values:
 
 - **Reduces sensitivity** to the \(\varepsilon\) parameter.
-- **Improves NMI** (Normalised Mutual Information) on LFR benchmarks.
+- **Improves NMI** (Normalized Mutual Information) on LFR benchmarks.
 - **Improves Modularity** on LFR benchmarks.
 - **Community size distributions** closer to the ground truth (Less singletons).
 

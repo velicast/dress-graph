@@ -109,7 +109,7 @@ computed as a by-product of fitting. No extra work is needed.
 - **Influence maximisation.**  If high-\(D_u\) nodes tend to be embedded
   in cohesive clusters, they may also be effective seed nodes for
   information-diffusion cascades, though this needs empirical validation.
-- **GNN node features.**  \(D_u\) (and the normalised form
+- **GNN node features.**  \(D_u\) (and the normalized form
   \(D_u / \deg(u)\)) can be concatenated onto node feature vectors before
   message passing, giving the GNN access to structural context at no
   additional training cost.

@@ -19,7 +19,7 @@ enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a
 nonlinear fixed-point system where every edge's value depends on its
-neighbours' values.  The result is bounded in [0, 2], deterministic, and
+neighbors' values.  The result is bounded in [0, 2], deterministic, and
 requires no tuning.  Sorting the edge values produces a canonical **graph fingerprint**.
 
 The arXiv papers are outdated and will be updated next week. The latest versions including the proof in Paper 2, are in the GitHub repo.
@@ -61,7 +61,7 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Property |
 |----------|
 | Bounded [0, 2], self-similarity = 2 |
-| Provably numerically stable (no overflows, no undefined behaviours) |
+| Provably numerically stable (no overflows, no undefined behaviors) |
 | Parameter-free (no damping factor) |
 | Scale invariant (degree-0 homogeneous) |
 | Unique deterministic fixed point |
@@ -237,7 +237,7 @@ If you use DRESS in your research, please cite:
 
 ---
 
-> **Why "DRESS"?** DRESS computes an edge labelling that reveals the graph's hidden
+> **Why "DRESS"?** DRESS computes an edge labeling that reveals the graph's hidden
 > structural identity - it *dresses* the bare skeleton (adjacency) with
 > meaningful values.  A graph without DRESS is "naked" topology; after DRESS,
 > every edge wears the structural role that fits it best.  And `dress_fit()`

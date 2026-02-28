@@ -59,7 +59,7 @@ and edge-importance ranking.
 | Property |
 |----------|
 | Bounded \([0, 2]\), self-similarity \(= 2\) |
-| Provably numerically stable (no overflows, no undefined behaviours) |
+| Provably numerically stable (no overflows, no undefined behaviors) |
 | Parameter-free (self-regularizing, no damping factor) |
 | Scale invariant (degree-0 homogeneous) |
 | Unique deterministic fixed point |
@@ -123,7 +123,7 @@ See [Installation](getting-started/installation.md) to get started.
 
 !!! quote "Why 'DRESS'?"
     DRESS computes an
-    edge labelling that reveals the graph's hidden structural identity. It
+    edge labeling that reveals the graph's hidden structural identity. It
     *dresses* the bare skeleton (adjacency) with meaningful values.  A graph
     without DRESS is "naked" topology; after DRESS, every edge wears the
     structural role that fits it best.  And `dress_fit()` is literally fitting

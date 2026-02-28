@@ -53,7 +53,7 @@ in 5–20 iterations.
 For directed graphs, four adjacency constructions are supported.  Each variant
 determines both the neighborhood and the combined edge weight:
 
-| Variant | Neighbourhood \(N[u]\) | Combined weight \(\bar{w}(u,v)\) |
+| Variant | Neighborhood \(N[u]\) | Combined weight \(\bar{w}(u,v)\) |
 |---------|------------------------|----------------------------------|
 | `UNDIRECTED` | \(\{u\} \cup\) all neighbors (ignoring direction) | \(2\,w(u,v)\) |
 | `DIRECTED` | \(\{u\} \cup\) all neighbors (in + out) | \(w(u,v) + w(v,u)\) |

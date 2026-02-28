@@ -72,7 +72,7 @@ value vectors.
 At steady state, every edge value \(d_{uv}\) encodes how structurally similar
 nodes \(u\) and \(v\) are, as seen by the entire graph.
 
-- **Normalised structural overlap.**  The numerator aggregates shared
+- **Normalized structural overlap.**  The numerator aggregates shared
   neighborhood contributions; the denominator normalizes by the structural
   size of each node.  The ratio is a cosine-like similarity between the
   structural profiles of \(u\) and \(v\).
@@ -108,7 +108,7 @@ randomness, no sampling, no ordering dependence.
 
 If two graphs \(G\) and \(G'\) are isomorphic, their sorted DRESS edge value
 multisets are identical.  DRESS depends only on the graph's structure (adjacency
-and weights), not on vertex labelling.  Any relabelling (permutation of nodes)
+and weights), not on vertex labeling.  Any relabeling (permutation of nodes)
 that maps \(G\) to \(G'\) also maps each edge's neighborhood identically,
 so the fixed-point equation produces the same values.
 
@@ -234,7 +234,7 @@ are similar.
 | Unique fixed point | Depends on \(C\) | **Always** |
 | Self-similarity | \(\text{sim}(u,u) = 1\) by definition | \(d_{uu} = 2\) (derived from formula) |
 
-SimRank's \(O(N^2)\) memory makes it impractical on large graphs.  Optimised
+SimRank's \(O(N^2)\) memory makes it impractical on large graphs.  Optimized
 variants reduce cost but introduce additional parameters or approximations.
 
 ### PageRank

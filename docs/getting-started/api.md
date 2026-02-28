@@ -31,7 +31,7 @@ exact value 2.0.  The number of bins is \(\lfloor 2/\varepsilon \rfloor + 1\).
 
 ## Variants
 
-| Constant | Value | Neighbourhood \(N[u]\) | Combined weight \(\bar{w}(u,v)\) |
+| Constant | Value | Neighborhood \(N[u]\) | Combined weight \(\bar{w}(u,v)\) |
 |----------|-------|------------------------|----------------------------------|
 | `UNDIRECTED` | 0 | \(\{u\} \cup\) all neighbors (ignoring direction) | \(2\,w(u,v)\) |
 | `DIRECTED` | 1 | \(\{u\} \cup\) all neighbors (in + out) | \(w(u,v) + w(v,u)\) |

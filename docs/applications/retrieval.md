@@ -69,7 +69,7 @@ Datasets: **LINUX** (800 train / 200 test program call graphs) and
 ## Metrics
 
 - **P\@K**: fraction of the predicted top-K that appear in the true GED top-K.
-- **NDCG\@K**: normalised discounted cumulative gain (ranking quality).
+- **NDCG\@K**: normalized discounted cumulative gain (ranking quality).
 - **Spearman ρ**: full-ranking correlation with GED.
 
 ## Results
