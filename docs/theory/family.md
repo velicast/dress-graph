@@ -155,40 +155,17 @@ Unlike approaches that modify the DRESS iteration itself (e.g., clamping edge va
 
 See [Δ^k-DRESS (Iterated Deletion)](delta-ell-dress.md) for the generalization to depth $k$.
 
-## ∇-DRESS (Higher-Order Refinement)
-
-∇^k-DRESS is the **primary higher-order variant**. Instead of deleting vertices, it *individualizes* them: vertices in a chosen set $S$ receive distinct edge weights that break symmetry while preserving the full graph structure. This is provably at least as powerful as $(k{+}2)$-WL.
-
-See [∇^k-DRESS (Higher-Order Refinement)](nabla-k-dress.md) for the full treatment.
-
-### Connection to the Reconstruction Conjecture
-
-The multiset $\{\!\{ \text{DRESS}(G \setminus \{v\}) : v \in V \}\!\}$ is directly analogous to the *deck* in the Kelly–Ulam reconstruction conjecture, which posits that graphs with $n \ge 3$ are determined (up to isomorphism) by their multiset of node-deleted subgraphs. Δ-DRESS computes a continuous relaxation of this deck.
-
-### Properties
-
-**Complexity:** $\mathcal{O}(n \cdot I \cdot m \cdot \Delta)$, where $I$ is the number of iterations per deletion. The computation for each deleted subgraph is entirely independent, making Δ-DRESS embarrassingly parallel.
-
-### Expressiveness
-
-Δ-DRESS empirically distinguishes the following non-isomorphic pairs:
-
-- **Rook vs. Shrikhande:** Successfully distinguished (SRG(16, 6, 2, 2); confounds 3-WL).
-- **Chang Graphs:** Distinguished all 6 pairs among T(8) and the three Chang graphs (SRG(28, 12, 6, 4); confound 3-WL).
-- **$2 \times C_4$ vs. $C_8$:** Successfully distinguished (both 2-regular on 8 nodes).
-- **Petersen vs. Pentagonal Prism:** Successfully distinguished (both 3-regular on 10 nodes).
-
 ## Family Structure
 
 The DRESS variants form a nested hierarchy with orthogonal composition operators:
 
 $$\text{Generalized-DRESS} \supset \text{Motif-DRESS} \supset \text{Original-DRESS}$$
 
-$\nabla(\cdot)$ and $\Delta(\cdot)$ are **orthogonal wrappers** applicable to any of the above: given any DRESS variant $\mathcal{F}$,
+$\Delta(\cdot)$ is an **orthogonal wrapper** applicable to any of the above: given any DRESS variant $\mathcal{F}$,
 
-$$\nabla^k\text{-DRESS}(\mathcal{F}) = h\!\left(\bigsqcup_{|S|=k} \mathcal{F}(G^S)\right) \qquad \Delta^k\text{-DRESS}(\mathcal{F}) = h\!\left(\bigsqcup_{|S|=k} \mathcal{F}(G \setminus S)\right)$$
+$$\Delta^k\text{-DRESS}(\mathcal{F}) = h\!\left(\bigsqcup_{|S|=k} \mathcal{F}(G \setminus S)\right)$$
 
-The individualization/deletion strategy is independent of the choice of $\mathcal{N}$, $f$, and $g$. All experiments in the higher-order sections use $\mathcal{F} = \text{Original-DRESS}$, but $\nabla$-Motif-DRESS or $\nabla$-Cosine-DRESS are equally valid and may offer complementary expressiveness. See [$\nabla^k$-DRESS](nabla-k-dress.md) and [$\Delta^k$-DRESS](delta-ell-dress.md) for details.
+The deletion strategy is independent of the choice of $\mathcal{N}$, $f$, and $g$. All experiments in the higher-order sections use $\mathcal{F} = \text{Original-DRESS}$, but $\Delta$-Motif-DRESS or $\Delta$-Cosine-DRESS are equally valid and may offer complementary expressiveness. See [$\Delta^k$-DRESS](delta-ell-dress.md) for details.
 
 ## k-Ego-DRESS
 

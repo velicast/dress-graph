@@ -10,7 +10,6 @@
 
 #include "dress/dress.h"
 #include "dress/delta_dress.h"
-#include "dress/nabla_dress.h"
 
 /* ------------------------------------------------------------------ */
 /*  dress_fit                                                          */
@@ -183,87 +182,11 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
 }
 
 /* ------------------------------------------------------------------ */
-/*  nabla_dress_fit                                                    */
-/* ------------------------------------------------------------------ */
-SEXP C_nabla_dress_fit(SEXP n_vertices_,
-                       SEXP sources_,
-                       SEXP targets_,
-                       SEXP weights_,
-                       SEXP k_,
-                       SEXP nabla_weight_,
-                       SEXP variant_,
-                       SEXP max_iterations_,
-                       SEXP epsilon_,
-                       SEXP precompute_) {
-
-    int N  = INTEGER(n_vertices_)[0];
-    int E  = LENGTH(sources_);
-    int k              = INTEGER(k_)[0];
-    double nabla_weight = REAL(nabla_weight_)[0];
-    int variant        = INTEGER(variant_)[0];
-    int max_iterations = INTEGER(max_iterations_)[0];
-    double epsilon     = REAL(epsilon_)[0];
-    int precompute     = INTEGER(precompute_)[0];
-
-    /* Allocate copies (init_dress_graph takes ownership). */
-    int *U = (int *)malloc(E * sizeof(int));
-    int *V = (int *)malloc(E * sizeof(int));
-    if (!U || !V) {
-        free(U); free(V);
-        error("nabla_dress_fit: memory allocation failed");
-    }
-    memcpy(U, INTEGER(sources_), E * sizeof(int));
-    memcpy(V, INTEGER(targets_), E * sizeof(int));
-
-    double *W = NULL;
-    if (!isNull(weights_)) {
-        W = (double *)malloc(E * sizeof(double));
-        if (!W) { free(U); free(V); error("nabla_dress_fit: memory allocation failed"); }
-        memcpy(W, REAL(weights_), E * sizeof(double));
-    }
-
-    p_dress_graph_t g = init_dress_graph(N, E, U, V, W,
-                                         (dress_variant_t)variant, precompute);
-    if (!g) {
-        error("nabla_dress_fit: init_dress_graph returned NULL");
-    }
-
-    int hist_size = 0;
-    int64_t *hist = nabla_fit(g, k, max_iterations, epsilon, nabla_weight,
-                              &hist_size,
-                              0, NULL, NULL);
-
-    /* Build result list: histogram + hist_size */
-    SEXP result = PROTECT(allocVector(VECSXP, 2));
-    SEXP names  = PROTECT(allocVector(STRSXP, 2));
-
-    SET_STRING_ELT(names, 0, mkChar("histogram"));
-    SET_STRING_ELT(names, 1, mkChar("hist_size"));
-    setAttrib(result, R_NamesSymbol, names);
-
-    /* histogram — numeric vector (R has no native int64) */
-    SEXP r_hist = PROTECT(allocVector(REALSXP, hist_size));
-    for (int i = 0; i < hist_size; i++) {
-        REAL(r_hist)[i] = (double)hist[i];
-    }
-    SET_VECTOR_ELT(result, 0, r_hist);
-
-    /* hist_size — int scalar */
-    SET_VECTOR_ELT(result, 1, ScalarInteger(hist_size));
-
-    free(hist);
-    free_dress_graph(g);
-    UNPROTECT(3);
-    return result;
-}
-
-/* ------------------------------------------------------------------ */
 /*  Registration table                                                 */
 /* ------------------------------------------------------------------ */
 static const R_CallMethodDef callMethods[] = {
     {"C_dress_fit",       (DL_FUNC) &C_dress_fit,       8},
     {"C_delta_dress_fit", (DL_FUNC) &C_delta_dress_fit, 9},
-    {"C_nabla_dress_fit", (DL_FUNC) &C_nabla_dress_fit, 10},
     {"C_dress_version",   (DL_FUNC) &C_dress_version,   0},
     {NULL, NULL, 0}
 };

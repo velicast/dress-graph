@@ -260,28 +260,27 @@ complementary: PageRank ranks nodes, DRESS characterizes edges.
 The 1-WL algorithm iteratively refines node colors based on neighbor
 multisets.  It is the basis of most GNN message-passing architectures.
 
-DRESS can be understood as a **continuous relaxation of 1-WL**.
-Both algorithms iterate over the same local structure — each node's
-neighborhood — and converge to a fixed point.  The key difference is
-that 1-WL produces **discrete color partitions** while DRESS produces
+DRESS can be understood as a **continuous equivalent of 2-WL**.
+Both algorithms converge to a fixed point.  The key difference is
+that 2-WL produces **discrete color classes** while DRESS produces
 **continuous real-valued edge scores**.
 
-| Aspect | 1-WL | DRESS |
+| Aspect | 2-WL | DRESS |
 |--------|------|-------|
-| Entity | Nodes (discrete colors) | Edges (continuous values) |
+| Entity | Node pairs (discrete colors) | Edges (continuous values) |
 | Output | Color histogram (partition) | Real-valued edge vector (metric) |
-| Refinement | Hash of neighbor multiset | Cosine-like ratio with recursive weights |
+| Refinement | Refine pair color via all third nodes | Cosine-like ratio with recursive weights |
 | Fixed point | Stable coloring (finite steps) | Unique continuous fixed point |
-| Sensitivity | Cannot distinguish regular graphs | Distinguishes beyond 1-WL: distinguishes prism vs \(K_{3,3}\) ([proof](../applications/isomorphism.md#dress-distinguishes-graphs-that-1-wl-cannot)) |
+| Sensitivity | Distinguishes regular graphs (e.g. prism vs \(K_{3,3}\)) | Matches 2-WL: distinguishes prism vs \(K_{3,3}\) ([proof](../applications/isomorphism.md#dress-matches-2-wl)) |
 | Parameters | None | None |
 
 This continuous relaxation has concrete advantages:
 
-- **Metric output.**  1-WL answers "same or different"; DRESS answers
+- **Metric output.**  2-WL answers "same or different"; DRESS answers
   "how similar."  Every binary classification task becomes a
   regression/similarity task, and every histogram becomes a distribution.
-- **Edge granularity.**  1-WL assigns one color per node; DRESS assigns
-  one value per edge, providing strictly finer structural description.
+- **Edge granularity.**  2-WL assigns one color per node pair; DRESS assigns
+  one value per edge, providing a compact structural description.
 - **Downstream utility.**  Continuous values can be thresholded, ranked,
   clustered, or used directly as features — none of which are possible
   with a discrete partition.

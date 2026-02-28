@@ -20,7 +20,7 @@ module DRESS
 
 using Libdl
 
-export dress_fit, delta_dress_fit, nabla_dress_fit, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
+export dress_fit, delta_dress_fit, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
 
 # ── variant constants ────────────────────────────────────────────────
 const UNDIRECTED = Cint(0)
@@ -45,13 +45,11 @@ Called automatically on first use if the `.so` is missing.
 function dress_build()
     src = joinpath(_LIB_DIR, "src", "dress.c")
     src_delta = joinpath(_LIB_DIR, "src", "delta_dress.c")
-    src_nabla = joinpath(_LIB_DIR, "src", "nabla_dress.c")
     inc = joinpath(_LIB_DIR, "include")
     isfile(src) || error("Cannot find dress.c at $src")
     isfile(src_delta) || error("Cannot find delta_dress.c at $src_delta")
-    isfile(src_nabla) || error("Cannot find nabla_dress.c at $src_nabla")
     cc = get(ENV, "CC", "gcc")
-    cmd = `$cc -shared -fPIC -O3 -fopenmp -I$inc -o $_SO_PATH $src $src_delta $src_nabla -lm`
+    cmd = `$cc -shared -fPIC -O3 -fopenmp -I$inc -o $_SO_PATH $src $src_delta -lm`
     @info "Building DRESS shared library…" cmd
     run(cmd)
     @info "Built $_SO_PATH"
@@ -64,7 +62,6 @@ const _FN_INIT    = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_FIT     = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_FREE    = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_DELTA   = Ref{Ptr{Cvoid}}(C_NULL)
-const _FN_NABLA   = Ref{Ptr{Cvoid}}(C_NULL)
 
 function _ensure_lib()
     _LIB_HANDLE[] != C_NULL && return
@@ -74,7 +71,6 @@ function _ensure_lib()
     _FN_FIT[]     = dlsym(_LIB_HANDLE[], :fit)
     _FN_FREE[]    = dlsym(_LIB_HANDLE[], :free_dress_graph)
     _FN_DELTA[]   = dlsym(_LIB_HANDLE[], :delta_fit)
-    _FN_NABLA[]   = dlsym(_LIB_HANDLE[], :nabla_fit)
 end
 
 # ── result type ──────────────────────────────────────────────────────
@@ -322,119 +318,6 @@ function delta_dress_fit(N::Integer,
     ccall(_FN_FREE[], Cvoid, (Ptr{Cvoid},), g)
 
     return DeltaDRESSResult(histogram, hsize)
-end
-
-# ── nabla result type ────────────────────────────────────────────────
-
-"""
-    NablaDRESSResult
-
-Holds the output of `nabla_dress_fit`.
-
-Fields:
-- `histogram::Vector{Int64}`    – bin-count vector
-- `hist_size::Int`              – number of bins (floor(2/ε) + 1)
-"""
-struct NablaDRESSResult
-    histogram :: Vector{Int64}
-    hist_size :: Int
-end
-
-function Base.show(io::IO, r::NablaDRESSResult)
-    total = sum(r.histogram)
-    print(io, "NablaDRESSResult(hist_size=$(r.hist_size), total_values=$total)")
-end
-
-# ── nabla wrapper ────────────────────────────────────────────────────
-
-"""
-    nabla_dress_fit(N, sources, targets;
-                    k=0, nabla_weight=2.0, variant=UNDIRECTED,
-                    max_iterations=100, epsilon=1e-6,
-                    precompute=false) → NablaDRESSResult
-
-Run ∇^k-DRESS: enumerate all C(N,k) vertex subsets, individualize
-(mark) each subset by multiplying incident edge weights by
-`nabla_weight`, fit DRESS, and return the pooled histogram.
-
-# Arguments
-- `N::Int`                – number of vertices (0-based ids)
-- `sources::Vector{Int}`  – edge source vertices (0-based)
-- `targets::Vector{Int}`  – edge target vertices (0-based)
-
-# Keyword arguments
-- `k::Int`               – individualization depth (default 0)
-- `nabla_weight::Float64` – multiplicative weight factor (default 2.0)
-- `variant`              – one of `UNDIRECTED`, `DIRECTED`, `FORWARD`, `BACKWARD`
-- `max_iterations::Int`  – max DRESS iterations per round (default 100)
-- `epsilon::Float64`     – convergence tolerance and bin width (default 1e-6)
-- `precompute::Bool`     – precompute intercepts (default false)
-"""
-function nabla_dress_fit(N::Integer,
-                         sources::AbstractVector{<:Integer},
-                         targets::AbstractVector{<:Integer};
-                         weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         k::Integer         = 0,
-                         nabla_weight::Real  = 2.0,
-                         variant::Integer   = UNDIRECTED,
-                         max_iterations::Integer = 100,
-                         epsilon::Real      = 1e-6,
-                         precompute::Bool   = false)
-
-    E = length(sources)
-    length(targets) == E || throw(ArgumentError("sources and targets must have equal length"))
-
-    _ensure_lib()
-
-    # The C library takes ownership of U, V via free().
-    U_c = Libc.malloc(E * sizeof(Cint))
-    V_c = Libc.malloc(E * sizeof(Cint))
-
-    u_arr = unsafe_wrap(Array, Ptr{Cint}(U_c), E)
-    v_arr = unsafe_wrap(Array, Ptr{Cint}(V_c), E)
-    u_arr .= Cint.(sources)
-    v_arr .= Cint.(targets)
-
-    W_c = if weights !== nothing
-        w_ptr = Libc.malloc(E * sizeof(Cdouble))
-        w_arr = unsafe_wrap(Array, Ptr{Cdouble}(w_ptr), E)
-        w_arr .= Cdouble.(weights)
-        Ptr{Cdouble}(w_ptr)
-    else
-        Ptr{Cdouble}(C_NULL)
-    end
-
-    # init_dress_graph(N, E, U, V, W, variant, precompute_intercepts) → ptr
-    g = ccall(_FN_INIT[], Ptr{Cvoid},
-              (Cint, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cint),
-              Cint(N), Cint(E),
-              Ptr{Cint}(U_c), Ptr{Cint}(V_c), W_c,
-              Cint(variant), Cint(precompute))
-
-    g == C_NULL && error("init_dress_graph returned NULL")
-
-    # nabla_fit(g, k, iterations, epsilon, nabla_weight, &hist_size,
-    #           keep_multisets, &multisets, &num_subsets) → *int64
-    hsize_ref = Ref{Cint}(0)
-    h_ptr = ccall(_FN_NABLA[], Ptr{Int64},
-                  (Ptr{Cvoid}, Cint, Cint, Cdouble, Cdouble, Ptr{Cint}, Cint, Ptr{Ptr{Cdouble}}, Ptr{Int64}),
-                  g, Cint(k), Cint(max_iterations), Cdouble(epsilon), Cdouble(nabla_weight),
-                  hsize_ref, Cint(0), Ptr{Ptr{Cdouble}}(C_NULL), Ptr{Int64}(C_NULL))
-
-    hsize = Int(hsize_ref[])
-    histogram = if h_ptr != C_NULL && hsize > 0
-        copy(unsafe_wrap(Array, h_ptr, hsize))
-    else
-        Int64[]
-    end
-
-    # Free the C histogram and graph
-    if h_ptr != C_NULL
-        Libc.free(h_ptr)
-    end
-    ccall(_FN_FREE[], Cvoid, (Ptr{Cvoid},), g)
-
-    return NablaDRESSResult(histogram, hsize)
 end
 
 end # module DRESS

@@ -64,7 +64,7 @@ and edge-importance ranking.
 | Scale invariant (degree-0 homogeneous) |
 | Unique deterministic fixed point |
 | Low complexity: \(O(E)\) per iteration, \(O(N + E)\) memory |
-| Massively parallelisable (\(\nabla^k\) subproblems and per-edge updates) |
+| Massively parallelizable (\(\Delta^k\) subproblems and per-edge updates) |
 | Supports weighted graphs |
 | Supports directed graphs |
 

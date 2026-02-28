@@ -62,18 +62,6 @@ extern "C" {
         multisets: *mut *mut c_double,
         num_subgraphs: *mut i64,
     ) -> *mut i64;
-
-    fn nabla_fit(
-        g: *mut c_void,
-        k: c_int,
-        iterations: c_int,
-        epsilon: c_double,
-        nabla_weight: c_double,
-        hist_size: *mut c_int,
-        keep_multisets: c_int,
-        multisets: *mut *mut c_double,
-        num_subsets: *mut i64,
-    ) -> *mut i64;
 }
 
 // ── Public types ────────────────────────────────────────────────────
@@ -127,26 +115,6 @@ impl fmt::Display for DeltaDressResult {
         write!(
             f,
             "DeltaDressResult(hist_size={}, total_values={})",
-            self.hist_size, total,
-        )
-    }
-}
-
-/// Result of the ∇^k-DRESS fitting procedure.
-#[derive(Debug, Clone)]
-pub struct NablaDressResult {
-    /// Histogram bin counts (length = `hist_size`).
-    pub histogram: Vec<i64>,
-    /// Number of bins: floor(2/epsilon) + 1.
-    pub hist_size: i32,
-}
-
-impl fmt::Display for NablaDressResult {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let total: i64 = self.histogram.iter().sum();
-        write!(
-            f,
-            "NablaDressResult(hist_size={}, total_values={})",
             self.hist_size, total,
         )
     }
@@ -418,93 +386,6 @@ impl DRESS {
             free_dress_graph(g);
 
             Ok(DeltaDressResult {
-                histogram,
-                hist_size: hsize,
-            })
-        }
-    }
-
-    /// Run ∇^k-DRESS on a graph: enumerate all C(N,k) vertex subsets,
-    /// individualize (mark) the selected vertices by multiplying their
-    /// incident edge weights by `nabla_weight`, fit DRESS, and return
-    /// the pooled histogram.
-    ///
-    /// * `n` – number of vertices
-    /// * `sources` / `targets` – edge list (0-based)
-    /// * `weights` – optional per-edge weights
-    /// * `k` – individualization depth (0 = original graph)
-    /// * `nabla_weight` – multiplicative factor for incident edges (default 2.0)
-    /// * `max_iterations` – max DRESS iterations per round
-    /// * `epsilon` – convergence tolerance and bin width
-    /// * `variant` – graph variant
-    /// * `precompute` – precompute intercepts
-    pub fn nabla_fit(
-        n: i32,
-        sources: Vec<i32>,
-        targets: Vec<i32>,
-        weights: Option<Vec<f64>>,
-        k: i32,
-        nabla_weight: f64,
-        max_iterations: i32,
-        epsilon: f64,
-        variant: Variant,
-        precompute: bool,
-    ) -> Result<NablaDressResult, DressError> {
-        let e = sources.len();
-        if targets.len() != e {
-            return Err(DressError::LengthMismatch(
-                "sources and targets must have equal length".into(),
-            ));
-        }
-
-        unsafe {
-            let u_ptr = libc_malloc_copy_i32(&sources);
-            let v_ptr = libc_malloc_copy_i32(&targets);
-            let w_ptr = match &weights {
-                Some(w) => libc_malloc_copy_f64(w),
-                None => std::ptr::null_mut(),
-            };
-
-            let g = init_dress_graph(
-                n,
-                e as c_int,
-                u_ptr,
-                v_ptr,
-                w_ptr,
-                variant as c_int,
-                precompute as c_int,
-            );
-            if g.is_null() {
-                return Err(DressError::InitFailed);
-            }
-
-            let mut hsize: c_int = 0;
-            let h = nabla_fit(
-                g,
-                k,
-                max_iterations,
-                epsilon,
-                nabla_weight,
-                &mut hsize,
-                0,
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
-            );
-
-            let histogram = if !h.is_null() && hsize > 0 {
-                std::slice::from_raw_parts(h, hsize as usize).to_vec()
-            } else {
-                vec![]
-            };
-
-            if !h.is_null() {
-                extern "C" { fn free(ptr: *mut i64); }
-                free(h);
-            }
-
-            free_dress_graph(g);
-
-            Ok(NablaDressResult {
                 histogram,
                 hist_size: hsize,
             })

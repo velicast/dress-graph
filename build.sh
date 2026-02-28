@@ -63,25 +63,21 @@ vendor_sources() {
     mkdir -p rust/vendor/include/dress
     cp libdress/src/dress.c            rust/vendor/dress.c
     cp libdress/src/delta_dress.c      rust/vendor/delta_dress.c
-    cp libdress/src/nabla_dress.c      rust/vendor/nabla_dress.c
     cp libdress/include/dress/dress.h       rust/vendor/include/dress/dress.h
     cp libdress/include/dress/delta_dress.h rust/vendor/include/dress/delta_dress.h
-    cp libdress/include/dress/nabla_dress.h rust/vendor/include/dress/nabla_dress.h
 
     # R
     mkdir -p r/src/dress
     cp libdress/src/dress.c            r/src/dress.c
     cp libdress/src/delta_dress.c      r/src/delta_dress.c
-    cp libdress/src/nabla_dress.c      r/src/nabla_dress.c
     cp libdress/include/dress/dress.h       r/src/dress/dress.h
     cp libdress/include/dress/delta_dress.h r/src/dress/delta_dress.h
-    cp libdress/include/dress/nabla_dress.h r/src/dress/nabla_dress.h
 }
 
 # Remove vendored copies.
 unvendor_sources() {
     rm -rf rust/vendor
-    rm -f  r/src/dress.c r/src/delta_dress.c r/src/nabla_dress.c
+    rm -f  r/src/dress.c r/src/delta_dress.c
     rm -rf r/src/dress
 }
 
@@ -138,7 +134,6 @@ build_igraph() {
             libdress-igraph/src/dress_igraph.c \
             libdress/src/dress.c \
             libdress/src/delta_dress.c \
-            libdress/src/nabla_dress.c \
             $IGRAPH_LIBS -lm -fopenmp 2>&1
         pass "libdress-igraph compiled"
 
@@ -156,7 +151,6 @@ build_igraph() {
             libdress-igraph/src/dress_igraph.c \
             libdress/src/dress.c \
             libdress/src/delta_dress.c \
-            libdress/src/nabla_dress.c \
             $IGRAPH_LIBS -lm -fopenmp 2>&1
         pass "libdress-igraph delta compiled"
 

@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite the following paper."
+message: "If you use this software, please cite the following papers."
 title: "DRESS Graph"
 type: software
 repository-code: "https://github.com/velicast/dress-graph"
@@ -17,6 +17,18 @@ preferred-citation:
       value: "arXiv:2602.20833"
       description: "arXiv preprint"
 references:
+  - type: article
+    title: "DRESS and the WL Hierarchy: Climbing One Deletion at a Time"
+    authors:
+      - family-names: Castrillo Velilla
+        given-names: Eduar
+        orcid: "https://orcid.org/0009-0005-2492-0957"
+    year: 2026
+    url: "https://arxiv.org/abs/2602.21557"
+    identifiers:
+      - type: other
+        value: "arXiv:2602.21557"
+        description: "arXiv preprint"
   - type: article
     title: "Dynamic Structural Similarity on Graphs"
     authors:

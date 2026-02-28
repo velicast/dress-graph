@@ -2,9 +2,6 @@
 
 Δ^k-DRESS generalizes Δ-DRESS by applying $k$ levels of iterated node deletion, systematically climbing the Weisfeiler–Leman (WL) hierarchy.
 
-!!! note "∇^k-DRESS is the primary higher-order variant"
-    The [∇^k-DRESS (individualization)](nabla-k-dress.md) operator is the recommended higher-order variant, as it preserves the full graph structure and has a proven expressiveness guarantee ($\ge (k{+}2)$-WL). Δ^k-DRESS is the deletion-based alternative that is faster per subproblem but loses structural information.
-
 ## Definition
 
 For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k \ge 0$:

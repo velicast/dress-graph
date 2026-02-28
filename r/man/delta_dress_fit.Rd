@@ -8,7 +8,7 @@ The result is a fixed-size histogram of edge DRESS values pooled across all
 \eqn{\binom{N}{k}}{C(N,k)} subgraphs.
 }
 \usage{
-delta_dress_fit(n_vertices, sources, targets, k = 0L,
+delta_dress_fit(n_vertices, sources, targets, weights = NULL, k = 0L,
                 variant = DRESS_UNDIRECTED, max_iterations = 100L,
                 epsilon = 1e-6, precompute = FALSE)
 }
@@ -17,6 +17,8 @@ delta_dress_fit(n_vertices, sources, targets, k = 0L,
     \code{0 .. n_vertices - 1}).}
   \item{sources}{Integer vector of length E -- edge source endpoints (0-based).}
   \item{targets}{Integer vector of length E -- edge target endpoints (0-based).}
+  \item{weights}{Numeric vector of length E -- edge weights, or \code{NULL}
+    for unweighted (all ones). Default \code{NULL}.}
   \item{k}{Integer. Number of vertices to remove per subset
     (0 = original graph, default 0).}
   \item{variant}{Graph variant (default \code{DRESS_UNDIRECTED}).

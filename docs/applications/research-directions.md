@@ -1,10 +1,10 @@
 # Research Directions
 
-DRESS is a continuous relaxation of 1-WL color refinement with
-**real-valued edge scores** instead of discrete colors.  DRESS is
-provably stronger than 1-WL on some graph families (e.g. it
-[distinguishes the prism graph from \(K_{3,3}\)](isomorphism.md#dress-distinguishes-graphs-that-1-wl-cannot),
-which 1-WL cannot).  Whether WL-1 can distinguish any pair that DRESS
+DRESS is a continuous equivalent of 2-WL with
+**real-valued edge scores** instead of discrete colors.  DRESS
+matches 2-WL in expressiveness (e.g. it
+[distinguishes the prism graph from \(K_{3,3}\)](isomorphism.md#dress-matches-2-wl),
+which 1-WL cannot but 2-WL can).  Whether 2-WL can distinguish any pair that DRESS
 cannot remains open.  Below are research directions where the continuous
 output may provide concrete advantages.
 
@@ -22,7 +22,7 @@ edge_attr = dress_forward_backward(graph)   # shape [E, 2]
 out = gnn(x=node_features, edge_index=edges, edge_attr=edge_attr)
 ```
 
-Because DRESS encodes the full 1-WL information in two floats per edge,
+Because DRESS encodes the full 2-WL information in two floats per edge,
 the network starts with a structurally meaningful initialization rather
 than learning these features from scratch.  This is analogous to
 random-walk or Laplacian positional encodings used in Graphormer and GPS,
@@ -188,6 +188,6 @@ without expensive exact computation.
 | Molecular fingerprints | bit vector (ECFP) | **continuous, collision-free, metric** |
 | Homomorphism counting | exact equivalence | **approximate distance** |
 
-The recurring theme: DRESS replaces 1-WL's discrete output with a
+The recurring theme: DRESS replaces 2-WL's discrete output with a
 continuous, metric one.  Every binary classification becomes a
 regression/similarity task, and every histogram becomes a distribution.

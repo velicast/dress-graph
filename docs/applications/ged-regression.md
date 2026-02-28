@@ -48,4 +48,4 @@ We compare the DRESS-based regressor against published neural baselines like Sim
 
 - **LINUX**: DRESS massively outperforms published baselines on MSE, \(\rho\), and \(\tau\), achieving MSE \(0.343 \times 10^{-3}\) — **15× lower than TaGSim** — with near-perfect Spearman correlation (0.988). TaGSim retains an edge on the precision-at-top metric \(p@20\).
 - **AIDS700nef**: DRESS achieves state-of-the-art across all four metrics, reducing MSE by 21% relative to TaGSim and improving Spearman \(\rho\) from 0.679 to 0.730.
-- **IMDBMulti**: Performance drops significantly on dense social graphs. This is a known theoretical limitation: DRESS is equivalent in expressiveness to the 1-WL test on the line graph, which struggles to distinguish highly symmetric, dense structures (like cliques and stars) common in social networks.
+- **IMDBMulti**: Performance drops significantly on dense social graphs. This is a known theoretical limitation: DRESS matches 2-WL in expressiveness, but still struggles to distinguish highly symmetric, dense structures (like cliques and stars) common in social networks.

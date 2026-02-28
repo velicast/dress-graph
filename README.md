@@ -6,7 +6,7 @@ DRESS is a provably continuous relaxation of the Weisfeiler–Leman algorithm.
 At depth $k$, higher-order DRESS is **provably at least as powerful as $(k{+}2)$-WL**
 in expressiveness — the base algorithm ($k{=}0$) already matches 2-WL, and each
 level adds one WL dimension.
-Yet it is dramatically cheaper to compute: a single DRESS run costs
+Yet it is cheaper to compute: a single DRESS run costs
 $\mathcal{O}(I \cdot m \cdot d_{\max})$ where $I$ is the number of iterations,
 and depth-$k$ requires $\binom{n}{k}$ independent runs — a total of
 $\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$,
@@ -14,7 +14,7 @@ compared to $\mathcal{O}(n^{k+3})$ for $(k{+}2)$-WL.
 Space complexity is $\mathcal{O}(n + m)$, compared to $\mathcal{O}(n^{k+2})$ for $(k{+}2)$-WL.
 The algorithm is embarrassingly parallel in two orthogonal ways —
 across the $\binom{n}{k}$ subproblems and across edge updates within each iteration —
-enabling distributed/cloud and multi-core/GPU/SIMD implementations.
+enabling distributed/cloud PLUS multi-core/GPU/SIMD implementations.
 
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a
@@ -64,7 +64,7 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Scale invariant (degree-0 homogeneous) |
 | Unique deterministic fixed point |
 | Low complexity: O(E) per iteration, O(N + E) memory |
-| Massively parallelisable (∇^k subproblems and per-edge updates) |
+| Massively parallelizable (Δ^k subproblems and per-edge updates) |
 | Supports weighted graphs |
 | Supports directed graphs |
 
@@ -110,16 +110,16 @@ result = dress_fit(
 print(result.edge_dress)  # DRESS value for each edge
 ```
 
-### ∇^k-DRESS (higher-order refinement)
+### Δ^k-DRESS (higher-order refinement)
 
 ```python
-from dress import nabla_dress_fit
+from dress import delta_dress_fit
 
-result = nabla_dress_fit(
+result = delta_dress_fit(
     n_vertices=4,
     sources=[0, 1, 2, 0],
     targets=[1, 2, 3, 3],
-    k=1,              # individualize 1 vertex at a time
+    k=1,              # delete 1 vertex at a time
     epsilon=1e-6,
 )
 print(result.histogram)   # histogram of edge DRESS values across all subgraphs
@@ -160,7 +160,7 @@ Full documentation (theory, applications, API reference):
 
 ## Publications
 
-- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Vertex at a Time.* [arxiv:2602.21557](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
+- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [arxiv:2602.21557](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
 - E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)
@@ -181,6 +181,26 @@ If you use DRESS in your research, please cite:
   archivePrefix = {arXiv},
   primaryClass  = {cs.DS},
   url     = {https://arxiv.org/abs/2602.20833}
+}
+
+@misc{castrillo2026kdress,
+  title   = {DRESS and the WL Hierarchy: Climbing One Deletion at a Time},
+  author  = {Eduar Castrillo Velilla},
+  year    = {2026},
+  eprint  = {2602.21557},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.DS},
+  url     = {https://arxiv.org/abs/2602.21557}
+}
+
+@misc{castrillo2018dress,
+  title   = {Dynamic Structural Similarity on Graphs},
+  author  = {Eduar Castrillo and Elizabeth Le{\'o}n and Jonatan G{\'o}mez},
+  year    = {2018},
+  eprint  = {1805.01419},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.SI},
+  url     = {https://arxiv.org/abs/1805.01419}
 }
 ```
 

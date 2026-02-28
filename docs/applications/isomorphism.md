@@ -62,34 +62,33 @@ graphs *can* produce identical DRESS vectors:
 
 ## Relationship to Weisfeiler–Leman
 
-DRESS is a **continuous relaxation of 1-WL** (color refinement).  Both
-algorithms iterate over the same local structure — each node's
-neighborhood — and converge to a fixed point.  Where 1-WL hashes
-neighbor multisets into discrete colors, DRESS computes a cosine-like
-ratio that yields continuous real-valued edge scores.
+DRESS **matches 2-WL** in expressiveness.  Where 2-WL assigns discrete
+colors to node pairs, DRESS computes a cosine-like ratio that yields
+continuous real-valued edge scores — achieving the same distinguishing
+power at \(O(E)\) cost per iteration.
 
 This has three practical consequences:
 
-1. **Metric output.**  1-WL says "same or different"; DRESS says "how
+1. **Metric output.**  2-WL says "same or different"; DRESS says "how
    similar."  Every binary same/different test becomes a similarity
    query, and every color histogram becomes a real-valued distribution.
-2. **Edge granularity.**  1-WL assigns one color per node; DRESS assigns
-   one value per edge, giving a strictly finer structural fingerprint.
+2. **Edge granularity.**  2-WL assigns one color per node pair; DRESS assigns
+   one value per edge, giving a compact structural fingerprint.
 3. **Downstream utility.**  Continuous values can be thresholded, ranked,
    clustered, or fed directly into ML pipelines — none of which is possible
    with a discrete partition.
 
 DRESS achieves 100 % accuracy on standard isomorphism benchmarks (MiVIA, IsoBench).
-Original-DRESS **distinguishes beyond 1-WL**: it
-[distinguishes the prism graph from \(K_{3,3}\)](#dress-distinguishes-graphs-that-1-wl-cannot),
-a pair that 1-WL provably cannot separate
+Original-DRESS **matches 2-WL**: it
+[distinguishes the prism graph from \(K_{3,3}\)](#dress-matches-2-wl),
+a pair that 1-WL cannot separate but 2-WL can
 (see [Theorem 1 in the DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)).
 It still fails on CFI constructions and strongly regular graphs with
 identical parameters.
 See [Properties — WL comparison](../theory/properties.md#weisfeilerleman-wl-color-refinement)
 for a detailed side-by-side table.
 
-### DRESS distinguishes graphs that 1-WL cannot
+### DRESS matches 2-WL
 
 The **prism graph** (\(C_3 \square K_2\)) and \(K_{3,3}\) are both
 3-regular on 6 nodes with 9 edges.  WL-1 assigns all nodes the same color
@@ -142,7 +141,7 @@ has a single uniform value.  The sorted vectors necessarily differ.
 
 ### DRESS reveals edge roles in regular graphs
 
-On any \(d\)-regular graph WL-1 assigns a single color to every vertex and
+On any \(d\)-regular graph 2-WL assigns a single color to every vertex and
 a single color to every edge — it learns nothing.  DRESS, working at the
 edge level, can still expose structurally distinct edge roles.
 
@@ -236,7 +235,7 @@ all edges are structurally indistinguishable.
 
 ## Higher-order DRESS for harder cases
 
-The [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf) introduces Motif-DRESS and Δ-DRESS, and the [WL hierarchy paper](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) introduces ∇^k-DRESS as the primary higher-order variant.
+The [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf) introduces Motif-DRESS and Δ-DRESS, and the [WL hierarchy paper](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) introduces Δ^k-DRESS as the primary higher-order variant.
 
 ### Motif-DRESS (K4 clique)
 
@@ -269,9 +268,5 @@ The specific SRG pairs tested above are known to be indistinguishable by 3-WL; e
 | Chang-1 vs Chang-2 | **PASS** | |
 | Chang-1 vs Chang-3 | **PASS** | |
 | Chang-2 vs Chang-3 | **PASS** | |
-
-### ∇^k-DRESS (Higher-Order Refinement)
-
-∇^k-DRESS individualizes $k$ vertices at a time (reweighting their edges to break symmetry) instead of deleting them, preserving the full graph structure. This is provably at least as powerful as $(k{+}2)$-WL. See [the full ∇^k-DRESS treatment](../theory/nabla-k-dress.md) for CFI benchmark results and complexity analysis.
 
 See also [Δ^k-DRESS (Iterated Deletion)](../theory/delta-ell-dress.md) for the generalization of Δ-DRESS to arbitrary depth.
