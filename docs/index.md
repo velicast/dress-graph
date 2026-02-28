@@ -4,16 +4,16 @@
 
 DRESS is a provably (Under reconstruction conjecture) continuous relaxation of the Weisfeiler–Leman algorithm.
 At depth \(k\), higher-order DRESS is **provably at least as powerful as \((k{+}2)\)-WL**
-in expressiveness — the base algorithm (\(k{=}0\)) already matches 2-WL, and each
+in expressiveness - the base algorithm (\(k{=}0\)) already matches 2-WL, and each
 level adds one WL dimension.
 Yet it is dramatically cheaper to compute: a single DRESS run costs
 \(\mathcal{O}(I \cdot m \cdot d_{\max})\) where \(I\) is the number of iterations,
-and depth-\(k\) requires \(\binom{n}{k}\) independent runs — a total of
+and depth-\(k\) requires \(\binom{n}{k}\) independent runs - a total of
 \(\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)\),
 compared to \(\mathcal{O}(n^{k+3})\) for \((k{+}2)\)-WL.
 Space complexity is \(\mathcal{O}(n + m)\), compared to \(\mathcal{O}(n^{k+2})\) for \((k{+}2)\)-WL.
-The algorithm is embarrassingly parallel in two orthogonal ways —
-across the \(\binom{n}{k}\) subproblems and across edge updates within each iteration —
+The algorithm is embarrassingly parallel in two orthogonal ways -
+across the \(\binom{n}{k}\) subproblems and across edge updates within each iteration -
 enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
 
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
@@ -99,7 +99,7 @@ See [The DRESS Equation](theory/equation.md) for the full derivation.
 - **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
 - **Classification**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
 - **Retrieval**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
-- **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs — no GNN required.
+- **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs - no GNN required.
 - **Edge Robustness**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
 
 See [Applications Overview](applications/overview.md) for details.

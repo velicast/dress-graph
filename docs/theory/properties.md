@@ -282,7 +282,7 @@ This continuous relaxation has concrete advantages:
 - **Edge granularity.**  2-WL assigns one color per node pair; DRESS assigns
   one value per edge, providing a compact structural description.
 - **Downstream utility.**  Continuous values can be thresholded, ranked,
-  clustered, or used directly as features — none of which are possible
+  clustered, or used directly as features - none of which are possible
   with a discrete partition.
 
 ### Summary
@@ -291,7 +291,7 @@ This continuous relaxation has concrete advantages:
 |----------|---------|----------|------|-----------|
 | Parameter-free | ✗ | ✗ | ✓ | **✓** |
 | Edge-level output | ✗ | ✗ | ✗ | **✓** |
-| Bounded | ✓ | ✓ | — | **✓** |
+| Bounded | ✓ | ✓ | - | **✓** |
 | Unique fixed point | ✗ | ✓ | ✓ | **✓** |
 | Memory | \(O(N^2)\) | \(O(N)\) | \(O(N)\) | **\(O(N+E)\)** |
 | Handles weighted/directed | Partial | ✓ | ✗ | **✓** |

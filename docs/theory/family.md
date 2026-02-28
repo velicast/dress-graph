@@ -19,7 +19,7 @@ The weights $w(e)$ act as a multiplicative factor, controlling how much structur
 
 Different choices of motif $M$ yield different neighborhood operators:
 
-- **Triangle ($M = K_3$):** $\mathcal{N}(u,v) = \{(u,x), (x,v) \mid x \in N[u] \cap N[v]\}$ — this recovers Original-DRESS.
+- **Triangle ($M = K_3$):** $\mathcal{N}(u,v) = \{(u,x), (x,v) \mid x \in N[u] \cap N[v]\}$ - this recovers Original-DRESS.
 - **4-cycle ($M = C_4$):** Aggregates over edges participating in 4-cycles with $(u,v)$.
 - **$K_4$ clique:** Aggregates over edges forming a $K_4$ with $(u,v)$.
 
@@ -44,7 +44,7 @@ For Motif-DRESS to converge to a unique fixed point, the aggregation function $f
 
 2. **Boundedness.** For any valid $\mathcal{N}_M(e)$ and corresponding norm, the numerator is strictly bounded by the denominator via the Cauchy–Schwarz inequality (or Hölder's inequality for Minkowski-$r$ variants). Self-loop inclusion ensures the denominator is strictly positive. Thus $F(d)_{uv} \in [0, 2]$ for all $d > 0$.
 
-3. **Contraction on the Hilbert Projective Metric.** Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part — which follows from the Cauchy–Schwarz bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\!\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to $d^* \in [0, 2]^{|E|}$. A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
+3. **Contraction on the Hilbert Projective Metric.** Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part - which follows from the Cauchy–Schwarz bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\!\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to $d^* \in [0, 2]^{|E|}$. A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
 
 **Self-loops.** Self-loops are added to every node before iteration (i.e., the algorithm uses the closed neighborhood $N[u] = N(u) \cup \{u\}$). The self-loop edge $(u,u)$ participates in both the aggregation and the node norm; without it, an isolated edge with no common neighbors would produce $g(u) \cdot g(v) = 0$, making the iteration undefined.
 
@@ -141,7 +141,7 @@ d_{uv}^{(t+1)} = \frac{f\bigl(\{d_{e'}^{(t)}\}_{e' \in \mathcal{N}(u,v)}\bigr)}{
 
 where:
 
-- $\mathcal{N}(u,v)$ is a **symmetric neighborhood operator** — the set of edges aggregated for edge $(u,v)$,
+- $\mathcal{N}(u,v)$ is a **symmetric neighborhood operator** - the set of edges aggregated for edge $(u,v)$,
 - $f$ is the **aggregation function** over edges in $\mathcal{N}(u,v)$,
 - $g(u)$ is the **node norm**.
 

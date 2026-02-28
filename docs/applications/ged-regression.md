@@ -2,7 +2,7 @@
 
 ## Task
 
-Given two graphs \(G_1\) and \(G_2\), predict their **Graph Edit Distance (GED)** — the minimum number of node and edge insertions, deletions, and substitutions required to transform \(G_1\) into \(G_2\).
+Given two graphs \(G_1\) and \(G_2\), predict their **Graph Edit Distance (GED)** - the minimum number of node and edge insertions, deletions, and substitutions required to transform \(G_1\) into \(G_2\).
 
 Exact GED computation is NP-hard and practically impossible for graphs with more than a dozen nodes. Most modern approaches use heavy Graph Neural Networks (GNNs) to learn a heuristic approximation.
 
@@ -46,6 +46,6 @@ We compare the DRESS-based regressor against published neural baselines like Sim
 
 ### Analysis
 
-- **LINUX**: DRESS massively outperforms published baselines on MSE, \(\rho\), and \(\tau\), achieving MSE \(0.343 \times 10^{-3}\) — **15× lower than TaGSim** — with near-perfect Spearman correlation (0.988). TaGSim retains an edge on the precision-at-top metric \(p@20\).
+- **LINUX**: DRESS massively outperforms published baselines on MSE, \(\rho\), and \(\tau\), achieving MSE \(0.343 \times 10^{-3}\) - **15× lower than TaGSim** - with near-perfect Spearman correlation (0.988). TaGSim retains an edge on the precision-at-top metric \(p@20\).
 - **AIDS700nef**: DRESS achieves state-of-the-art across all four metrics, reducing MSE by 21% relative to TaGSim and improving Spearman \(\rho\) from 0.679 to 0.730.
 - **IMDBMulti**: Performance drops significantly on dense social graphs. This is a known theoretical limitation: DRESS matches 2-WL in expressiveness, but still struggles to distinguish highly symmetric, dense structures (like cliques and stars) common in social networks.

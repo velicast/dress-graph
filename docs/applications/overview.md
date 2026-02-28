@@ -72,11 +72,11 @@ See [Graph Isomorphism](isomorphism.md#directed-graphs) for details.
 ### Network robustness
 
 Edges with low DRESS values are structurally isolated (few common
-neighbors, weak support) — bridges and bottlenecks. Benchmarking on 200 graphs from 10 TU datasets
+neighbors, weak support) - bridges and bottlenecks. Benchmarking on 200 graphs from 10 TU datasets
 shows that static DRESS-asc is a **strong static strategy**, beating betweenness centrality (79 %) and Fiedler spectral
 cut (78 %). It captures a significant portion of the
-improvement achieved by adaptive betweenness — a method that
-recomputes centrality after every removal at \(O(nm^2)\) cost —
+improvement achieved by adaptive betweenness - a method that
+recomputes centrality after every removal at \(O(nm^2)\) cost -
 while requiring only a single \(O(km)\) DRESS fit.
 See [Edge Robustness](edge-robustness.md) for full results.
 

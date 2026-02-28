@@ -16,11 +16,11 @@
 \maketitle
 
 \begin{abstract}
-The Weisfeiler-Lehman (WL) hierarchy is a cornerstone framework for graph isomorphism testing and structural analysis. However, scaling beyond 1-WL to 3-WL and higher requires tensor-based operations that scale as $\mathcal{O}(n^3)$ or $\mathcal{O}(n^4)$, making them computationally prohibitive for large graphs. In this paper, we start from the Original-DRESS equation (Castrillo, Le\'{o}n, and G\'{o}mez, 2018)---a parameter-free, continuous dynamical system on edges---and show that it distinguishes the prism graph from $K_{3,3}$, a pair that 1-WL provably cannot separate. We then generalize it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions, and further to Generalized-DRESS, an abstract template parameterized by the choice of neighborhood operator, aggregation function and norm. Finally, we introduce $\Delta$-DRESS, which runs DRESS on each vertex-deleted subgraph $G \setminus \{v\}$, connecting the framework to the Kelly--Ulam reconstruction conjecture. $\Delta$-DRESS empirically distinguishes Strongly Regular Graphs (SRGs)---such as the Rook and Shrikhande graphs---that confound 3-WL. Our results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL on well-known benchmark graphs, without the prohibitive $\mathcal{O}(n^4)$ computational cost.
+The Weisfeiler-Lehman (WL) hierarchy is a cornerstone framework for graph isomorphism testing and structural analysis. However, scaling beyond 1-WL to 3-WL and higher requires tensor-based operations that scale as $\mathcal{O}(n^3)$ or $\mathcal{O}(n^4)$, making them computationally prohibitive for large graphs. In this paper, we start from the Original-DRESS equation (Castrillo, Le\'{o}n, and G\'{o}mez, 2018)--a parameter-free, continuous dynamical system on edges--and show that it distinguishes the prism graph from $K_{3,3}$, a pair that 1-WL provably cannot separate. We then generalize it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions, and further to Generalized-DRESS, an abstract template parameterized by the choice of neighborhood operator, aggregation function and norm. Finally, we introduce $\Delta$-DRESS, which runs DRESS on each vertex-deleted subgraph $G \setminus \{v\}$, connecting the framework to the Kelly--Ulam reconstruction conjecture. $\Delta$-DRESS empirically distinguishes Strongly Regular Graphs (SRGs)--such as the Rook and Shrikhande graphs--that confound 3-WL. Our results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL on well-known benchmark graphs, without the prohibitive $\mathcal{O}(n^4)$ computational cost.
 \end{abstract}
 
 \section{Introduction}
-The graph isomorphism problem and structural similarity measurement rely heavily on the Weisfeiler-Lehman (WL) hierarchy \cite{weisfeiler1968reduction}. While the standard 1-WL test---shown to characterize the expressiveness of message-passing neural networks \cite{xu2019how, morris2019weisfeiler}---is highly efficient, it fails to distinguish many non-isomorphic graphs. Higher-order $k$-WL tests \cite{cai1992optimal} offer greater expressiveness, but their $\mathcal{O}(n^3)$ or $\mathcal{O}(n^4)$ complexity renders them impractical for large-scale network analysis.
+The graph isomorphism problem and structural similarity measurement rely heavily on the Weisfeiler-Lehman (WL) hierarchy \cite{weisfeiler1968reduction}. While the standard 1-WL test--shown to characterize the expressiveness of message-passing neural networks \cite{xu2019how, morris2019weisfeiler}--is highly efficient, it fails to distinguish many non-isomorphic graphs. Higher-order $k$-WL tests \cite{cai1992optimal} offer greater expressiveness, but their $\mathcal{O}(n^3)$ or $\mathcal{O}(n^4)$ complexity renders them impractical for large-scale network analysis.
 
 The Original-DRESS algorithm \cite{castrillo2018dynamicstructuralsimilaritygraphs} provides a continuous alternative: a parameter-free, non-linear dynamical system that iteratively refines edge values based on common-neighbor aggregation. As we show in Section~3, Original-DRESS distinguishes graphs that 1-WL cannot. However, it still fails to distinguish highly symmetric structures such as Strongly Regular Graphs (SRGs).
 
@@ -57,7 +57,7 @@ However, because Original-DRESS aggregates strictly over triangles (common neigh
 
 \section{Original-DRESS Distinguishes Graphs That 1-WL Cannot}
 
-We now demonstrate a key expressiveness result: Original-DRESS---the simplest member of the DRESS family---already distinguishes graphs that 1-WL (color refinement) cannot.
+We now demonstrate a key expressiveness result: Original-DRESS--the simplest member of the DRESS family--already distinguishes graphs that 1-WL (color refinement) cannot.
 
 \begin{theorem}[DRESS distinguishes beyond 1-WL]
 \label{thm:dress-gt-1wl}
@@ -93,7 +93,7 @@ $K_{3,3}$ & $\{2/\sqrt{3} \approx 1.155\}$ & all 9 edges identical \\
 Since 1-WL cannot distinguish them and DRESS can, DRESS distinguishes beyond 1-WL on this instance.
 \end{proof}
 
-\paragraph{Remark.} This result holds for Original-DRESS alone---the simplest member of the DRESS family, using only triangle neighborhoods and $\mathcal{O}(E)$ computation per iteration. The generalizations that follow (Motif-DRESS, $\Delta$-DRESS) extend this advantage further to graphs that resist even 3-WL.
+\paragraph{Remark.} This result holds for Original-DRESS alone--the simplest member of the DRESS family, using only triangle neighborhoods and $\mathcal{O}(E)$ computation per iteration. The generalizations that follow (Motif-DRESS, $\Delta$-DRESS) extend this advantage further to graphs that resist even 3-WL.
 
 \section{Motif-DRESS}
 Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by defining $\mathcal{N}(u,v)$ as the set of edges that co-occur with $(u,v)$ in a specific structural motif $M$, with $f = \text{sum}$, $g = \text{geometric norm}$, and an optional symmetric weight function $w: E \to \mathbb{R}_{>0}$:
@@ -108,7 +108,7 @@ The symmetric weight function $w(e)$ acts as a multiplicative factor, controllin
 
 Different choices of motif $M$ yield different neighborhood operators:
 \begin{itemize}
-    \item \textbf{Triangle ($M = K_3$):} $\mathcal{N}(u,v) = \{(u,x), (x,v) \mid x \in N[u] \cap N[v]\}$---this recovers Original-DRESS.
+    \item \textbf{Triangle ($M = K_3$):} $\mathcal{N}(u,v) = \{(u,x), (x,v) \mid x \in N[u] \cap N[v]\}$--this recovers Original-DRESS.
     \item \textbf{4-cycle ($M = C_4$):} Aggregates over edges participating in 4-cycles with $(u,v)$.
     \item \textbf{$K_4$ clique:} Aggregates over edges forming a $K_4$ with $(u,v)$.
 \end{itemize}
@@ -137,7 +137,7 @@ The argument proceeds in three steps:
 \begin{enumerate}
     \item \textbf{Scale Invariance (Degree-0 Homogeneity):} The aggregation function is positively homogeneous of degree $p$, and the norm of degree $q$. Since $p = 2q$, the ratio $F(d)$ is homogeneous of degree $0$: for any $\lambda > 0$, $F(\lambda d) = F(d)$. Hence the iteration is self-regularizing and cannot diverge or collapse to zero.
     \item \textbf{Boundedness:} For any valid symmetric neighborhood operator $\mathcal{N}_M(e)$, the Cauchy--Schwarz inequality (or H\"older's inequality for Minkowski-$r$ variants) bounds the numerator by the denominator. Self-loop inclusion ensures the denominator is strictly positive. Thus $F(d)_{uv} \in [0, 2]$ for all $d > 0$.
-    \item \textbf{Contraction on the Hilbert Projective Metric:} Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part---which follows from the Cauchy--Schwarz bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to $d^* \in [0, 2]^{|E|}$.
+    \item \textbf{Contraction on the Hilbert Projective Metric:} Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part--which follows from the Cauchy--Schwarz bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to $d^* \in [0, 2]^{|E|}$.
 \end{enumerate}
 A complete formal verification of the contraction constant is deferred to future work; all empirical tests in this paper confirm convergence within 20 iterations.
 \end{proof}
@@ -151,7 +151,7 @@ d_{uv}^{(t+1)} = \frac{f\bigl(\{d_{e'}^{(t)}\}_{e' \in \mathcal{N}(u,v)}\bigr)}{
 
 where:
 \begin{itemize}
-    \item $\mathcal{N}(u,v)$ is a \textbf{symmetric neighborhood operator}---the set of edges aggregated for edge $(u,v)$,
+    \item $\mathcal{N}(u,v)$ is a \textbf{symmetric neighborhood operator}--the set of edges aggregated for edge $(u,v)$,
     \item $f$ is the \textbf{aggregation function} over edges in $\mathcal{N}(u,v)$,
     \item $g(u)$ is the \textbf{vertex norm}.
 \end{itemize}
@@ -192,7 +192,7 @@ $\Delta(\cdot)$ is an \textbf{orthogonal wrapper} applicable to any of the above
 This strategy is independent of the choice of $\mathcal{N}$, $f$, and $g$. $\Delta$-DRESS breaks symmetry by deletion and generalizes to depth $k$: $\Delta^k$ runs DRESS on all $\binom{n}{k}$ vertex-deleted subgraphs. The exploration of this iterated hierarchy and its relationship to the WL hierarchy is developed in the companion paper~\cite{castrillo2026kdress}.
 
 \section{Conclusion}
-We presented the DRESS family, a hierarchy of continuous structural refinement algorithms. Starting from Original-DRESS---a single equation proposed in 2018---we showed it distinguishes graphs that 1-WL cannot (Theorem~\ref{thm:dress-gt-1wl}). We then generalized it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions. Generalized-DRESS abstracts further, opening the aggregation function and norm as free parameters. $\Delta$-DRESS extends the framework by running DRESS on each vertex-deleted subgraph, connecting it to the Kelly--Ulam reconstruction conjecture, and empirically distinguishes Strongly Regular Graphs that confound 3-WL, while maintaining scalability well below $\mathcal{O}(n^3)$ for sparse graphs. These results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL, without the prohibitive computational cost of higher-order WL tests. An open-source implementation with bindings for C, C++, Python, Rust, Go, Julia, R, MATLAB, and WebAssembly is publicly available at \url{https://github.com/velicast/dress-graph}.
+We presented the DRESS family, a hierarchy of continuous structural refinement algorithms. Starting from Original-DRESS--a single equation proposed in 2018--we showed it distinguishes graphs that 1-WL cannot (Theorem~\ref{thm:dress-gt-1wl}). We then generalized it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions. Generalized-DRESS abstracts further, opening the aggregation function and norm as free parameters. $\Delta$-DRESS extends the framework by running DRESS on each vertex-deleted subgraph, connecting it to the Kelly--Ulam reconstruction conjecture, and empirically distinguishes Strongly Regular Graphs that confound 3-WL, while maintaining scalability well below $\mathcal{O}(n^3)$ for sparse graphs. These results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL, without the prohibitive computational cost of higher-order WL tests. An open-source implementation with bindings for C, C++, Python, Rust, Go, Julia, R, MATLAB, and WebAssembly is publicly available at \url{https://github.com/velicast/dress-graph}.
 
 \bibliographystyle{plain}
 \bibliography{refs}

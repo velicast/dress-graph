@@ -43,8 +43,8 @@ where \(c_u\) is the canonical ID of node \(u\)'s label and \(k\) is the
 total number of distinct labels.  Every distinct unordered label pair maps to
 a unique weight.
 
-This encoding is deterministic and depends only on label frequencies — an
-intrinsic dataset property — not on the arbitrary integer assignment.
+This encoding is deterministic and depends only on label frequencies - an
+intrinsic dataset property - not on the arbitrary integer assignment.
 
 ### When labels are absent
 
@@ -64,11 +64,11 @@ used to evaluate GIN, GCN, GraphSAGE, and the WL subtree kernel.
 | PTC_MR | 18 | 344 | 61.6 ± 5.3 | **64.6 ± 6.4** |
 | PROTEINS | 3 | 1,113 | 71.5 ± 3.1 | **73.0 ± 5.1** |
 | NCI1 | 22 | 4,110 | 77.7 ± 1.4 | **79.2 ± 1.4** |
-| IMDB-BINARY | — | 1,000 | **74.7 ± 4.1** | 72.4 ± 4.0 |
-| IMDB-MULTI | — | 1,500 | 48.7 ± 2.4 | **48.9 ± 3.2** |
-| REDDIT-BINARY | — | 2,000 | **90.3 ± 1.3** | 87.6 ± 2.7 |
-| REDDIT-MULTI-5K | — | 4,999 | 50.6 ± 1.5 | **53.1 ± 1.5** |
-| COLLAB | — | 5,000 | **79.8 ± 1.6** | 79.1 ± 0.9 |
+| IMDB-BINARY | - | 1,000 | **74.7 ± 4.1** | 72.4 ± 4.0 |
+| IMDB-MULTI | - | 1,500 | 48.7 ± 2.4 | **48.9 ± 3.2** |
+| REDDIT-BINARY | - | 2,000 | **90.3 ± 1.3** | 87.6 ± 2.7 |
+| REDDIT-MULTI-5K | - | 4,999 | 50.6 ± 1.5 | **53.1 ± 1.5** |
+| COLLAB | - | 5,000 | **79.8 ± 1.6** | 79.1 ± 0.9 |
 
 **Canonical pair** wins on all labeled (bio) datasets.
 **Unweighted** wins on most social networks, but canonical pair can help
@@ -121,7 +121,7 @@ DRESS).  The critical difference is what happens **after**:
 | Classifier | Kernel SVM: \(O(N^2)\) to \(O(N^3)\) | RF/GBT: \(O(N \cdot d \log N)\), \(d \le 84\) |
 | **Total pipeline** | \(O(N \cdot h \cdot m + N^2 \cdot V)\) | \(O(N \cdot k \cdot m + N \cdot d \log N)\) |
 
-WL produces a kernel, not a feature vector — it is fundamentally tied to
+WL produces a kernel, not a feature vector - it is fundamentally tied to
 \(O(N^2)\) pairwise comparisons.  DRESS produces a fixed-size embedding,
 so the entire pipeline scales **linearly** in the number of graphs \(N\).
 For small benchmarks (MUTAG, 188 graphs) this is irrelevant, but for
@@ -132,7 +132,7 @@ becomes a practical bottleneck while DRESS remains trivial.
 
 ### Social networks and community structure
 
-DRESS excels on social network classification — particularly
+DRESS excels on social network classification - particularly
 REDDIT-BINARY (+9.3 vs WL), COLLAB (+0.9 vs WL), and
 REDDIT-MULTI-5K (+0.6 vs WL).  This is not a
 coincidence: social network classification is largely determined by
@@ -149,7 +149,7 @@ strengths, bridge edge strengths, and the balance between them.
 On molecular datasets with discrete atom types, canonical pair encoding
 consistently improves over unweighted DRESS (+2.1 on MUTAG, +3.0 on PTC_MR,
 +1.5 on PROTEINS, +1.5 on NCI1).  The encoding lets DRESS distinguish
-bond types — a Carbon–Carbon bond and a Carbon–Nitrogen bond look identical
+bond types - a Carbon–Carbon bond and a Carbon–Nitrogen bond look identical
 without labels but receive different weights under canonical pair encoding.
 
 ### Where DRESS falls short
@@ -157,5 +157,5 @@ without labels but receive different weights under canonical pair encoding.
 DRESS underperforms on NCI1 (−6.8 vs WL, −3.5 vs GIN) and IMDB-MULTI
 (−2.2 vs WL, −3.6 vs GIN).  These datasets require learning complex
 feature interactions that a fixed-size summary cannot capture.
-DRESS provides what topology and label pair statistics *alone* can give —
+DRESS provides what topology and label pair statistics *alone* can give -
 when the task demands more, learned models have an inherent advantage.

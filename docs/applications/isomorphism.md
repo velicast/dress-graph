@@ -64,7 +64,7 @@ graphs *can* produce identical DRESS vectors:
 
 DRESS **matches 2-WL** in expressiveness.  Where 2-WL assigns discrete
 colors to node pairs, DRESS computes a cosine-like ratio that yields
-continuous real-valued edge scores — achieving the same distinguishing
+continuous real-valued edge scores - achieving the same distinguishing
 power at \(O(E)\) cost per iteration.
 
 This has three practical consequences:
@@ -75,7 +75,7 @@ This has three practical consequences:
 2. **Edge granularity.**  2-WL assigns one color per node pair; DRESS assigns
    one value per edge, giving a compact structural fingerprint.
 3. **Downstream utility.**  Continuous values can be thresholded, ranked,
-   clustered, or fed directly into ML pipelines — none of which is possible
+   clustered, or fed directly into ML pipelines - none of which is possible
    with a discrete partition.
 
 DRESS achieves 100 % accuracy on standard isomorphism benchmarks (MiVIA, IsoBench).
@@ -85,7 +85,7 @@ a pair that 1-WL cannot separate but 2-WL can
 (see [Theorem 1 in the DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)).
 It still fails on CFI constructions and strongly regular graphs with
 identical parameters.
-See [Properties — WL comparison](../theory/properties.md#weisfeilerleman-wl-color-refinement)
+See [Properties - WL comparison](../theory/properties.md#weisfeilerleman-wl-color-refinement)
 for a detailed side-by-side table.
 
 ### DRESS matches 2-WL
@@ -133,7 +133,7 @@ from the structure of the DRESS equation.
 value \(d^*\).  Triangle edges have 1 common neighbor; their update
 equation gives \(d^* = (4 + 4d^*) / (2 + 3d^*)\).  Matching edges have
 0 common neighbors; their equation gives \(d^* = (4 + 2d^*) / (2 + 3d^*)\).
-These yield \(d^* = (1+\sqrt{13})/3 \approx 1.535\) and \(d^* = 2/\sqrt{3} \approx 1.155\) respectively — a
+These yield \(d^* = (1+\sqrt{13})/3 \approx 1.535\) and \(d^* = 2/\sqrt{3} \approx 1.155\) respectively - a
 contradiction.  Therefore the prism must have at least two distinct edge
 values, while \(K_{3,3}\) (edge-transitive, 0 common neighbors everywhere)
 has a single uniform value.  The sorted vectors necessarily differ.
@@ -142,7 +142,7 @@ has a single uniform value.  The sorted vectors necessarily differ.
 ### DRESS reveals edge roles in regular graphs
 
 On any \(d\)-regular graph 2-WL assigns a single color to every vertex and
-a single color to every edge — it learns nothing.  DRESS, working at the
+a single color to every edge - it learns nothing.  DRESS, working at the
 edge level, can still expose structurally distinct edge roles.
 
 **Example: circulant graph \(C(10,\{1,2,5\})\).**  This is a 5-regular
@@ -183,7 +183,7 @@ different roles that WL-1 is completely blind to.
 ### DRESS also has limits: strongly regular graphs
 
 The **4×4 rook graph** and the **Shrikhande graph** are both
-SRG(16, 6, 2, 2) — 6-regular on 16 vertices where every pair of adjacent
+SRG(16, 6, 2, 2) - 6-regular on 16 vertices where every pair of adjacent
 vertices shares exactly 2 common neighbors, and every pair of non-adjacent
 vertices also shares exactly 2.
 
@@ -222,8 +222,8 @@ Both graphs produce **identical, uniform** DRESS values:
 
 | | Edge DRESS | Node DRESS | Distinct edge values |
 |---|---|---|---|
-| 4×4 Rook | 1.000 | — | 1 |
-| Shrikhande | 1.000 | — | 1 |
+| 4×4 Rook | 1.000 | - | 1 |
+| Shrikhande | 1.000 | - | 1 |
 
 DRESS cannot distinguish them.  Both graphs are edge-transitive, and every
 edge has exactly the same local structure (2 common neighbors).  The DRESS

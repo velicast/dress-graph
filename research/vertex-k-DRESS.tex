@@ -26,7 +26,7 @@ The Cai--F\"urer--Immerman (CFI) construction provides the canonical family of h
 
 We prove that $\Delta^k$-DRESS is at least as powerful as $(k+2)$-WL under the Kelly--Ulam Reconstruction Conjecture: the base case shows that Original-DRESS is at least as powerful as $2$-WL via the injectivity of the Birkhoff contraction fixed point, and an inductive argument lifts the result by one WL level per deletion depth, using the fact that the reconstruction deck determines the graph up to isomorphism.
 
-We verify the theoretical bound empirically on the canonical CFI benchmark: Original-DRESS ($k=0$) already distinguishes $\text{CFI}(K_3)$ (requiring 2-WL), and each additional level extends the range by one WL level, up to $k=3$ matching 5-WL. Crucially, $k=3$ fails on $\text{CFI}(K_7)$ (requiring 6-WL), confirming a sharp boundary at $(k+2)$-WL. The computational cost is $\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$---polynomial in $n$ for fixed $k$. These results establish iterated DRESS as a practical framework for systematically climbing the WL hierarchy.
+We verify the theoretical bound empirically on the canonical CFI benchmark: Original-DRESS ($k=0$) already distinguishes $\text{CFI}(K_3)$ (requiring 2-WL), and each additional level extends the range by one WL level, up to $k=3$ matching 5-WL. Crucially, $k=3$ fails on $\text{CFI}(K_7)$ (requiring 6-WL), confirming a sharp boundary at $(k+2)$-WL. The computational cost is $\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$--polynomial in $n$ for fixed $k$. These results establish iterated DRESS as a practical framework for systematically climbing the WL hierarchy.
 \end{abstract}
 
 \section{Introduction}
@@ -37,7 +37,7 @@ The CFI construction \cite{cai1992optimal} provides the canonical hard instances
 
 In the companion paper \cite{castrillo2026dress}, we introduced the DRESS family of continuous structural refinement algorithms. $\Delta$-DRESS, which runs DRESS on each vertex-deleted subgraph, was shown to empirically distinguish strongly regular graphs that confound 3-WL and connects to the Kelly--Ulam reconstruction conjecture \cite{kelly1942congruence, ulam1960collection}.
 
-In this paper, we introduce $\Delta^k$-DRESS, which applies $k$ levels of vertex \emph{deletion}. Under the Kelly--Ulam Reconstruction Conjecture \cite{kelly1942congruence, ulam1960collection}---which asserts that a graph with $n \geq 3$ vertices is determined up to isomorphism by its deck of vertex-deleted subgraphs---deletion is equivalent to individualization in discriminative power. Since $(j{+}1)$-WL is equivalent to running $j$-WL over all single-vertex individualizations \cite{cai1992optimal, grohe2017descriptive}, the reconstruction deck provides precisely the information needed to climb the WL hierarchy.
+In this paper, we introduce $\Delta^k$-DRESS, which applies $k$ levels of vertex \emph{deletion}. Under the Kelly--Ulam Reconstruction Conjecture \cite{kelly1942congruence, ulam1960collection}--which asserts that a graph with $n \geq 3$ vertices is determined up to isomorphism by its deck of vertex-deleted subgraphs--deletion is equivalent to individualization in discriminative power. Since $(j{+}1)$-WL is equivalent to running $j$-WL over all single-vertex individualizations \cite{cai1992optimal, grohe2017descriptive}, the reconstruction deck provides precisely the information needed to climb the WL hierarchy.
 
 We verify $\Delta^k$-DRESS on the CFI family: $k=0$ (Original-DRESS) already distinguishes $\text{CFI}(K_3)$, $k=1$ reaches $\text{CFI}(K_4)$, $k=2$ reaches $\text{CFI}(K_5)$, and $k=3$ reaches $\text{CFI}(K_6)$.
 
@@ -80,7 +80,7 @@ where $G \setminus \{v\}$ is the subgraph induced by $V \setminus \{v\}$, $\bigs
 
 We now define the iterated vertex deletion operator.
 
-\begin{definition}[$\Delta^k$-DRESS --- Deletion]
+\begin{definition}[$\Delta^k$-DRESS -- Deletion]
 \label{def:delta-k}
 For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k \ge 0$:
 \[
@@ -107,7 +107,7 @@ We first establish a key property of the DRESS fixed-point operator.
 
 \begin{lemma}[Refinement monotonicity]
 \label{lem:refinement}
-Let $F$ denote the Original-DRESS update operator, and let $\mathbf{d}^{(t)}$ denote the edge-value vector at iteration $t$. If two edges $(u,v)$ and $(u',v')$ have the same value $d^{(t)}_{uv} = d^{(t)}_{u'v'}$ at iteration $t$ but differ in their common-neighbor multiset structure---i.e., the multisets $\{\!\{(d^{(t)}_{ux}, d^{(t)}_{xv}) : x \in N[u] \cap N[v]\}\!\}$ and $\{\!\{(d^{(t)}_{u'x'}, d^{(t)}_{x'v'}) : x' \in N[u'] \cap N[v']\}\!\}$ are not equal---then $d^{(t+1)}_{uv} \neq d^{(t+1)}_{u'v'}$.
+Let $F$ denote the Original-DRESS update operator, and let $\mathbf{d}^{(t)}$ denote the edge-value vector at iteration $t$. If two edges $(u,v)$ and $(u',v')$ have the same value $d^{(t)}_{uv} = d^{(t)}_{u'v'}$ at iteration $t$ but differ in their common-neighbor multiset structure--i.e., the multisets $\{\!\{(d^{(t)}_{ux}, d^{(t)}_{xv}) : x \in N[u] \cap N[v]\}\!\}$ and $\{\!\{(d^{(t)}_{u'x'}, d^{(t)}_{x'v'}) : x' \in N[u'] \cap N[v']\}\!\}$ are not equal--then $d^{(t+1)}_{uv} \neq d^{(t+1)}_{u'v'}$.
 \end{lemma}
 
 \begin{proof}
@@ -143,7 +143,7 @@ We show that DRESS refines at least as finely as $2$-WL. The $2$-WL coloring is 
 \begin{quote}
 If $2$-WL assigns different colors to $(u,v)$ and $(u',v')$ at round $t$, then $d^{(t)}_{uv} \neq d^{(t)}_{u'v'}$.
 \end{quote}
-At the stable coloring (the fixed point of both processes), any color difference in $2$-WL is therefore reflected as a value difference in $\mathbf{d}^*$. In particular, if the $2$-WL stable colorings of $G$ and $H$ differ---meaning the multisets of stable colors are not equal---then the multisets of fixed-point edge values $\mathbf{d}^*_G$ and $\mathbf{d}^*_H$ are not equal either, and hence $\operatorname{sort}(\mathbf{d}^*_G) \neq \operatorname{sort}(\mathbf{d}^*_H)$.
+At the stable coloring (the fixed point of both processes), any color difference in $2$-WL is therefore reflected as a value difference in $\mathbf{d}^*$. In particular, if the $2$-WL stable colorings of $G$ and $H$ differ--meaning the multisets of stable colors are not equal--then the multisets of fixed-point edge values $\mathbf{d}^*_G$ and $\mathbf{d}^*_H$ are not equal either, and hence $\operatorname{sort}(\mathbf{d}^*_G) \neq \operatorname{sort}(\mathbf{d}^*_H)$.
 \end{proof}
 
 Before stating the main inductive theorem, we recall a classical characterization of the WL hierarchy via vertex individualization.
@@ -163,7 +163,7 @@ This is a consequence of the characterization of $j$-WL via the counting logic $
 
 We now define the \textbf{multiset fingerprint} of $\Delta^k$-DRESS, which retains full per-deletion information:
 
-\begin{definition}[Multiset fingerprint --- Deletion]
+\begin{definition}[Multiset fingerprint -- Deletion]
 \label{def:delta-multiset-fp}
 For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k \geq 0$:
 \[
@@ -225,17 +225,17 @@ The $j$-WL algorithm cannot distinguish $\text{CFI}(G)$ from $\text{CFI}'(G)$ wh
 For the complete graph $K_n$, the treewidth is $n - 1$, so $\text{CFI}(K_n)$ requires $(n{-}1)$-WL. In particular:
 \begin{itemize}
     \item $\text{CFI}(K_3)$: requires 2-WL.
-    \item $\text{CFI}(K_5)$: requires 4-WL, operating on 4-tuples---$\mathcal{O}(n^5)$ per iteration.
-    \item $\text{CFI}(K_6)$: requires 5-WL, operating on 5-tuples---$\mathcal{O}(n^6)$ per iteration.
+    \item $\text{CFI}(K_5)$: requires 4-WL, operating on 4-tuples--$\mathcal{O}(n^5)$ per iteration.
+    \item $\text{CFI}(K_6)$: requires 5-WL, operating on 5-tuples--$\mathcal{O}(n^6)$ per iteration.
 \end{itemize}
 
 \subsection{\texorpdfstring{$\Delta^k$}{Delta-k}-DRESS on \texorpdfstring{CFI$(K_n)$}{CFI(Kn)}}
 
-We test $\Delta^k$-DRESS for $k = 0, 1, 2, 3$ on CFI pairs over complete graphs $K_n$ ($n = 3, \ldots, 10$). Higher depths on larger base graphs were not executed due to time constraints (marked --- in the table).
+We test $\Delta^k$-DRESS for $k = 0, 1, 2, 3$ on CFI pairs over complete graphs $K_n$ ($n = 3, \ldots, 10$). Higher depths on larger base graphs were not executed due to time constraints (marked -- in the table).
 
 \begin{table}[h]
 \centering
-\caption{$\Delta^k$-DRESS results on CFI graph pairs. $\checkmark$ = pair distinguished; $\times$ = pair not distinguished; --- = not executed due to time constraints. The WL requirement column shows the minimum WL dimension needed to distinguish the pair.}
+\caption{$\Delta^k$-DRESS results on CFI graph pairs. $\checkmark$ = pair distinguished; $\times$ = pair not distinguished; -- = not executed due to time constraints. The WL requirement column shows the minimum WL dimension needed to distinguish the pair.}
 \label{tab:cfi-results}
 \begin{tabular}{@{}lcccccc@{}}
 \toprule
@@ -246,9 +246,9 @@ $K_4$   & 16    & 3-WL & $\times$      & $\checkmark$  & $\checkmark$  & $\check
 $K_5$   & 40    & 4-WL & $\times$      & $\times$      & $\checkmark$  & $\checkmark$  \\
 $K_6$   & 96    & 5-WL & $\times$      & $\times$      & $\times$      & $\checkmark$  \\
 $K_7$   & 224   & 6-WL & $\times$      & $\times$      & $\times$      & $\times$      \\
-$K_8$   & 512   & 7-WL & $\times$      & $\times$      & ---            & ---            \\
-$K_9$   & 1152  & 8-WL & $\times$      & $\times$      & ---            & ---            \\
-$K_{10}$& 2560  & 9-WL & $\times$      & $\times$      & ---            & ---            \\
+$K_8$   & 512   & 7-WL & $\times$      & $\times$      & --            & --            \\
+$K_9$   & 1152  & 8-WL & $\times$      & $\times$      & --            & --            \\
+$K_{10}$& 2560  & 9-WL & $\times$      & $\times$      & --            & --            \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -258,7 +258,7 @@ $K_{10}$& 2560  & 9-WL & $\times$      & $\times$      & ---            & ---   
 The results in Table~\ref{tab:cfi-results} reveal a clear staircase pattern:
 
 \begin{enumerate}
-    \item \textbf{$\Delta^0$ (Original-DRESS)} distinguishes $\text{CFI}(K_3)$, which requires 2-WL. This is a notable result: Original-DRESS---with no vertex deletion---already exceeds 1-WL on CFI instances, consistent with the prism vs.\ $K_{3,3}$ result in \cite{castrillo2026dress}. It fails on all larger CFI pairs.
+    \item \textbf{$\Delta^0$ (Original-DRESS)} distinguishes $\text{CFI}(K_3)$, which requires 2-WL. This is a notable result: Original-DRESS--with no vertex deletion--already exceeds 1-WL on CFI instances, consistent with the prism vs.\ $K_{3,3}$ result in \cite{castrillo2026dress}. It fails on all larger CFI pairs.
 
     \item \textbf{$\Delta^1$} extends the range to $\text{CFI}(K_4)$ (3-WL). This is consistent with the results in \cite{castrillo2026dress}, where $\Delta$-DRESS was shown to distinguish SRG pairs that confound 3-WL. It fails on $\text{CFI}(K_5)$.
 

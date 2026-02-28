@@ -6,13 +6,13 @@ DRESS assigns every edge a value reflecting its structural importance.
 A natural question: **can these values double as an edge-importance
 ranking for robustness analysis?**
 
-If so, any DRESS computation — whether for
+If so, any DRESS computation - whether for
 [classification](classification.md), [retrieval](retrieval.md), or
-community detection — already contains a principled edge-removal ordering.
+community detection - already contains a principled edge-removal ordering.
 No additional algorithm is required.
 
 We compare DRESS against established baselines *and* against **adaptive betweenness centrality**
-— the theoretical ceiling that recomputes betweenness after every
+- the theoretical ceiling that recomputes betweenness after every
 single removal at \(O(n \cdot m^2)\) cost.
 
 ## Setup
@@ -20,7 +20,7 @@ single removal at \(O(n \cdot m^2)\) cost.
 ### Progressive edge removal
 
 For a connected graph \(G\), we progressively remove edges according to an
-ordering and track the **Largest Connected Component (LCC) fraction** — the
+ordering and track the **Largest Connected Component (LCC) fraction** - the
 fraction of nodes still reachable from the largest component.  The area under
 this curve (AUC) summarizes how quickly the ordering fragments the graph:
 **lower AUC = more damaging ordering**.
@@ -41,7 +41,7 @@ this curve (AUC) summarizes how quickly the ordering fragments the graph:
 | **DRESS-adaptive** | adaptive | Recompute DRESS after each removal | \(O(k \cdot m^2)\) |
 
 Static strategies fix the ordering before removal begins.  Adaptive
-strategies recompute after every removal — they are the theoretical
+strategies recompute after every removal - they are the theoretical
 ceiling but orders of magnitude more expensive.
 
 ### Why ascending?
@@ -99,7 +99,7 @@ Mean AUC across all graphs; lower is better.
 | 6 | DegProduct | 0.423 | \(O(m)\) | static |
 | 7 | CoreHD | 0.439 | \(O(m)\) | static |
 | 8 | CI | 0.478 | \(O(n \cdot d^\ell)\) | static |
-| 9 | Random | 0.528 | — | baseline |
+| 9 | Random | 0.528 | - | baseline |
 
 !!! success "Headline result"
     **DRESS-asc is the best static strategy overall**, ranking #3
@@ -134,13 +134,13 @@ vs recomputing betweenness after every single removal at \(O(nm^2)\).
 | Dataset | DRESS wins | Wilcoxon \(p\) | Sig? |
 |---------|--------------|----------------|------|
 | MUTAG | 20 / 20 | \(< 0.0001\) | \*\*\* |
-| PTC_MR | 12 / 20 | 0.18 | — |
+| PTC_MR | 12 / 20 | 0.18 | - |
 | PROTEINS | 18 / 20 | \(< 0.0001\) | \*\*\* |
 | DD | 20 / 20 | \(< 0.0001\) | \*\*\* |
 | ENZYMES | 16 / 20 | 0.0001 | \*\*\* |
 | NCI1 | 17 / 20 | 0.012 | \* |
-| IMDB-BINARY | 9 / 20 | 0.98 | — |
-| IMDB-MULTI | 9 / 20 | 0.19 | — |
+| IMDB-BINARY | 9 / 20 | 0.98 | - |
+| IMDB-MULTI | 9 / 20 | 0.19 | - |
 | REDDIT-BINARY | 17 / 20 | 0.0002 | \*\*\* |
 | REDDIT-MULTI-5K | 20 / 20 | \(< 0.0001\) | \*\*\* |
 
@@ -157,7 +157,7 @@ significantly loses on any.
 | DD | 18 / 20 | \(< 0.0001\) | \*\*\* |
 | ENZYMES | 15 / 20 | 0.017 | \* |
 | NCI1 | 16 / 20 | 0.001 | \*\* |
-| IMDB-BINARY | 10 / 20 | 0.26 | — |
+| IMDB-BINARY | 10 / 20 | 0.26 | - |
 | IMDB-MULTI | 14 / 20 | 0.003 | \*\* |
 | REDDIT-BINARY | 18 / 20 | \(< 0.0001\) | \*\*\* |
 | REDDIT-MULTI-5K | 20 / 20 | \(< 0.0001\) | \*\*\* |
@@ -218,7 +218,7 @@ the spectral cut is optimal by design.
 
 DRESS values reflect **local structural support**: an edge \((u,v)\)
 receives a high value when \(u\) and \(v\) share many well-connected
-common neighbors.  Edges with low DRESS values are structurally exposed —
+common neighbors.  Edges with low DRESS values are structurally exposed -
 they sit at bottlenecks, between communities, or at the periphery.
 
 ## Cost comparison

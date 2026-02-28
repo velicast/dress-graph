@@ -17,13 +17,13 @@ At depth $k$, the operator computes DRESS on all $\binom{n}{k}$ subgraphs obtain
 Special cases:
 
 - **$\Delta^0$:** Original-DRESS (no deletion).
-- **$\Delta^1$:** Equivalent to Δ-DRESS — runs DRESS on each single-node-deleted subgraph.
+- **$\Delta^1$:** Equivalent to Δ-DRESS - runs DRESS on each single-node-deleted subgraph.
 
 ## Histogram Representation
 
 The graph fingerprint can be represented equivalently as the sorted vector $\text{sort}(d^*)$ or as the histogram $h(d^*)$; both uniquely identify the multiset of converged edge values. Since DRESS values are bounded in $[0, 2]$ and convergence tolerance is $\epsilon$, each edge value maps to one of $\lceil 2/\epsilon \rceil$ integer bins (e.g., $2 \times 10^{6}$ bins for $\epsilon = 10^{-6}$).
 
-Individual subgraph fingerprints are not recoverable from the pooled histogram. The memory footprint is constant regardless of $k$ — a single fixed-size integer array — whereas storing the raw multiset of $\binom{n}{k} \cdot |E|$ floating-point values would be prohibitive. This fixed-size representation, combined with the deletion operator, empirically matches the discriminative power of $k$-WL methods that require $\mathcal{O}(n^{k+1})$ storage.
+Individual subgraph fingerprints are not recoverable from the pooled histogram. The memory footprint is constant regardless of $k$ - a single fixed-size integer array - whereas storing the raw multiset of $\binom{n}{k} \cdot |E|$ floating-point values would be prohibitive. This fixed-size representation, combined with the deletion operator, empirically matches the discriminative power of $k$-WL methods that require $\mathcal{O}(n^{k+1})$ storage.
 
 ## Complexity
 
@@ -48,11 +48,11 @@ Results using Original-DRESS as the variant $\mathcal{F}$, with $\epsilon = 10^{
 | $K_5$ | 40 | 4-WL | ✗ | ✗ | ✓ | ✓ |
 | $K_6$ | 96 | 5-WL | ✗ | ✗ | ✗ | ✓ |
 | $K_7$ | 224 | 6-WL | ✗ | ✗ | ✗ | ✗ |
-| $K_8$ | 512 | 7-WL | ✗ | ✗ | — | — |
-| $K_9$ | 1152 | 8-WL | ✗ | ✗ | — | — |
-| $K_{10}$ | 2560 | 9-WL | ✗ | ✗ | — | — |
+| $K_8$ | 512 | 7-WL | ✗ | ✗ | - | - |
+| $K_9$ | 1152 | 8-WL | ✗ | ✗ | - | - |
+| $K_{10}$ | 2560 | 9-WL | ✗ | ✗ | - | - |
 
-✓ = pair distinguished, ✗ = pair not distinguished, — = not executed due to time constraints.
+✓ = pair distinguished, ✗ = pair not distinguished, - = not executed due to time constraints.
 
 ## The Staircase Pattern
 

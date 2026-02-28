@@ -5,7 +5,7 @@
 All bindings expose the same underlying algorithm through three main function
 calls: **`dress_fit()`** and **`delta_dress_fit()`**.
 
-**`dress_fit()`** — Pass in the graph (vertices, edges, optional
+**`dress_fit()`** - Pass in the graph (vertices, edges, optional
 weights), and get back a result struct containing every output array.
 
 ```
@@ -16,7 +16,7 @@ The result always contains the same fields across every language:
 edge dress values, edge weights, node dress norms, iteration count, and
 final convergence delta.
 
-**`delta_dress_fit()`** — Compute the \(\Delta^k\)-DRESS histogram.
+**`delta_dress_fit()`** - Compute the \(\Delta^k\)-DRESS histogram.
 Enumerates all \(\binom{N}{k}\) vertex-deletion subsets, runs DRESS on
 each subgraph, and accumulates edge values into a histogram.
 

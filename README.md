@@ -4,16 +4,16 @@
 
 DRESS is a provably (Under Reconstruction Conjecture) continuous relaxation of the Weisfeiler–Leman algorithm.
 At depth $k$, higher-order DRESS is **provably at least as powerful as $(k{+}2)$-WL**
-in expressiveness — the base algorithm ( $k{=}0$ ) already matches 2-WL, and each
+in expressiveness - the base algorithm ( $k{=}0$ ) already matches 2-WL, and each
 level adds one WL dimension.
 Yet it is cheaper to compute: a single DRESS run costs
 $\mathcal{O}(I \cdot m \cdot d_{\max})$ where $I$ is the number of iterations,
-and depth- $k$ requires ${n \choose k}$ independent runs — a total of
+and depth- $k$ requires ${n \choose k}$ independent runs - a total of
 $\mathcal{O}\bigl({n \choose k} \cdot I \cdot m \cdot d_{\max}\bigr)$,
 compared to $\mathcal{O}(n^{k+3})$ for $(k{+}2)$-WL.
 Space complexity is $\mathcal{O}(n + m)$, compared to $\mathcal{O}(n^{k+2})$ for $(k{+}2)$-WL.
-The algorithm is embarrassingly parallel in two orthogonal ways —
-across the ${n \choose k}$ subproblems and across edge updates within each iteration —
+The algorithm is embarrassingly parallel in two orthogonal ways -
+across the ${n \choose k}$ subproblems and across edge updates within each iteration -
 enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
 
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
@@ -82,7 +82,7 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 | Facebook (konect) | 59,216,215 | 92,522,012 | 26 | 6.84e-7 |
 | Facebook (UCI/UNI) | 58,790,783 | 92,208,195 | 26 | 6.84e-7 |
 
-- **Low iteration count.** Even on graphs with tens of millions of vertices and edges, DRESS converges in fewer than 31 iterations — consistent with the contraction-mapping guarantee.
+- **Low iteration count.** Even on graphs with tens of millions of vertices and edges, DRESS converges in fewer than 31 iterations - consistent with the contraction-mapping guarantee.
 - **Scale independence.** Iteration count grows very slowly with graph size. A graph with 59 M vertices needs only ~1.5× the iterations of one with 8 K vertices.
 - **Uniform residual.** The final δ is consistently on the order of 10⁻⁷, indicating that convergence quality does not degrade with graph size.
 
@@ -92,7 +92,7 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 - **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
 - **Classification**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
 - **Retrieval**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
-- **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs — no GNN required.
+- **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs - no GNN required.
 - **Edge Robustness**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
 
 ## Quick start (Python)
@@ -238,7 +238,7 @@ If you use DRESS in your research, please cite:
 ---
 
 > **Why "DRESS"?** DRESS computes an edge labelling that reveals the graph's hidden
-> structural identity — it *dresses* the bare skeleton (adjacency) with
+> structural identity - it *dresses* the bare skeleton (adjacency) with
 > meaningful values.  A graph without DRESS is "naked" topology; after DRESS,
 > every edge wears the structural role that fits it best.  And `dress_fit()`
 > is literally fitting the dress to the graph: few iterations give a loose fit,

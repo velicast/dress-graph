@@ -17,7 +17,7 @@ All runs used convergence tolerance \(\epsilon = 10^{-6}\) with a maximum of
 ### Key Observations
 
 - **Low iteration count.** Even on graphs with tens of millions of vertices and
-  edges, DRESS converges in fewer than 31 iterations — consistent with the
+  edges, DRESS converges in fewer than 31 iterations - consistent with the
   [contraction-mapping guarantee](theory/properties.md#unique-fixed-point).
 - **Scale independence.** Iteration count grows very slowly with graph size.
   A graph with 59 M vertices needs only ~1.5× the iterations of one with 8 K

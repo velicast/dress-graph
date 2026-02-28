@@ -3,7 +3,7 @@
 ## Task
 
 Given a query graph, rank a database of graphs by structural similarity.
-This is the graph analogue of image retrieval or document search — and it
+This is the graph analogue of image retrieval or document search - and it
 requires a **fixed-length graph representation** that supports efficient
 nearest-neighbor lookup.
 
@@ -39,7 +39,7 @@ Total: **84 dimensions** per graph.
 
 A sweep over `n_quantiles` ∈ {10, 20, 40, 80, 100, 120, 160} shows
 performance saturating around 80–100 quantiles.  Beyond that, extra
-dimensions add noise without capturing new distributional information —
+dimensions add noise without capturing new distributional information -
 consistent with the small graph sizes in these benchmarks (LINUX: ~8 nodes,
 AIDS: ~9 nodes).
 
@@ -53,12 +53,12 @@ AIDS: ~9 nodes).
 | 120 | 124 | 0.443 | 0.216 |
 | 160 | 164 | 0.398 | 0.219 |
 
-We use **80 quantiles (84d)** as the default — near the peak, with no
+We use **80 quantiles (84d)** as the default - near the peak, with no
 fragile hyperparameter sensitivity.
 
 ## Ground truth
 
-We evaluate against **Graph Edit Distance (GED)** — the minimum number of
+We evaluate against **Graph Edit Distance (GED)** - the minimum number of
 node/edge insertions, deletions, and substitutions to transform one graph
 into another.  GED matrices from the GED-EXP benchmark (Bai et al., 2019)
 provide the "true" ranking for each query.
@@ -85,7 +85,7 @@ Datasets: **LINUX** (800 train / 200 test program call graphs) and
 | DRESS Wasserstein | 0.360 | 0.307 | 0.375 | 0.523 | 0.983 | 0.521 |
 
 DRESS achieves **P\@1 = 0.505** (3× the size baseline) and
-**NDCG\@10 = 0.987** — near-perfect ranking quality in the top 10.
+**NDCG\@10 = 0.987** - near-perfect ranking quality in the top 10.
 
 ### AIDS700nef
 
@@ -118,7 +118,7 @@ DRESS computes each fingerprint independently in \(O(m)\).
 An interesting pattern: the size baseline wins on Spearman ρ (0.867 vs 0.838
 on LINUX) but loses badly on P\@K.  This means size captures the **broad
 trend** (bigger graphs have higher GED to small ones) but cannot distinguish
-graphs of similar size — exactly where DRESS excels.
+graphs of similar size - exactly where DRESS excels.
 
 For retrieval, P\@K is the metric that matters: users want the right
 results in the top positions.  A method with perfect ρ but poor P\@10 is
@@ -129,10 +129,10 @@ useless for practical search.
 - **L1 distance** is more robust than L2 for P\@10, consistent across
   both datasets.  L1 downweights outlier dimensions in the fingerprint.
 - **Histograms** (fixed-bin counts) performed consistently worse than
-  percentile fingerprints — the CDF representation captures distribution
+  percentile fingerprints - the CDF representation captures distribution
   shape more faithfully.
 - **DRESS+Size concatenation** did not help on LINUX (where graphs have
   similar sizes) and helped only marginally on AIDS.  The fingerprint
   already captures size implicitly via the edge count feature.
-- **Cosine distance** was mediocre — magnitude (scale) matters for this
+- **Cosine distance** was mediocre - magnitude (scale) matters for this
   task, and cosine discards it.
