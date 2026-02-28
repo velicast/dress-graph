@@ -4,17 +4,17 @@
 
 DRESS is a provably (Under Reconstruction Conjecture) continuous relaxation of the Weisfeiler–Leman algorithm.
 At depth $k$, higher-order DRESS is **provably at least as powerful as $(k{+}2)$-WL**
-in expressiveness — the base algorithm ($k{=}0$) already matches 2-WL, and each
+in expressiveness — the base algorithm ( $k{=}0$ ) already matches 2-WL, and each
 level adds one WL dimension.
 Yet it is cheaper to compute: a single DRESS run costs
 $\mathcal{O}(I \cdot m \cdot d_{\max})$ where $I$ is the number of iterations,
-and depth-$k$ requires $\binom{n}{k}$ independent runs — a total of
-$\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$,
+and depth- $k$ requires ${n \choose k}$ independent runs — a total of
+$\mathcal{O}\bigl({n \choose k} \cdot I \cdot m \cdot d_{\max}\bigr)$,
 compared to $\mathcal{O}(n^{k+3})$ for $(k{+}2)$-WL.
 Space complexity is $\mathcal{O}(n + m)$, compared to $\mathcal{O}(n^{k+2})$ for $(k{+}2)$-WL.
 The algorithm is embarrassingly parallel in two orthogonal ways —
-across the $\binom{n}{k}$ subproblems and across edge updates within each iteration —
-enabling distributed/cloud PLUS multi-core/GPU/SIMD implementations.
+across the ${n \choose k}$ subproblems and across edge updates within each iteration —
+enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
 
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a

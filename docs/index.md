@@ -14,7 +14,7 @@ compared to \(\mathcal{O}(n^{k+3})\) for \((k{+}2)\)-WL.
 Space complexity is \(\mathcal{O}(n + m)\), compared to \(\mathcal{O}(n^{k+2})\) for \((k{+}2)\)-WL.
 The algorithm is embarrassingly parallel in two orthogonal ways —
 across the \(\binom{n}{k}\) subproblems and across edge updates within each iteration —
-enabling distributed/cloud and multi-core/GPU/SIMD implementations.
+enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
 
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a
