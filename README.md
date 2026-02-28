@@ -185,6 +185,8 @@ Full documentation (theory, applications, API reference):
 
 ## Publications
 
+The arXiv papers are outdated and will be updated next week. The latest versions including the proof in Paper 2, are in the GitHub repo.
+
 - E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [arxiv:2602.21557](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
 - E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
