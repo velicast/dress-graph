@@ -96,37 +96,36 @@ Since 1-WL cannot distinguish them and DRESS can, DRESS distinguishes beyond 1-W
 \paragraph{Remark.} This result holds for Original-DRESS alone--the simplest member of the DRESS family, using only triangle neighborhoods and $\mathcal{O}(E)$ computation per iteration. The generalizations that follow (Motif-DRESS, $\Delta$-DRESS) extend this advantage further to graphs that resist even 3-WL.
 
 \section{Motif-DRESS}
-Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by defining $\mathcal{N}(u,v)$ as the set of edges that co-occur with $(u,v)$ in a specific structural motif $M$, with $f = \text{sum}$, $g = \text{geometric norm}$, and an optional symmetric weight function $w: E \to \mathbb{R}_{>0}$:
+Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by replacing the common-neighbor aggregation with a motif-defined symmetric vertex neighborhood $\mathcal{N}_M(u,v) = \mathcal{N}_M(v,u)$: the set of endpoints of edges in instances of an undirected motif $M$ containing edge $(u,v)$ that are adjacent to $u$ or $v$, always including $u$ and $v$ themselves, with an optional symmetric weight function $w: E \to \mathbb{R}_{>0}$ (with $w_e = 1$ for unweighted graphs).
 
 \begin{equation}
-d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{e' \in \mathcal{N}_M(u,v)} w_{e'}\,d_{e'}^{(t)}}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
+d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{x \in \mathcal{N}_M(u,v)} \bigl(w_{ux} \cdot d_{ux}^{(t)} + w_{xv} \cdot d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
 \end{equation}
 
-where $\|u\|^{(t)} = \sqrt{\sum_{e' \in \mathcal{N}_M(u,u)} w_{e'}\,d_{e'}^{(t)}}$ is the weighted vertex norm at time $t$.
+where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} w_{ux} \cdot d_{ux}^{(t)}}$, and $w_{ab} \cdot d_{ab} = 0$ whenever $(a,b) \notin E$. The symmetric weight function $w(e)$ acts as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $w \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
 
-The symmetric weight function $w(e)$ acts as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $w \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
-
-Different choices of motif $M$ yield different neighborhood operators:
+Different choices of motif $M$ yield different neighborhoods:
 \begin{itemize}
-    \item \textbf{Triangle ($M = K_3$):} $\mathcal{N}(u,v) = \{(u,x), (x,v) \mid x \in N[u] \cap N[v]\}$--this recovers Original-DRESS.
-    \item \textbf{4-cycle ($M = C_4$):} Aggregates over edges participating in 4-cycles with $(u,v)$.
-    \item \textbf{$K_4$ clique:} Aggregates over edges forming a $K_4$ with $(u,v)$.
+    \item \textbf{Triangle ($M = K_3$):} $\mathcal{N}_{K_3}(u,v) = N[u] \cap N[v]$, the closed common neighborhood. This recovers Original-DRESS exactly: $\sum_{x \in N[u] \cap N[v]} \bigl(w_{ux}\,d_{ux} + w_{xv}\,d_{xv}\bigr)$.
+    \item \textbf{$K_4$ clique:} For each pair $x, y$ with $\{u,v,x,y\}$ forming a $K_4$, $\mathcal{N}_{K_4}(u,v)$ contains $u$, $v$, $x$, and $y$. Each vertex contributes $w_{ux}\,d_{ux} + w_{xv}\,d_{xv}$.
+    \item \textbf{4-cycle ($M = C_4$):} For each 4-cycle $u$-$x$-$y$-$v$, $\mathcal{N}_{C_4}(u,v)$ contains $u$, $v$, $x$, and $y$. Vertex $x$ contributes $w_{ux}\,d_{ux}$; vertex $y$ contributes $w_{yv}\,d_{yv}$ (cross-terms are zero since $(x,v), (u,y) \notin E$ in the $C_4$).
 \end{itemize}
 
 \subsection{Properties}
 
-\textbf{Complexity:} $\mathcal{O}(\text{Motif Extraction}) + \mathcal{O}\!\bigl(I \cdot \sum_{e} |\mathcal{N}_M(e)|\bigr)$, where $I$ is the number of iterations and $\sum_e |\mathcal{N}_M(e)|$ is the total size of all motif-neighborhood lists. For Original-DRESS (triangles), this reduces to $\mathcal{O}(I \cdot m \cdot T)$, where $T$ is the number of triangles. For motifs such as 4-cycles or $K_4$ cliques in sparse graphs, the motif-neighborhood lists can be significantly smaller, making Motif-DRESS faster than Original-DRESS.
+\textbf{Complexity:} $\mathcal{O}(\text{Motif Extraction}) + \mathcal{O}\!\bigl(I \cdot \sum_{e} |\mathcal{N}_M(e)|\bigr)$, where $I$ is the number of iterations and $\sum_e |\mathcal{N}_M(e)|$ is the total size of all motif neighborhoods. For Original-DRESS (triangles), this reduces to $\mathcal{O}(I \cdot m \cdot T)$, where $T$ is the number of triangles. For motifs such as 4-cycles or $K_4$ cliques in sparse graphs, the motif neighborhoods can be significantly smaller, making Motif-DRESS faster than Original-DRESS.
 
-\textbf{Invariant: $d_{uu} = 2$.} The self-similarity is invariant under iteration: since $\mathcal{N}_M(u,u)$ includes all edges incident to $u$ symmetrically, and $d_{ux} = d_{xu}$, substituting $v = u$ yields $d_{uu}^{(t+1)} = 2\|u\|^2 / \|u\|^2 = 2$ for all $t$. Thus $d_{uu} = 2$ is a fixed property of the equation, not a free parameter.
+\textbf{Invariant: $d_{uu} = 2$.} The self-similarity $d_{uu} = 2$ is a constant maintained throughout iteration. Since the iteration only updates $d_{uv}$ for $u \ne v$, and the norm $\|u\| = \sqrt{\sum_{x \in N[u]} w_{ux} \cdot d_{ux}}$ always includes $d_{uu} = 2$, this is a fixed property of the equation, not a free parameter.
 
 \subsection{Expressiveness}
 All experiments below use the $K_4$ clique motif. The specific SRG pairs tested below are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
 \begin{itemize}
     \item \textbf{Rook vs.\ Shrikhande:} Successfully distinguishes this pair of SRGs with parameters $(16, 6, 2, 2)$. The Rook graph ($K_4 \square K_4$) contains $K_4$ cliques while the Shrikhande graph does not, so the $K_4$-neighborhood sizes differ per edge.
-    \item \textbf{Chang Graphs:} Distinguishes all 6 pairwise comparisons among the four SRGs with parameters $(28, 12, 6, 4)$: T(8), Chang-1, Chang-2, and Chang-3.
+    \item \textbf{Chang Graphs:} Distinguishes 3 of the 6 pairwise comparisons among the four SRGs with parameters $(28, 12, 6, 4)$: T(8) vs each of Chang-1, Chang-2, and Chang-3. The three Chang graphs are pairwise indistinguishable by Motif-$K_4$ (all three have identical $K_4$-neighborhood structure per edge).
 \end{itemize}
 
 \subsection{Proof Sketch of Convergence}
+\label{sec:convergence}
 
 \begin{theorem}[Convergence of Motif-DRESS]
 Let $F: \mathbb{R}_+^{|E|} \to \mathbb{R}_+^{|E|}$ be the Motif-DRESS update operator. If the aggregation function and the vertex norm satisfy the degree-0 homogeneity condition ($p = 2q$), then $F$ converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any non-negative initial state $d^{(0)} > 0$.
@@ -143,7 +142,7 @@ A complete formal verification of the contraction constant is deferred to future
 \end{proof}
 
 \section{Generalized-DRESS}
-Motif-DRESS fixes the aggregation to summation and the norm to the geometric mean. Generalized-DRESS is the most abstract template, allowing any choice of these components. For each edge $(u, v)$ and a symmetric neighborhood operator $\mathcal{N}(u,v)$:
+Motif-DRESS fixes the aggregation to summation and the norm to the geometric mean. Generalized-DRESS is the most abstract template, allowing any choice of these components as long as the resulting update rule preserves the convergence guarantees (degree-0 homogeneity, boundedness, and contraction; see Section~\ref{sec:convergence}). For each edge $(u,v)$:
 
 \begin{equation}
 d_{uv}^{(t+1)} = \frac{f\bigl(\{d_{e'}^{(t)}\}_{e' \in \mathcal{N}(u,v)}\bigr)}{g^{(t)}(u) \cdot g^{(t)}(v)}
