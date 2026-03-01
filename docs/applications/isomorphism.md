@@ -247,11 +247,11 @@ Motif-DRESS generalizes the neighborhood operator from triangles to arbitrary mo
 | T(8) vs Chang-1 | **PASS** | |
 | T(8) vs Chang-2 | **PASS** | |
 | T(8) vs Chang-3 | **PASS** | |
-| Chang-1 vs Chang-2 | **PASS** | |
-| Chang-1 vs Chang-3 | **PASS** | |
-| Chang-2 vs Chang-3 | **PASS** | |
+| Chang-1 vs Chang-2 | FAIL | All three Chang graphs have identical $K_4$-neighborhood structure per edge |
+| Chang-1 vs Chang-3 | FAIL | |
+| Chang-2 vs Chang-3 | FAIL | |
 
-The specific SRG pairs tested above are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
+Motif-$K_4$ distinguishes 3 of the 6 Chang pairs (T(8) vs each Chang graph) and 1/1 Rook vs Shrikhande. The three Chang graphs are pairwise indistinguishable because they share identical $K_4$-neighborhood structure per edge. The specific SRG pairs tested above are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
 
 ### Δ-DRESS
 
