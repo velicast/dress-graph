@@ -7,21 +7,21 @@ presents them in this order: Original-DRESS → Motif-DRESS → Generalized-DRES
 
 ## Motif-DRESS
 
-Original-DRESS is limited to triangle neighborhoods. Motif-DRESS generalizes it by defining $\mathcal{N}(u,v)$ as the set of edges that co-occur with $(u,v)$ in a specific structural motif $M$, with $f = \text{sum}$, $g = \text{geometric norm}$, and an optional weight function $w(e)$:
+Original-DRESS is limited to triangle neighborhoods. Motif-DRESS generalizes it by defining $\mathcal{N}_M(u,v)$ as a symmetric vertex neighborhood: the set of endpoints of edges in instances of an undirected motif $M$ containing edge $(u,v)$ that are adjacent to $u$ or $v$, always including $u$ and $v$ themselves, with $f = \text{sum}$, $g = \text{geometric norm}$, and an optional symmetric weight function $w: E \to \mathbb{R}_{>0}$ (with $w_e = 1$ for unweighted graphs):
 
 \[
-d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{e' \in \mathcal{N}_M(u,v)} w_{e'}\,d_{e'}^{(t)}}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
+d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{x \in \mathcal{N}_M(u,v)} \bigl(w_{ux}\,d_{ux}^{(t)} + w_{xv}\,d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
 \]
 
-where $\|u\|^{(t)} = \sqrt{\sum_{e' \in \mathcal{N}_M(u,u)} w_{e'}\,d_{e'}^{(t)}}$ is the weighted node norm at time $t$.
+where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} w_{ux} \cdot d_{ux}^{(t)}}$ is the vertex norm, and $w_{ab} \cdot d_{ab} = 0$ whenever $(a,b) \notin E$.
 
 The weights $w(e)$ act as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $w \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
 
 Different choices of motif $M$ yield different neighborhood operators:
 
-- **Triangle ($M = K_3$):** $\mathcal{N}(u,v) = \{(u,x), (x,v) \mid x \in N[u] \cap N[v]\}$ - this recovers Original-DRESS.
-- **4-cycle ($M = C_4$):** Aggregates over edges participating in 4-cycles with $(u,v)$.
-- **$K_4$ clique:** Aggregates over edges forming a $K_4$ with $(u,v)$.
+- **Triangle ($M = K_3$):** $\mathcal{N}_{K_3}(u,v) = N[u] \cap N[v]$, the closed common neighborhood. This recovers Original-DRESS exactly.
+- **4-cycle ($M = C_4$):** For each 4-cycle $u$-$x$-$y$-$v$, $\mathcal{N}_{C_4}(u,v)$ contains $u$, $v$, $x$, and $y$.
+- **$K_4$ clique:** For each pair $x, y$ with $\{u,v,x,y\}$ forming a $K_4$, $\mathcal{N}_{K_4}(u,v)$ contains $u$, $v$, $x$, and $y$.
 
 ### Properties
 
@@ -34,7 +34,7 @@ Different choices of motif $M$ yield different neighborhood operators:
 All experiments below use the $K_4$ clique motif. The specific SRG pairs tested below are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
 
 - **Rook vs. Shrikhande:** Successfully distinguishes this pair of SRGs with parameters $(16, 6, 2, 2)$. The Rook graph ($K_4 \square K_4$) contains $K_4$ cliques while the Shrikhande graph does not, so the $K_4$-neighborhood sizes differ per edge.
-- **Chang Graphs:** Distinguishes all 6 pairwise comparisons among the four SRGs with parameters $(28, 12, 6, 4)$: T(8), Chang-1, Chang-2, and Chang-3.
+- **Chang Graphs:** Distinguishes 3 of the 6 pairwise comparisons among the four SRGs with parameters $(28, 12, 6, 4)$: T(8) vs each of Chang-1, Chang-2, and Chang-3. The three Chang graphs are pairwise indistinguishable by Motif-$K_4$ (all three have identical $K_4$-neighborhood structure per edge).
 
 ### Proof Sketch of Convergence
 
@@ -52,7 +52,7 @@ For Motif-DRESS to converge to a unique fixed point, the aggregation function $f
 
 The Original-DRESS equation, introduced in [Castrillo, León & Gómez (2018)](https://arxiv.org/abs/1805.01419), is a special case of Motif-DRESS with:
 
-- **Motif:** Triangle ($M = K_3$), so $\mathcal{N}(u,v) = \{(u,x), (x,v) \mid x \in N[u] \cap N[v]\}$
+- **Motif:** Triangle ($M = K_3$), so $\mathcal{N}_{K_3}(u,v) = N[u] \cap N[v]$
 - **Aggregation:** $f = \text{sum}$
 - **Norm:** $g = \text{geometric norm}$, i.e., $g(u) = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$
 
@@ -133,7 +133,7 @@ DRESS is well-defined on any valid weighted graph.
 
 ## Generalized-DRESS
 
-Motif-DRESS fixes the aggregation to summation and the norm to the geometric mean. Generalized-DRESS is the most abstract template, allowing any choice of these components. For each edge $(u, v)$ and a symmetric neighborhood operator $\mathcal{N}(u,v)$:
+Motif-DRESS fixes the aggregation to summation and the norm to the geometric mean. Generalized-DRESS is the most abstract template, allowing any choice of these components as long as the resulting update rule preserves the convergence guarantees (degree-0 homogeneity, boundedness, and contraction). For each edge $(u,v)$:
 
 \[
 d_{uv}^{(t+1)} = \frac{f\bigl(\{d_{e'}^{(t)}\}_{e' \in \mathcal{N}(u,v)}\bigr)}{g^{(t)}(u) \cdot g^{(t)}(v)}
