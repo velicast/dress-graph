@@ -1,5 +1,7 @@
 # API Reference
 
+> **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, R, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
+
 ## Core concepts
 
 All bindings expose the same underlying algorithm through three main function

@@ -24,6 +24,8 @@ requires no tuning.  Sorting the edge values produces a canonical **graph finger
 
 The arXiv papers are outdated and will be updated next week. The latest versions including the proof in Paper 2, are in the GitHub repo.
 
+> **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, JS, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
+
 For the theory and generalizations (DRESS Family), see the research paper:
 [**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 

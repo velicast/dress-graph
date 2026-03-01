@@ -1,5 +1,7 @@
 # Quick Start
 
+> **Note on Wrappers:** Please report any bugs you find while using the language wrappers. I am moving quickly and relying on AI to speed up the development of these wrappers, but I am actively and carefully maintaining the core C backend.
+
 ## Python
 
 ```python
