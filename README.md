@@ -2,12 +2,11 @@
 
 PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph) Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph) NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph) CRAN ![cran status](https://img.shields.io/badge/CRAN-coming%20soon-yellow)
 
-**Try it now:**
 Quickstart [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/quickstart.ipynb)
 Prism vs K₃,₃ [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/prism_vs_k33.ipynb)
 Rook vs Shrikhande [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/delta_dress_rook_shrikhande.ipynb)
 
-**A Continuous Framework for Structural Graph Refinement**
+## A Continuous Framework for Structural Graph Refinement
 
 DRESS is a provably (Under Reconstruction Conjecture) continuous relaxation of the Weisfeiler–Leman algorithm.
 At depth $k$, higher-order DRESS is **provably at least as powerful as $(k{+}2)$-WL**
