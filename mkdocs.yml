@@ -46,6 +46,7 @@ nav:
       - Graph Isomorphism: applications/isomorphism.md
       - Community Detection: applications/community-detection.md
       - Graph Classification: applications/classification.md
+      - "Graph Classification: DRESS+GNNs": applications/dress-gnns.md
       - Graph Retrieval: applications/retrieval.md
       - GED Regression: applications/ged-regression.md
       - Edge Robustness: applications/edge-robustness.md
