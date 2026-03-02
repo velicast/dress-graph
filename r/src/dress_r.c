@@ -105,7 +105,7 @@ SEXP C_dress_fit(SEXP n_vertices_,
 /*  dress_version                                                      */
 /* ------------------------------------------------------------------ */
 SEXP C_dress_version(void) {
-    return ScalarString(mkChar("0.3.0"));
+    return ScalarString(mkChar("0.3.1"));
 }
 
 /* ------------------------------------------------------------------ */
@@ -119,7 +119,8 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
                        SEXP variant_,
                        SEXP max_iterations_,
                        SEXP epsilon_,
-                       SEXP precompute_) {
+                       SEXP precompute_,
+                       SEXP keep_multisets_) {
 
     int N  = INTEGER(n_vertices_)[0];
     int E  = LENGTH(sources_);
@@ -128,6 +129,7 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     int max_iterations = INTEGER(max_iterations_)[0];
     double epsilon     = REAL(epsilon_)[0];
     int precompute     = INTEGER(precompute_)[0];
+    int keep_ms        = INTEGER(keep_multisets_)[0];
 
     /* Allocate copies (init_dress_graph takes ownership). */
     int *U = (int *)malloc(E * sizeof(int));
@@ -153,16 +155,25 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     }
 
     int hist_size = 0;
+    double *ms_ptr = NULL;
+    int64_t num_sub = 0;
     int64_t *hist = delta_fit(g, k, max_iterations, epsilon,
                               &hist_size,
-                              0, NULL, NULL);
+                              keep_ms,
+                              keep_ms ? &ms_ptr : NULL,
+                              keep_ms ? &num_sub : NULL);
 
-    /* Build result list: histogram + hist_size */
-    SEXP result = PROTECT(allocVector(VECSXP, 2));
-    SEXP names  = PROTECT(allocVector(STRSXP, 2));
+    /* Build result list: histogram + hist_size [+ multisets + num_subgraphs] */
+    int n_fields = keep_ms ? 4 : 2;
+    SEXP result = PROTECT(allocVector(VECSXP, n_fields));
+    SEXP names  = PROTECT(allocVector(STRSXP, n_fields));
 
     SET_STRING_ELT(names, 0, mkChar("histogram"));
     SET_STRING_ELT(names, 1, mkChar("hist_size"));
+    if (keep_ms) {
+        SET_STRING_ELT(names, 2, mkChar("multisets"));
+        SET_STRING_ELT(names, 3, mkChar("num_subgraphs"));
+    }
     setAttrib(result, R_NamesSymbol, names);
 
     /* histogram — numeric vector (R has no native int64) */
@@ -175,6 +186,26 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     /* hist_size — int scalar */
     SET_VECTOR_ELT(result, 1, ScalarInteger(hist_size));
 
+    /* multisets and num_subgraphs (when requested) */
+    if (keep_ms) {
+        if (ms_ptr && num_sub > 0) {
+            /* R matrix is column-major: matrix[row, col] = data[col * nrow + row]
+               C multisets are row-major: ms_ptr[s * E + e]
+               R matrix(num_sub, E): result[s, e] = data[(e-1)*num_sub + (s-1)]
+               So we transpose during copy. */
+            SEXP r_ms = PROTECT(allocMatrix(REALSXP, (int)num_sub, E));
+            for (int64_t s = 0; s < num_sub; s++)
+                for (int e = 0; e < E; e++)
+                    REAL(r_ms)[e * (int)num_sub + (int)s] = ms_ptr[s * E + e];
+            SET_VECTOR_ELT(result, 2, r_ms);
+            UNPROTECT(1); /* r_ms */
+            free(ms_ptr);
+        } else {
+            SET_VECTOR_ELT(result, 2, allocMatrix(REALSXP, 0, 0));
+        }
+        SET_VECTOR_ELT(result, 3, ScalarInteger((int)num_sub));
+    }
+
     free(hist);
     free_dress_graph(g);
     UNPROTECT(3);
@@ -186,7 +217,7 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
 /* ------------------------------------------------------------------ */
 static const R_CallMethodDef callMethods[] = {
     {"C_dress_fit",       (DL_FUNC) &C_dress_fit,       8},
-    {"C_delta_dress_fit", (DL_FUNC) &C_delta_dress_fit, 9},
+    {"C_delta_dress_fit", (DL_FUNC) &C_delta_dress_fit, 10},
     {"C_dress_version",   (DL_FUNC) &C_dress_version,   0},
     {NULL, NULL, 0}
 };

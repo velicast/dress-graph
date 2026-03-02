@@ -42,9 +42,13 @@ For Motif-DRESS to converge to a unique fixed point, the aggregation function $f
 
 1. **Scale Invariance (Degree-0 Homogeneity).** If $f$ is positively homogeneous of degree $p$ and $g$ is positively homogeneous of degree $q$, then the ratio is homogeneous of degree $p - 2q$. For the iteration to remain bounded and non-trivial: $\boxed{p = 2q}$. If $p > 2q$ the iteration diverges; if $p < 2q$ it collapses to zero. This makes the mapping scale-invariant: multiplying all $d$-values by a constant leaves the next iterate unchanged, so the result depends only on graph structure.
 
-2. **Boundedness.** For any valid $\mathcal{N}_M(e)$ and corresponding norm, the numerator is strictly bounded by the denominator via the Cauchy–Schwarz inequality (or Hölder's inequality for Minkowski-$r$ variants). Self-loop inclusion ensures the denominator is strictly positive. Thus $F(d)_{uv} \in [0, 2]$ for all $d > 0$.
+2. **Boundedness.** The motif neighborhood $\mathcal{N}_M(u,v)$ is always a subset of each node's full neighborhood, so the numerator decomposes as $\sum_{\mathcal{N}_M} \bar{w}_{ux}\,d_{ux} + \sum_{\mathcal{N}_M} \bar{w}_{vx}\,d_{vx} \leq \|u\|^2 + \|v\|^2$. Self-loop inclusion ensures $\|u\|,\,\|v\| > 0$, giving the finite per-step bound:
 
-3. **Contraction on the Hilbert Projective Metric.** Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part - which follows from the Cauchy–Schwarz bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\!\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to $d^* \in [0, 2]^{|E|}$. A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
+    $$F(d)_{uv} \;\leq\; \frac{\|u\|}{\|v\|} + \frac{\|v\|}{\|u\|}$$
+
+    By AM-GM this is always $\geq 2$, with equality when $\|u\| = \|v\|$.  In the **unweighted** case (uniform $\bar{w}$), the fixed-point contraction forces the norm ratio to remain bounded, and the converged values satisfy $d^* \in [0, 2]$.  With **non-uniform edge weights**, node norms can differ even for structurally identical nodes, so fixed-point values may exceed 2.
+
+3. **Contraction on the Hilbert Projective Metric.** Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part — which follows from the finite per-step bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\!\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to a finite vector $d^*$ (in the unweighted case, $d^* \in [0, 2]^{|E|}$). A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
 
 **Self-loops.** Self-loops are added to every node before iteration (i.e., the algorithm uses the closed neighborhood $N[u] = N(u) \cup \{u\}$). The self-loop edge $(u,u)$ participates in both the aggregation and the node norm; without it, an isolated edge with no common neighbors would produce $g(u) \cdot g(v) = 0$, making the iteration undefined.
 
@@ -129,7 +133,9 @@ any DRESS family member to $G_k$. No formula changes are needed; the
 higher-order structure comes entirely from the input graph construction.
 
 All proofs (boundedness, convergence, uniqueness) carry over immediately since
-DRESS is well-defined on any valid weighted graph.
+DRESS is well-defined on any valid weighted graph.  Note that with non-uniform
+edge weights, node norms may differ and converged values can exceed 2
+(see [Proof Sketch – Boundedness](#proof-sketch-of-convergence)).
 
 ## Generalized-DRESS
 

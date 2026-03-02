@@ -32,7 +32,9 @@ where the **node norm** is:
 The numerator sums over every common neighbor \(x\) of \(u\) and \(v\)
 (including self-loops), adding the weighted similarities that \(u\) and \(v\)
 each have with \(x\).  The denominator normalizes by the geometric mean of
-the two node norms, ensuring the result is bounded.
+the two node norms, ensuring the result is bounded.  In the unweighted case
+the fixed point satisfies $d^* \in [0, 2]$; with non-uniform edge weights
+values may exceed 2 (see [Properties – Boundedness](properties.md#boundedness)).
 
 ## Convergence
 

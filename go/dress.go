@@ -117,14 +117,15 @@ func Fit(n int, sources, targets []int32, weights []float64,
 	C.fit(g, C.int(maxIterations), C.double(epsilon), &iterations, &delta)
 
 	// Read C struct by offset (LP64 layout — see dress.h):
-	//   offset 56: *edge_weight   (double*)
-	//   offset 64: *edge_dress    (double*)
-	//   offset 80: *node_dress    (double*)
+	//   offset 56: *W             (double*)  raw input weights
+	//   offset 64: *edge_weight   (double*)
+	//   offset 72: *edge_dress    (double*)
+	//   offset 88: *node_dress    (double*)
 	base := uintptr(unsafe.Pointer(g))
 
-	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 56))
-	edPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
-	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 80))
+	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
+	edPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
+	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 88))
 
 	ewSlice := unsafe.Slice(ewPtr, e)
 	edSlice := unsafe.Slice(edPtr, e)
@@ -155,8 +156,10 @@ func Fit(n int, sources, targets []int32, weights []float64,
 
 // DeltaResult holds the output of a Δ^k-DRESS fitting operation.
 type DeltaResult struct {
-	Histogram []int64
-	HistSize  int
+	Histogram    []int64
+	HistSize     int
+	Multisets    []float64 // row-major C(N,k) × E; NaN = removed edge (nil when not requested)
+	NumSubgraphs int64
 }
 
 func (r *DeltaResult) String() string {
@@ -180,9 +183,10 @@ func (r *DeltaResult) String() string {
 //   - maxIterations: maximum DRESS iterations per subgraph
 //   - epsilon: convergence tolerance and bin width
 //   - precompute: precompute intercepts in each subgraph
+//   - keepMultisets: if true, return per-subgraph edge values
 func DeltaFit(n int, sources, targets []int32, weights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
-	precompute bool) (*DeltaResult, error) {
+	precompute bool, keepMultisets bool) (*DeltaResult, error) {
 
 	e := len(sources)
 	if len(targets) != e {
@@ -224,13 +228,29 @@ func DeltaFit(n int, sources, targets []int32, weights []float64,
 	}
 
 	var histSize C.int
+	var msPtr *C.double
+	var numSub C.int64_t
+
+	keepMS := C.int(0)
+	if keepMultisets {
+		keepMS = C.int(1)
+	}
+
 	hPtr := C.delta_fit(g, C.int(k), C.int(maxIterations),
 		C.double(epsilon), &histSize,
-		C.int(0), (**C.double)(nil), (*C.int64_t)(nil))
+		keepMS,
+		func() **C.double {
+			if keepMultisets {
+				return &msPtr
+			}
+			return (**C.double)(nil)
+		}(),
+		&numSub)
 
 	result := &DeltaResult{
-		HistSize:  int(histSize),
-		Histogram: make([]int64, int(histSize)),
+		HistSize:     int(histSize),
+		Histogram:    make([]int64, int(histSize)),
+		NumSubgraphs: int64(numSub),
 	}
 
 	if hPtr != nil && histSize > 0 {
@@ -239,6 +259,16 @@ func DeltaFit(n int, sources, targets []int32, weights []float64,
 			result.Histogram[i] = int64(hSlice[i])
 		}
 		C.free(unsafe.Pointer(hPtr))
+	}
+
+	if keepMultisets && msPtr != nil && numSub > 0 {
+		len := int(int64(numSub) * int64(e))
+		msSlice := unsafe.Slice(msPtr, len)
+		result.Multisets = make([]float64, len)
+		for i := 0; i < len; i++ {
+			result.Multisets[i] = float64(msSlice[i])
+		}
+		C.free(unsafe.Pointer(msPtr))
 	}
 
 	C.free_dress_graph(g)

@@ -118,16 +118,23 @@ dress_fit <- function(n_vertices,
 #' @param n_vertices Integer. Number of vertices (vertex ids in 0..N-1).
 #' @param sources Integer vector of length E — edge source endpoints (0-based).
 #' @param targets Integer vector of length E — edge target endpoints (0-based).
+#' @param weights Numeric vector of length E — per-edge weights, or NULL for
+#'   unweighted (all weights = 1). Default NULL.
 #' @param k Integer. Number of vertices to remove (0 = original graph).
 #' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
 #' @param max_iterations Maximum fitting iterations (default 100).
 #' @param epsilon Convergence threshold (default 1e-6).
 #' @param precompute Logical. Pre-compute intercept index (default FALSE).
+#' @param keep_multisets Logical. If TRUE, return per-subgraph edge DRESS
+#'   values in a C(N,k) x E matrix (NaN for removed edges). Default FALSE.
 #'
 #' @return A list with components:
 #' \describe{
 #'   \item{\code{histogram}}{Numeric vector — bin counts of edge delta values.}
-#'   \item{\code{hist_size}}{Integer — number of bins (floor(2/epsilon) + 1).}
+#'   \item{\code{hist_size}}{Integer — number of bins (floor(dmax/epsilon) + 1; dmax = 2 unweighted).}
+#'   \item{\code{multisets}}{Matrix (C(N,k) x E) of per-subgraph edge values
+#'     (only present when \code{keep_multisets = TRUE}; NaN = removed edge).}
+#'   \item{\code{num_subgraphs}}{Integer — C(N,k) (only when \code{keep_multisets = TRUE}).}
 #' }
 #'
 #' @examples
@@ -145,7 +152,8 @@ delta_dress_fit <- function(n_vertices,
                             variant          = DRESS_UNDIRECTED,
                             max_iterations   = 100L,
                             epsilon          = 1e-6,
-                            precompute       = FALSE) {
+                            precompute       = FALSE,
+                            keep_multisets   = FALSE) {
 
   n_vertices     <- as.integer(n_vertices)
   sources        <- as.integer(sources)
@@ -156,6 +164,7 @@ delta_dress_fit <- function(n_vertices,
   max_iterations <- as.integer(max_iterations)
   epsilon        <- as.double(epsilon)
   precompute     <- as.integer(precompute)
+  keep_multisets <- as.integer(keep_multisets)
 
   stopifnot(length(sources) == length(targets))
   if (!is.null(weights)) stopifnot(length(weights) == length(sources))
@@ -174,7 +183,8 @@ delta_dress_fit <- function(n_vertices,
         variant,
         max_iterations,
         epsilon,
-        precompute)
+        precompute,
+        keep_multisets)
 }
 
 # ---- Library version -------------------------------------------------

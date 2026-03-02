@@ -9,11 +9,16 @@
  * Usage in MATLAB:
  *
  *   result = delta_dress_mex(n_vertices, sources, targets, ...
- *                            k, variant, max_iterations, epsilon, precompute);
+ *                            k, variant, max_iterations, epsilon, precompute, ...
+ *                            keep_multisets);
  *
  *   result is a struct with fields:
- *     .histogram  — double [hist_size x 1]  bin counts (double for MATLAB compat)
- *     .hist_size  — int32 scalar            number of bins
+ *     .histogram      — double [hist_size x 1]  bin counts (double for MATLAB compat)
+ *     .hist_size      — int32 scalar            number of bins
+ *     .multisets      — double [C(N,k) x E]     per-subgraph edge values (NaN = removed)
+ *                       (only present when keep_multisets is nonzero)
+ *     .num_subgraphs  — int32 scalar            C(N,k)
+ *                       (only present when keep_multisets is nonzero)
  */
 
 #include "mex.h"
@@ -92,7 +97,8 @@ static int *to_int_array(const mxArray *arg, int expected_len, const char *name)
 /*
  * MATLAB signature:
  *   result = delta_dress_mex(n_vertices, sources, targets, ...
- *                            k, variant, max_iterations, epsilon, precompute)
+ *                            weights, k, variant, max_iterations, epsilon, ...
+ *                            precompute, keep_multisets)
  *
  * Inputs:
  *   n_vertices       — scalar int: number of vertices
@@ -103,31 +109,33 @@ static int *to_int_array(const mxArray *arg, int expected_len, const char *name)
  *   max_iterations   — scalar int: max fitting iterations
  *   epsilon          — scalar double: convergence / bin width
  *   precompute       — scalar int: 0 or 1
+ *   keep_multisets   — scalar int: 0 or 1 (optional, default 0)
  *
  * Output:
- *   result — struct with .histogram (double [hist_size x 1]) and
- *            .hist_size (int32 scalar).
+ *   result — struct with .histogram (double [hist_size x 1]),
+ *            .hist_size (int32 scalar), and when keep_multisets is nonzero:
+ *            .multisets (double [C(N,k) x E]) and .num_subgraphs (int32).
  */
 void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[])
 {
-    int N, E, k, variant_val, max_iterations, precompute;
+    int N, E, k, variant_val, max_iterations, precompute, keep_ms;
     double epsilon;
     int    *U, *V;
     double *W = NULL;
     p_dress_graph_t g;
     int    hist_size = 0;
     int64_t *hist;
-
-    const char *field_names[] = { "histogram", "hist_size" };
+    double *ms_ptr = NULL;
+    int64_t num_sub = 0;
     mxArray *m_hist, *m_hsize;
 
     /* ---- argument count check ---- */
-    if (nrhs < 8 || nrhs > 9)
+    if (nrhs < 8 || nrhs > 10)
         mexErrMsgIdAndTxt("delta_dress:nrhs",
-            "8 or 9 inputs required:\n"
+            "8 to 10 inputs required:\n"
             "  delta_dress_mex(n_vertices, sources, targets, weights, k, "
-            "variant, max_iterations, epsilon, precompute)\n"
+            "variant, max_iterations, epsilon, precompute, keep_multisets)\n"
             "  weights may be [] for unweighted.");
     if (nlhs > 1)
         mexErrMsgIdAndTxt("delta_dress:nlhs", "At most one output.");
@@ -153,6 +161,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     max_iterations = get_scalar_int(prhs[6], "max_iterations");
     epsilon        = get_scalar_double(prhs[7], "epsilon");
     precompute     = (nrhs > 8) ? get_scalar_int(prhs[8], "precompute") : 0;
+    keep_ms        = (nrhs > 9) ? get_scalar_int(prhs[9], "keep_multisets") : 0;
 
     /* ---- validate ---- */
     if (variant_val < 0 || variant_val > 3) {
@@ -174,10 +183,16 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     /* ---- compute delta-k-dress ---- */
     hist = delta_fit(g, k, max_iterations, epsilon, &hist_size,
-                    0, NULL, NULL);
+                    keep_ms,
+                    keep_ms ? &ms_ptr : NULL,
+                    keep_ms ? &num_sub : NULL);
 
     /* ---- pack output struct ---- */
-    plhs[0] = mxCreateStructMatrix(1, 1, 2, field_names);
+    int n_fields = keep_ms ? 4 : 2;
+    const char *fields_basic[]  = { "histogram", "hist_size" };
+    const char *fields_full[]   = { "histogram", "hist_size", "multisets", "num_subgraphs" };
+    plhs[0] = mxCreateStructMatrix(1, 1, n_fields,
+                                   keep_ms ? fields_full : fields_basic);
 
     /* histogram — double [hist_size x 1]  (MATLAB has no int64 MEX helper) */
     m_hist = mxCreateDoubleMatrix(hist_size, 1, mxREAL);
@@ -193,6 +208,34 @@ void mexFunction(int nlhs, mxArray *plhs[],
     m_hsize = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
     ((int *)mxGetData(m_hsize))[0] = hist_size;
     mxSetFieldByNumber(plhs[0], 0, 1, m_hsize);
+
+    /* multisets and num_subgraphs (when requested) */
+    if (keep_ms && ms_ptr) {
+        mxArray *m_ms = mxCreateDoubleMatrix((mwSize)num_sub, (mwSize)E, mxREAL);
+        {
+            /* C stores row-major: ms_ptr[s * E + e]. MATLAB is column-major.
+               Transpose during copy: MATLAB(e, s) = ms_ptr[s * E + e]. */
+            double *dst = mxGetPr(m_ms);
+            int64_t s;
+            int e;
+            for (s = 0; s < num_sub; s++)
+                for (e = 0; e < E; e++)
+                    dst[e * (mwSize)num_sub + s] = ms_ptr[s * E + e];
+        }
+        mxSetFieldByNumber(plhs[0], 0, 2, m_ms);
+
+        mxArray *m_nsub = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
+        ((int *)mxGetData(m_nsub))[0] = (int)num_sub;
+        mxSetFieldByNumber(plhs[0], 0, 3, m_nsub);
+
+        free(ms_ptr);
+    } else if (keep_ms) {
+        /* Requested but no multisets (e.g. k >= N) */
+        mxSetFieldByNumber(plhs[0], 0, 2, mxCreateDoubleMatrix(0, 0, mxREAL));
+        mxArray *m_nsub = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
+        ((int *)mxGetData(m_nsub))[0] = 0;
+        mxSetFieldByNumber(plhs[0], 0, 3, m_nsub);
+    }
 
     /* ---- cleanup ---- */
     free(hist);

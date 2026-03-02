@@ -106,9 +106,8 @@ static void build_raw_adjacency(p_dress_graph_t g,
         }
     }
     free(cnt);
-    if (W != NULL) {
-        free(W); // W is no longer needed after edge weights are copied into data
-    }
+    // W ownership is retained by the graph (g->input_weight) and freed
+    // in free_dress_graph — do NOT free it here.
     
     // Sort each node's segment by neighbor id for binary-search access
 #ifdef _OPENMP
@@ -337,8 +336,8 @@ static void compute_intercepts(p_dress_graph_t g)
 // 3. Initializes all dress values to 2.0 (fixed-point identity).
 // 4. Optionally precomputes intercepts for faster iteration.
 //
-// Takes ownership of U and V (freed by free_dress_graph).
-// W is read but not retained; pass NULL for unweighted graphs.
+// Takes ownership of U, V, and W (all freed by free_dress_graph).
+// W may be NULL for unweighted graphs.
 p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
                                  double *W, dress_variant_t variant,
                                  int precompute_intercepts)
@@ -353,6 +352,11 @@ p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
     g->variant = variant;
     g->precompute_intercepts = precompute_intercepts;
     g->node_dress = (double *)malloc(N * sizeof(double));
+
+    // Take ownership of W. delta_dress needs the raw input weights to
+    // construct subgraphs correctly (edge_weight stores variant-specific
+    // weights that differ from the raw input). Freed in free_dress_graph.
+    g->W = W;  // NULL when unweighted
 
     // Build raw then variant adjacency (both use flat CSR internally)
     int *raw_offset;
@@ -534,6 +538,7 @@ void free_dress_graph(p_dress_graph_t g)
     free(g->adj_edge_idx);
 
     // Per-edge arrays
+    free(g->W);
     free(g->edge_weight);
     free(g->edge_dress);
     free(g->edge_dress_next);

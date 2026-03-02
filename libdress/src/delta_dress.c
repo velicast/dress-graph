@@ -73,6 +73,9 @@ static p_dress_graph_t build_subgraph(p_dress_graph_t g,
     // Allocate edge arrays (init_dress_graph takes ownership).
     int *sub_U = (int *)malloc(sub_E * sizeof(int));
     int *sub_V = (int *)malloc(sub_E * sizeof(int));
+    double *sub_W = NULL;
+    if (g->W != NULL)
+        sub_W = (double *)malloc(sub_E * sizeof(double));
     int idx = 0;
     for (int e = 0; e < E; e++) {
         int mu = node_map[g->U[e]];
@@ -80,6 +83,7 @@ static p_dress_graph_t build_subgraph(p_dress_graph_t g,
         if (mu >= 0 && mv >= 0) {
             sub_U[idx] = mu;
             sub_V[idx] = mv;
+            if (sub_W) sub_W[idx] = g->W[e];
             if (edge_map) edge_map[e] = idx;
             idx++;
         } else {
@@ -90,7 +94,7 @@ static p_dress_graph_t build_subgraph(p_dress_graph_t g,
     free(node_map);
 
     return init_dress_graph(sub_N, sub_E, sub_U, sub_V,
-                            NULL, g->variant,
+                            sub_W, g->variant,
                             g->precompute_intercepts);
 }
 
@@ -140,6 +144,48 @@ static int64_t binom(int n, int k)
     return r;
 }
 
+/* Compute a safe a priori upper bound on the maximum DRESS value.
+ *
+ * For unweighted graphs this returns exactly 2.0.
+ * For weighted graphs we solve d = r(d) + 1/r(d) where
+ *   r(d) = sqrt((4 + Smax * d) / (4 + Smin * d))
+ * with Smax/Smin being the max/min node strength (sum of variant-
+ * specific edge weights per node).  The self-loop constant 4 comes
+ * from w_bar_uu * d_uu = 2 * 2.  The fixed point of this scalar
+ * equation is always >= 2 and is an upper bound on any edge value.  */
+static double compute_dmax_bound(p_dress_graph_t g)
+{
+    if (g->W == NULL)
+        return 2.0;   /* unweighted — exact bound */
+
+    /* Compute per-node strength = sum of edge_weight for incident edges. */
+    double Smin = 1e308, Smax = 0.0;
+    for (int u = 0; u < g->N; u++) {
+        double s = 0.0;
+        int base = g->adj_offset[u];
+        int end  = g->adj_offset[u + 1];
+        for (int i = base; i < end; i++) {
+            int ei = g->adj_edge_idx[i];
+            s += g->edge_weight[ei];
+        }
+        if (s < Smin) Smin = s;
+        if (s > Smax) Smax = s;
+    }
+
+    if (Smin <= 0.0 || Smax == Smin)
+        return 2.0;
+
+    /* Solve d = r(d) + 1/r(d) by fixed-point iteration. */
+    double d = 2.0;
+    for (int i = 0; i < 50; i++) {
+        double r = sqrt((4.0 + Smax * d) / (4.0 + Smin * d));
+        double d_new = r + 1.0 / r;
+        if (fabs(d_new - d) < 1e-12) break;
+        d = d_new;
+    }
+    return d;
+}
+
 int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
                    double epsilon, int *hist_size,
                    int keep_multisets, double **multisets,
@@ -147,7 +193,8 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
 {
     int N = g->N;
     int E = g->E;
-    int nbins = (int)(2.0 / epsilon) + 1;
+    double dmax = compute_dmax_bound(g);
+    int nbins = (int)(dmax / epsilon) + 1;
 
     if (hist_size)
         *hist_size = nbins;
@@ -172,11 +219,16 @@ int64_t *delta_fit(p_dress_graph_t g, int k, int iterations,
         // Copy edge list (init_dress_graph takes ownership).
         int *cp_U = (int *)malloc(E * sizeof(int));
         int *cp_V = (int *)malloc(E * sizeof(int));
+        double *cp_W = NULL;
         memcpy(cp_U, g->U, E * sizeof(int));
         memcpy(cp_V, g->V, E * sizeof(int));
+        if (g->W != NULL) {
+            cp_W = (double *)malloc(E * sizeof(double));
+            memcpy(cp_W, g->W, E * sizeof(double));
+        }
 
         p_dress_graph_t sub = init_dress_graph(
-            N, E, cp_U, cp_V, NULL, g->variant, g->precompute_intercepts);
+            N, E, cp_U, cp_V, cp_W, g->variant, g->precompute_intercepts);
 
         fit(sub, iterations, epsilon, NULL, NULL);
         accumulate_histogram(sub, hist, nbins, epsilon);

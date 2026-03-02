@@ -1,5 +1,13 @@
 # dress-graph
 
+PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph)
+
+Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph)
+
+NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph)
+
+CRAN [![cran downloads](https://cranlogs.r-pkg.org/badges/dress-graph)](https://cran.r-project.org/package=dress-graph)
+
 **A Continuous Framework for Structural Graph Refinement**
 
 DRESS is a provably (Under Reconstruction Conjecture) continuous relaxation of the Weisfeiler–Leman algorithm.
@@ -19,7 +27,8 @@ enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
 DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a
 nonlinear fixed-point system where every edge's value depends on its
-neighbors' values.  The result is bounded in [0, 2], deterministic, and
+neighbors' values.  The result is bounded in [0, 2] for unweighted graphs,
+deterministic, and
 requires no tuning.  Sorting the edge values produces a canonical **graph fingerprint**.
 
 > **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, JS, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
@@ -62,7 +71,7 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 
 | Property |
 |----------|
-| Bounded [0, 2], self-similarity = 2 |
+| Bounded [0, 2] (unweighted), self-similarity = 2 |
 | Provably numerically stable (no overflows, no undefined behaviors) |
 | Parameter-free (no damping factor) |
 | Scale invariant (degree-0 homogeneous) |
@@ -157,6 +166,14 @@ fp2 = sorted(round(val, 6) for val in r2.edge_dress)
 print("Distinguished:", fp1 != fp2)
 ```
 
+## Interactive notebooks
+
+| Notebook | Description |
+|----------|-------------|
+| [Quickstart](notebooks/quickstart.ipynb) | Compute DRESS on the Karate Club graph and visualize edge roles |
+| [Prism vs K₃,₃](notebooks/prism_vs_k33.ipynb) | DRESS distinguishes two 3-regular graphs that confound 1-WL |
+| [Rook vs Shrikhande](notebooks/delta_dress_rook_shrikhande.ipynb) | Δ¹-DRESS distinguishes two cospectral SRG(16,6,2,2) mates |
+
 ## Language bindings
 
 DRESS is implemented in C with bindings for:
@@ -173,12 +190,7 @@ DRESS is implemented in C with bindings for:
 ## Building from source
 
 ```bash
-# C / C++ (CMake)
-mkdir build && cd build
-cmake .. && make
-
-# Rust
-cd rust && cargo build --release
+./build.sh --no-test
 
 # Python
 cd python && pip install .

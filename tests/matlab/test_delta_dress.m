@@ -56,6 +56,21 @@ catch e
     fprintf('FAIL: histogram size eps=1e-6: %s\n', e.message);
 end
 
+%% === Weighted histogram size ===
+
+try
+    rw = delta_dress_fit(3, K3_SRC, K3_TGT, 'Weights', [1.0; 10.0; 1.0], ...
+                         'Epsilon', 1e-3);
+    assert_true(rw.hist_size > int32(2001), 'weighted hist_size > 2001');
+    assert_eq(length(rw.histogram), double(rw.hist_size), 'weighted histogram length');
+    assert_eq(sum(rw.histogram), 3, 'weighted K3 delta0 total = 3');
+    passed = passed + 1;
+    fprintf('PASS: weighted histogram size\n');
+catch e
+    failed = failed + 1;
+    fprintf('FAIL: weighted histogram size: %s\n', e.message);
+end
+
 %% === Delta-0 on K3 ===
 
 try

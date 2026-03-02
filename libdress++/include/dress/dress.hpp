@@ -119,7 +119,7 @@ public:
 
     struct DeltaFitResult {
         std::vector<int64_t> histogram;   // bin-count vector of length hist_size
-        int                  hist_size;   // floor(2/epsilon) + 1
+        int                  hist_size;   // floor(dmax/epsilon) + 1  (dmax = 2 unweighted)
         std::vector<double>  multisets;   // C(N,k) * E row-major, NaN = removed
         int64_t              num_subgraphs; // C(N,k) — number of rows
     };

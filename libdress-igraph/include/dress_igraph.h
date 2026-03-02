@@ -102,7 +102,7 @@ int dress_igraph_to_vector(const dress_igraph_result_t *result,
 
 typedef struct dress_igraph_delta_result_t {
     int64_t *histogram;  /* [hist_size] bin counts (caller frees via delta_free) */
-    int      hist_size;  /* number of bins = floor(2/epsilon) + 1               */
+    int      hist_size;  /* number of bins = floor(dmax/epsilon) + 1 (dmax=2 unweighted) */
 } dress_igraph_delta_result_t;
 
 /* ------------------------------------------------------------------ */

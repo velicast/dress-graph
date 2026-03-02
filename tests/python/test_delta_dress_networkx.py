@@ -14,6 +14,8 @@ nx = pytest.importorskip("networkx", reason="networkx not installed")
 from dress.networkx import delta_dress_graph  # noqa: E402
 from dress.core import DeltaDRESSResult       # noqa: E402
 
+EPS = 1e-3
+
 
 # ── fixtures ─────────────────────────────────────────────────────────
 
@@ -136,8 +138,44 @@ class TestEdgeCases:
         expected = int(2.0 / eps) + 1  # = 21
         assert result.hist_size == expected
 
+    def test_weighted_hist_size(self):
+        """Weighted triangle with non-uniform weights → adaptive dmax > 2.0."""
+        G = nx.Graph()
+        G.add_edge(0, 1, weight=1.0)
+        G.add_edge(1, 2, weight=10.0)
+        G.add_edge(0, 2, weight=1.0)
+        result = delta_dress_graph(G, k=0, epsilon=1e-3)
+        assert result.hist_size > 2001, f"expected > 2001, got {result.hist_size}"
+        assert len(result.histogram) == result.hist_size
+        assert sum(result.histogram) == 3
+
 
 # ── string-labeled nodes ──────────────────────────────────────────────
+
+class TestMultisets:
+    def test_disabled_by_default(self, triangle):
+        r = delta_dress_graph(triangle, k=0, epsilon=EPS)
+        assert r.multisets is None
+
+    def test_delta0_triangle(self, triangle):
+        r = delta_dress_graph(triangle, k=0, epsilon=EPS, keep_multisets=True)
+        assert r.num_subgraphs == 1
+        import numpy as np
+        ms = np.asarray(r.multisets)
+        assert ms.shape == (1, 3)
+        for v in ms.flat:
+            assert abs(v - 2.0) < EPS
+
+    def test_delta1_k3_nan(self, triangle):
+        r = delta_dress_graph(triangle, k=1, epsilon=EPS, keep_multisets=True)
+        assert r.num_subgraphs == 3
+        import numpy as np
+        ms = np.asarray(r.multisets)
+        assert ms.shape == (3, 3)
+        for row_i in range(3):
+            nans = np.isnan(ms[row_i]).sum()
+            assert nans == 2
+
 
 class TestStringNodes:
     def test_karate(self):

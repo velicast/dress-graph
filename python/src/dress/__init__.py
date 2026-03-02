@@ -36,6 +36,7 @@ def dress_fit(
     variant=UNDIRECTED,
     max_iterations=100,
     epsilon=1e-6,
+    precompute_intercepts=False,
 ):
     """Compute DRESS similarity for a graph and return all results.
 
@@ -60,6 +61,8 @@ def dress_fit(
         Maximum number of fix-point iterations (default 100).
     epsilon : float
         Convergence threshold (default 1e-6).
+    precompute_intercepts : bool
+        Pre-compute common-neighbour index (default ``False``).
 
     Returns
     -------
@@ -74,9 +77,10 @@ def dress_fit(
         # C extension: positional constructor
         if weights is not None:
             g = _DRESS_cls(n_vertices, list(sources), list(targets),
-                           list(weights), _cv)
+                           list(weights), _cv, precompute_intercepts)
         else:
-            g = _DRESS_cls(n_vertices, list(sources), list(targets), _cv)
+            g = _DRESS_cls(n_vertices, list(sources), list(targets), _cv,
+                           precompute_intercepts)
         fr = g.fit(max_iterations, epsilon)
         E = g.n_edges
         return DRESSResult(
@@ -95,6 +99,7 @@ def dress_fit(
             n_vertices, sources, targets,
             weights=weights, variant=variant,
             max_iterations=max_iterations, epsilon=epsilon,
+            precompute_intercepts=precompute_intercepts,
         )
 
 
@@ -175,5 +180,6 @@ def delta_dress_fit(
             weights=weights, k=k, variant=variant,
             max_iterations=max_iterations, epsilon=epsilon,
             precompute=precompute,
+            keep_multisets=keep_multisets,
         )
 

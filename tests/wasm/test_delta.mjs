@@ -47,6 +47,20 @@ async function testHistSize() {
     console.log('  OK');
 }
 
+async function testWeightedHistSize() {
+    console.log('test: weighted histogram size …');
+    const r = await deltaDressFit({
+        ...K3,
+        weights: [1.0, 10.0, 1.0],
+        k: 0,
+        epsilon: 1e-3,
+    });
+    assert(r.histSize > 2001, `weighted histSize > 2001, got ${r.histSize}`);
+    assertEqual(r.histogram.length, r.histSize, 'weighted histogram length == histSize');
+    assertEqual(histTotal(r), 3, 'weighted K3 delta0 total = 3');
+    console.log('  OK');
+}
+
 async function testDelta0K3() {
     console.log('test: delta-0 on K3 …');
     const r = await deltaDressFit({ ...K3, k: 0, epsilon: EPS });
@@ -147,9 +161,48 @@ async function testLengthMismatch() {
     console.log('  OK');
 }
 
+async function testMultisetsDisabled() {
+    console.log('test: multisets disabled …');
+    const r = await deltaDressFit({ ...K3, k: 0, epsilon: EPS });
+    assertEqual(r.multisets, null, 'multisets should be null');
+    console.log('  OK');
+}
+
+async function testMultisetsDelta0K3() {
+    console.log('test: multisets Δ^0 K3 …');
+    const r = await deltaDressFit({ ...K3, k: 0, epsilon: EPS, keepMultisets: true });
+    assertEqual(r.numSubgraphs, 1, 'C(3,0)=1 subgraph');
+    assert(r.multisets instanceof Float64Array, 'multisets is Float64Array');
+    assertEqual(r.multisets.length, 3, '1 subgraph * 3 edges = 3');
+    for (let i = 0; i < 3; i++) {
+        assert(Math.abs(r.multisets[i] - 2.0) < EPS,
+            `multisets[${i}]=${r.multisets[i]}, expected ~2.0`);
+    }
+    console.log('  OK');
+}
+
+async function testMultisetsDelta1K3() {
+    console.log('test: multisets Δ^1 K3 NaN pattern …');
+    const r = await deltaDressFit({ ...K3, k: 1, epsilon: EPS, keepMultisets: true });
+    assertEqual(r.numSubgraphs, 3, 'C(3,1)=3 subgraphs');
+    assertEqual(r.multisets.length, 9, '3 subgraphs * 3 edges = 9');
+    const E = 3;
+    for (let s = 0; s < 3; s++) {
+        let nans = 0;
+        for (let e = 0; e < E; e++) {
+            if (Number.isNaN(r.multisets[s * E + e])) nans++;
+            else assert(Math.abs(r.multisets[s * E + e] - 2.0) < EPS,
+                `row ${s} col ${e}: expected ~2.0`);
+        }
+        assertEqual(nans, 2, `row ${s}: expected 2 NaN`);
+    }
+    console.log('  OK');
+}
+
 async function main() {
     console.log('Delta-k-DRESS WASM tests\n');
     await testHistSize();
+    await testWeightedHistSize();
     await testDelta0K3();
     await testDelta1K3();
     await testDelta2K3();
@@ -161,6 +214,9 @@ async function main() {
     await testPathP4();
     await testDelta1P4();
     await testLengthMismatch();
+    await testMultisetsDisabled();
+    await testMultisetsDelta0K3();
+    await testMultisetsDelta1K3();
     console.log(`\n${passed} passed, ${failed} failed.`);
     if (failed > 0) process.exit(1);
 }

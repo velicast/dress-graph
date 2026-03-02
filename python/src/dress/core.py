@@ -107,32 +107,6 @@ class DRESSResult:
 
 # -- helpers ----------------------------------------------------------------
 
-def _sorted_merge_common(
-    at: List[int],
-    ae: List[int],
-    a_start: int,
-    a_end: int,
-    bt: List[int],
-    be: List[int],
-    b_start: int,
-    b_end: int,
-) -> List[tuple]:
-    """Sorted-merge walk returning (edge_idx_u, edge_idx_v) for common neighbours."""
-    result = []
-    i, j = a_start, b_start
-    while i < a_end and j < b_end:
-        x, y = at[i], bt[j]
-        if x == y:
-            result.append((ae[i], be[j]))
-            i += 1
-            j += 1
-        elif x < y:
-            i += 1
-        else:
-            j += 1
-    return result
-
-
 def _binary_search(targets: List[int], start: int, end: int, value: int) -> int:
     """Binary search for *value* in targets[start:end]. Returns index or -1."""
     lo, hi = start, end
@@ -146,6 +120,20 @@ def _binary_search(targets: List[int], start: int, end: int, value: int) -> int:
         else:
             hi = mid
     return -1
+
+
+def _binom(n: int, k: int) -> int:
+    """Binomial coefficient C(n, k)."""
+    if k < 0 or k > n:
+        return 0
+    if k == 0 or k == n:
+        return 1
+    if k > n - k:
+        k = n - k
+    r = 1
+    for i in range(k):
+        r = r * (n - i) // (i + 1)
+    return r
 
 
 # -- main class -------------------------------------------------------------
@@ -565,6 +553,7 @@ def dress_fit(
     variant: Variant = UNDIRECTED,
     max_iterations: int = 100,
     epsilon: float = 1e-6,
+    precompute_intercepts: bool = False,
 ) -> DRESSResult:
     """Compute DRESS similarity for a graph and return all results.
 
@@ -585,6 +574,8 @@ def dress_fit(
         Maximum number of fix-point iterations (default 100).
     epsilon : float
         Convergence threshold (default 1e-6).
+    precompute_intercepts : bool
+        Pre-compute common-neighbour index (default ``False``).
 
     Returns
     -------
@@ -592,7 +583,8 @@ def dress_fit(
         Dataclass with fields ``sources``, ``targets``, ``edge_dress``,
         ``edge_weight``, ``node_dress``, ``iterations``, and ``delta``.
     """
-    g = DRESS(n_vertices, sources, targets, weights=weights, variant=variant)
+    g = DRESS(n_vertices, sources, targets, weights=weights, variant=variant,
+              precompute_intercepts=precompute_intercepts)
     fr = g.fit(max_iterations=max_iterations, epsilon=epsilon)
     return DRESSResult(
         sources=list(g._U),
@@ -605,6 +597,64 @@ def dress_fit(
     )
 
 
+def _compute_dmax_bound(g: 'DRESS') -> float:
+    """Compute an a-priori upper bound on DRESS edge values.
+
+    Mirrors the C ``compute_dmax_bound()`` exactly: iterates the CSR
+    adjacency of an already-constructed DRESS graph, summing the
+    **variant-specific combined** ``edge_weight`` per node (not the raw
+    input weights).
+
+    For unweighted graphs (all ``edge_weight`` identical within a
+    variant) this returns exactly 2.0.  For weighted graphs the bound
+    is found by solving the scalar fixed-point
+
+        d = r(d) + 1/r(d),   r(d) = sqrt((4 + Smax*d) / (4 + Smin*d))
+
+    where Smax / Smin are the max / min per-node strength.
+    """
+    import math
+
+    N = g.n_vertices
+
+    # Fast path: check whether any weight differs from the first.
+    # (Mirrors the C check ``g->W == NULL``.)
+    ew0 = g._edge_weight[0] if g.n_edges > 0 else 0.0
+    all_equal = all(w == ew0 for w in g._edge_weight)
+    if all_equal:
+        return 2.0
+
+    # Compute per-node strength from the variant-specific CSR adjacency
+    # and combined edge_weight — exactly as the C code does.
+    s_min = float('inf')
+    s_max = 0.0
+    for u in range(N):
+        s = 0.0
+        base = g._adj_offset[u]
+        end  = g._adj_offset[u + 1]
+        for i in range(base, end):
+            ei = g._adj_eidx[i]
+            s += g._edge_weight[ei]
+        if s < s_min:
+            s_min = s
+        if s > s_max:
+            s_max = s
+
+    if s_min <= 0.0 or s_max == s_min:
+        return 2.0
+
+    # Solve d = r(d) + 1/r(d) by fixed-point iteration.
+    d = 2.0
+    for _ in range(50):
+        r = math.sqrt((4.0 + s_max * d) / (4.0 + s_min * d))
+        d_new = r + 1.0 / r
+        if abs(d_new - d) < 1e-12:
+            break
+        d = d_new
+
+    return d
+
+
 def delta_dress_fit(
     n_vertices: int,
     sources: Sequence[int],
@@ -615,6 +665,7 @@ def delta_dress_fit(
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute: bool = False,
+    keep_multisets: bool = False,
 ) -> DeltaDRESSResult:
     """Compute the Δ^k-DRESS histogram.
 
@@ -641,30 +692,44 @@ def delta_dress_fit(
         Convergence threshold and histogram bin width (default 1e-6).
     precompute : bool
         Pre-compute common-neighbour index (default ``False``).
+    keep_multisets : bool
+        If ``True``, return per-subgraph DRESS values in a 2-D list
+        of shape ``(C(N,k), E)``.  ``NaN`` marks removed edges.
 
     Returns
     -------
     DeltaDRESSResult
         Dataclass with ``histogram`` (list of int, length ``hist_size``)
-        and ``hist_size``.
+        and ``hist_size``.  If *keep_multisets* is ``True``, also
+        ``multisets`` (list of lists) and ``num_subgraphs``.
     """
     N = n_vertices
     E = len(sources)
-    nbins = int(2.0 / epsilon) + 1
-    hist: List[int] = [0] * nbins
 
     src = list(sources)
     tgt = list(targets)
     wgt: Optional[List[float]] = list(weights) if weights is not None else None
 
-    def _fit_and_accumulate(sub_n: int, sub_src: List[int], sub_tgt: List[int],
-                            sub_wgt: Optional[List[float]] = None) -> None:
-        """Build a DRESS graph, fit, and bin edge values into *hist*."""
-        if sub_wgt is not None:
-            g = DRESS(sub_n, sub_src, sub_tgt, weights=sub_wgt, variant=variant)
-        else:
-            g = DRESS(sub_n, sub_src, sub_tgt, variant=variant)
-        g.fit(max_iterations=max_iterations, epsilon=epsilon)
+    # Build the full graph once to compute the adaptive bin bound.
+    # The C code calls compute_dmax_bound(g) on the original graph
+    # using the combined (variant-specific) edge_weight from the CSR
+    # adjacency, so we do the same.
+    full_g = DRESS(N, list(src), list(tgt),
+                   weights=list(wgt) if wgt is not None else None,
+                   variant=variant)
+    dmax = _compute_dmax_bound(full_g)
+    nbins = int(dmax / epsilon) + 1
+    hist: List[int] = [0] * nbins
+
+    # Compute C(N, k) and optionally allocate multisets buffer.
+    cnk: int = 1 if k == 0 else _binom(N, k)
+    wants_ms = bool(keep_multisets)
+    ms: Optional[List[List[float]]] = None
+    if wants_ms:
+        ms = [[float('nan')] * E for _ in range(cnk)]
+
+    def _accumulate_histogram(g: DRESS) -> None:
+        """Bin converged edge dress values into *hist*."""
         for e in range(g.n_edges):
             d = g._edge_dress[e]
             b = int(d / epsilon)
@@ -674,20 +739,47 @@ def delta_dress_fit(
                 b = nbins - 1
             hist[b] += 1
 
+    def _fill_multiset_row(g: DRESS, edge_map: List[int], row: int) -> None:
+        """Fill one row of the multisets matrix.
+
+        multisets[row][e] = sub.edge_dress[edge_map[e]], or NaN if
+        edge_map[e] == -1 (edge was removed).
+        """
+        assert ms is not None
+        for e in range(E):
+            if edge_map[e] >= 0:
+                ms[row][e] = g._edge_dress[edge_map[e]]
+            # else: already NaN from initialisation
+
     # ── k = 0: Δ^0 — full graph ────────────────────────────────
     if k == 0:
-        _fit_and_accumulate(N, list(src), list(tgt),
-                            list(wgt) if wgt is not None else None)
-        return DeltaDRESSResult(histogram=hist, hist_size=nbins)
+        # Reuse the already-constructed full graph.
+        full_g.fit(max_iterations=max_iterations, epsilon=epsilon)
+        _accumulate_histogram(full_g)
+
+        if wants_ms:
+            # k=0: single subgraph (s=0), identity edge map.
+            assert ms is not None
+            for e in range(E):
+                ms[0][e] = full_g._edge_dress[e]
+
+        return DeltaDRESSResult(
+            histogram=hist, hist_size=nbins,
+            multisets=ms, num_subgraphs=cnk,
+        )
 
     # ── k >= N: no valid deletion subsets ───────────────────────
     if k >= N:
-        return DeltaDRESSResult(histogram=hist, hist_size=nbins)
+        return DeltaDRESSResult(
+            histogram=hist, hist_size=nbins,
+            multisets=ms, num_subgraphs=cnk,
+        )
 
     # ── k >= 1: iterative DFS over C(N, k) combinations ────────
     combo = [0] * k
     combo[0] = -1
     depth = 0
+    s = 0               # subgraph counter (for multiset rows)
 
     while depth >= 0:
         combo[depth] += 1
@@ -710,10 +802,12 @@ def delta_dress_fit(
                     new_id += 1
             sub_n = new_id
 
-            # Build subgraph edge list
+            # Build subgraph edge list (and edge map)
             sub_src: List[int] = []
             sub_tgt: List[int] = []
             sub_wgt_list: Optional[List[float]] = [] if wgt is not None else None
+            edge_map: List[int] = [-1] * E
+            sub_e_idx = 0
             for e in range(E):
                 mu = node_map[src[e]]
                 mv = node_map[tgt[e]]
@@ -722,13 +816,27 @@ def delta_dress_fit(
                     sub_tgt.append(mv)
                     if sub_wgt_list is not None:
                         sub_wgt_list.append(wgt[e])
+                    edge_map[e] = sub_e_idx
+                    sub_e_idx += 1
 
             if sub_src:
-                _fit_and_accumulate(sub_n, sub_src, sub_tgt, sub_wgt_list)
+                g = DRESS(sub_n, sub_src, sub_tgt,
+                          weights=sub_wgt_list if sub_wgt_list else None,
+                          variant=variant)
+                g.fit(max_iterations=max_iterations, epsilon=epsilon)
+                _accumulate_histogram(g)
+                if wants_ms:
+                    _fill_multiset_row(g, edge_map, s)
+            # else: zero-edge subgraph — ms[s] already all NaN
+
+            s += 1
         else:
             # Descend: seed next depth from current value
             depth += 1
             combo[depth] = combo[depth - 1]  # incremented at top
 
-    return DeltaDRESSResult(histogram=hist, hist_size=nbins)
+    return DeltaDRESSResult(
+        histogram=hist, hist_size=nbins,
+        multisets=ms, num_subgraphs=cnk,
+    )
 

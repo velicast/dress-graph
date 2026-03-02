@@ -62,7 +62,7 @@ PYBIND11_MODULE(_core, m) {
     py::class_<DRESS::DeltaFitResult>(m, "DeltaFitResult",
             "Result returned by DRESS.delta_fit()")
         .def_readonly("hist_size",  &DRESS::DeltaFitResult::hist_size,
-                      "Number of histogram bins (floor(2/epsilon) + 1)")
+                      "Number of histogram bins (floor(dmax/epsilon) + 1; dmax=2 unweighted)")
         .def_readonly("num_subgraphs", &DRESS::DeltaFitResult::num_subgraphs,
                       "Number of subgraphs (rows in multisets), 0 if not requested")
         .def_property_readonly("histogram", [](const DRESS::DeltaFitResult& r) {

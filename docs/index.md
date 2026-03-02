@@ -20,7 +20,8 @@ DRESS is a parameter-free algorithm that computes a unique, self-consistent
 edge similarity for any graph.  Given an edge list, it iteratively solves a
 nonlinear fixed-point system where every edge's similarity value depends on
 its neighbors' values.  It converges to a unique, bounded solution in
-\([0, 2]\) with no tuning parameters.  Sorting the edge values produces a
+\([0, 2]\) for unweighted graphs (values may exceed 2 with non-uniform edge
+weights) with no tuning parameters.  Sorting the edge values produces a
 canonical **graph fingerprint**.
 
 For the theory and generalizations (DRESS Family), see the research paper:
@@ -58,7 +59,7 @@ and edge-importance ranking.
 
 | Property |
 |----------|
-| Bounded \([0, 2]\), self-similarity \(= 2\) |
+| Bounded \([0, 2]\) for unweighted graphs, self-similarity \(= 2\) |
 | Provably numerically stable (no overflows, no undefined behaviors) |
 | Parameter-free (self-regularizing, no damping factor) |
 | Scale invariant (degree-0 homogeneous) |

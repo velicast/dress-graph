@@ -2,13 +2,20 @@
 
 ## Boundedness
 
-DRESS values are bounded in \([0, 2]\).
+In the unweighted case, DRESS values are bounded in \([0, 2]\).
 
 - \(d_{uv} = 2\) if and only if \(u = v\) (self-similarity).
 - \(d_{uv} = 0\) cannot occur on any edge in a connected graph (the self-loop
   contribution guarantees a positive numerator).
 - For edges between nodes with no common neighbors beyond the self-loop,
   values are small but strictly positive.
+
+With non-uniform edge weights, node norms \(\|u\|\) and \(\|v\|\) may
+differ even for structurally identical nodes, and converged values can
+exceed 2.  The per-step bound is
+\(d_{uv} \leq \|u\|/\|v\| + \|v\|/\|u\|\), which equals 2 only when
+\(\|u\| = \|v\|\).  See [Proof Sketch – Boundedness](family.md#proof-sketch-of-convergence)
+for details.
 
 ## Parameter-free (self-regularization)
 
@@ -47,7 +54,8 @@ homogeneity in \(d\), so \(\lambda\) cancels.
 
 DRESS converges to a unique solution regardless of initialization.  This
 follows from the update being a contraction mapping on the bounded set
-\([0, 2]^{|E|}\).
+\([0, 2]^{|E|}\) (unweighted case; with non-uniform edge weights the
+bounding set is larger but uniqueness still holds).
 
 ## Interpretation of the fixed point
 
@@ -124,8 +132,9 @@ initialization, or accumulation of rounding errors across iterations.
 DRESS is numerically stable by construction.  Four properties work together
 to guarantee this:
 
-1. **Bounded output.**  All values remain in \([0, 2]\).  There is no risk of
-   overflow, and the self-loop contribution prevents underflow to zero.
+1. **Bounded output.**  All values remain in \([0, 2]\) for unweighted graphs
+   (bounded by a computable \(d_{\max} \ge 2\) for weighted graphs).  There is
+   no risk of overflow, and the self-loop contribution prevents underflow to zero.
 
 2. **Degree-0 homogeneity.**  Scaling all values by a constant \(\lambda\)
    cancels out in the next iterate: \(F(\lambda\,d) = F(d)\).  This means
@@ -228,7 +237,7 @@ are similar.
 |--------|---------|-------|
 | Entity | Node pairs | Edges |
 | Damping factor | Required (\(C \in (0,1)\)); results change with \(C\) | **None** (parameter-free) |
-| Bounded | \([0, 1]\) | \([0, 2]\) |
+| Bounded | \([0, 1]\) | \([0, 2]\) (unweighted) |
 | Complexity (naïve) | \(O(k \cdot N^2 \cdot \bar{d}^2)\) | \(O(k \cdot E \cdot \bar{d})\) |
 | Memory | \(O(N^2)\) (all pairs) | \(O(N + E)\) (edges only) |
 | Unique fixed point | Depends on \(C\) | **Always** |

@@ -20,11 +20,16 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
 %     'MaxIterations'    — Maximum fitting iterations (default 100).
 %     'Epsilon'          — Convergence threshold / bin width (default 1e-6).
 %     'Precompute'       — Logical; precompute intercepts (default false).
+%     'KeepMultisets'    — Logical; return per-subgraph edge values (default false).
 %
 %   Output:
 %     result — struct with fields:
-%       .histogram  — double [hist_size x 1]  bin counts
-%       .hist_size  — int32 scalar            number of bins
+%       .histogram      — double [hist_size x 1]  bin counts
+%       .hist_size      — int32 scalar            number of bins
+%       .multisets      — double [C(N,k) x E]     per-subgraph edge values
+%                         (only when KeepMultisets is true; NaN = removed edge)
+%       .num_subgraphs  — int32 scalar            C(N,k)
+%                         (only when KeepMultisets is true)
 %
 %   Examples:
 %     % Triangle K3, delta-1
@@ -40,6 +45,7 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
     addParameter(p, 'MaxIterations', 100,   @(x) isscalar(x) && isnumeric(x) && x >= 1);
     addParameter(p, 'Epsilon',       1e-6,  @(x) isscalar(x) && isnumeric(x) && x > 0);
     addParameter(p, 'Precompute',    false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
+    addParameter(p, 'KeepMultisets', false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
     parse(p, varargin{:});
 
     weights        = double(p.Results.Weights(:));
@@ -48,6 +54,7 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
     max_iterations = int32(p.Results.MaxIterations);
     epsilon        = double(p.Results.Epsilon);
     precompute     = int32(logical(p.Results.Precompute));
+    keep_multisets = int32(logical(p.Results.KeepMultisets));
 
     assert(isscalar(n_vertices) && n_vertices >= 1, ...
            'delta_dress:invalidInput', 'n_vertices must be a positive scalar.');
@@ -65,5 +72,6 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
     targets    = int32(targets(:));
 
     result = delta_dress_mex(n_vertices, sources, targets, weights, k, ...
-                             variant, max_iterations, epsilon, precompute);
+                             variant, max_iterations, epsilon, precompute, ...
+                             keep_multisets);
 end

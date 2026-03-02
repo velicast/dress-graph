@@ -105,8 +105,14 @@ impl fmt::Display for DressResult {
 pub struct DeltaDressResult {
     /// Histogram bin counts (length = `hist_size`).
     pub histogram: Vec<i64>,
-    /// Number of bins: floor(2/epsilon) + 1.
+    /// Number of bins: floor(dmax/epsilon) + 1 (dmax = 2 for unweighted graphs).
     pub hist_size: i32,
+    /// Per-subgraph edge values, row-major C(N,k) × E.
+    /// `NaN` marks edges removed in a given subgraph.
+    /// `None` when `keep_multisets` is `false`.
+    pub multisets: Option<Vec<f64>>,
+    /// Number of subgraphs: C(N,k).
+    pub num_subgraphs: i64,
 }
 
 impl fmt::Display for DeltaDressResult {
@@ -253,15 +259,16 @@ impl DRESSBuilder {
             //   offset 32: *adj_offset
             //   offset 40: *adj_target
             //   offset 48: *adj_edge_idx
-            //   offset 56: *edge_weight
-            //   offset 64: *edge_dress
-            //   offset 72: *edge_dress_next
-            //   offset 80: *node_dress
+            //   offset 56: *W             (raw input weights)
+            //   offset 64: *edge_weight
+            //   offset 72: *edge_dress
+            //   offset 80: *edge_dress_next
+            //   offset 88: *node_dress
             let base = g as *const u8;
 
-            let ew_ptr = *(base.add(56) as *const *const f64);
-            let ed_ptr = *(base.add(64) as *const *const f64);
-            let nd_ptr = *(base.add(80) as *const *const f64);
+            let ew_ptr = *(base.add(64) as *const *const f64);
+            let ed_ptr = *(base.add(72) as *const *const f64);
+            let nd_ptr = *(base.add(88) as *const *const f64);
 
             let edge_weight = std::slice::from_raw_parts(ew_ptr, e).to_vec();
             let edge_dress  = std::slice::from_raw_parts(ed_ptr, e).to_vec();
@@ -320,6 +327,7 @@ impl DRESS {
     /// * `epsilon` – convergence tolerance and bin width
     /// * `variant` – graph variant
     /// * `precompute` – precompute intercepts in subgraphs
+    /// * `keep_multisets` – if true, return per-subgraph edge values
     pub fn delta_fit(
         n: i32,
         sources: Vec<i32>,
@@ -330,6 +338,7 @@ impl DRESS {
         epsilon: f64,
         variant: Variant,
         precompute: bool,
+        keep_multisets: bool,
     ) -> Result<DeltaDressResult, DressError> {
         let e = sources.len();
         if targets.len() != e {
@@ -360,15 +369,17 @@ impl DRESS {
             }
 
             let mut hsize: c_int = 0;
+            let mut ms_ptr: *mut c_double = std::ptr::null_mut();
+            let mut num_sub: i64 = 0;
             let h = delta_fit(
                 g,
                 k,
                 max_iterations,
                 epsilon,
                 &mut hsize,
-                0,
-                std::ptr::null_mut(),
-                std::ptr::null_mut(),
+                if keep_multisets { 1 } else { 0 },
+                if keep_multisets { &mut ms_ptr } else { std::ptr::null_mut() },
+                &mut num_sub,
             );
 
             let histogram = if !h.is_null() && hsize > 0 {
@@ -377,10 +388,23 @@ impl DRESS {
                 vec![]
             };
 
+            extern "C" { fn free(ptr: *mut std::ffi::c_void); }
+
+            let multisets = if keep_multisets && !ms_ptr.is_null() && num_sub > 0 {
+                let len = (num_sub as usize) * (e as usize);
+                let ms = std::slice::from_raw_parts(ms_ptr, len).to_vec();
+                free(ms_ptr as *mut std::ffi::c_void);
+                Some(ms)
+            } else {
+                if keep_multisets && !ms_ptr.is_null() {
+                    free(ms_ptr as *mut std::ffi::c_void);
+                }
+                None
+            };
+
             // Free the C-allocated histogram
             if !h.is_null() {
-                extern "C" { fn free(ptr: *mut i64); }
-                free(h);
+                free(h as *mut std::ffi::c_void);
             }
 
             free_dress_graph(g);
@@ -388,6 +412,8 @@ impl DRESS {
             Ok(DeltaDressResult {
                 histogram,
                 hist_size: hsize,
+                multisets,
+                num_subgraphs: num_sub,
             })
         }
     }

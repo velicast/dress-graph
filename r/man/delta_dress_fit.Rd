@@ -10,7 +10,8 @@ The result is a fixed-size histogram of edge DRESS values pooled across all
 \usage{
 delta_dress_fit(n_vertices, sources, targets, weights = NULL, k = 0L,
                 variant = DRESS_UNDIRECTED, max_iterations = 100L,
-                epsilon = 1e-6, precompute = FALSE)
+                epsilon = 1e-6, precompute = FALSE,
+                keep_multisets = FALSE)
 }
 \arguments{
   \item{n_vertices}{Integer. Number of vertices (vertex ids must be in
@@ -29,12 +30,19 @@ delta_dress_fit(n_vertices, sources, targets, weights = NULL, k = 0L,
   \item{epsilon}{Convergence threshold and histogram bin width (default 1e-6).}
   \item{precompute}{Logical. Pre-compute common-neighbor intercept index
     for faster iteration at the cost of more memory (default \code{FALSE}).}
+  \item{keep_multisets}{Logical. If \code{TRUE}, return per-subgraph edge
+    DRESS values in a C(N,k) x E matrix (\code{NaN} for removed edges).
+    Default \code{FALSE}.}
 }
 \value{
 A list with components:
   \item{histogram}{Numeric vector -- bin counts of edge DRESS values
     pooled across all subgraphs.}
-  \item{hist_size}{Integer -- number of bins (\code{floor(2/epsilon) + 1}).}
+  \item{hist_size}{Integer -- number of bins (\code{floor(dmax/epsilon) + 1}; dmax = 2 unweighted).}
+  \item{multisets}{Matrix (C(N,k) x E) of per-subgraph edge DRESS values
+    (only present when \code{keep_multisets = TRUE}; \code{NaN} = removed edge).}
+  \item{num_subgraphs}{Integer -- C(N,k) (only present when
+    \code{keep_multisets = TRUE}).}
 }
 \examples{
 # Triangle K3, delta-1: remove 1 vertex at a time

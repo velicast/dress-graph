@@ -57,6 +57,8 @@ export interface DeltaDressOptions {
     sources: Int32Array | number[];
     /** Edge target vertices (0-based) */
     targets: Int32Array | number[];
+    /** Optional edge weights (same length as sources) */
+    weights?: Float64Array | number[] | null;
     /** Vertices to remove per subset (default: 0 = original graph) */
     k?: number;
     /** Graph variant (default: Variant.UNDIRECTED) */
@@ -67,13 +69,19 @@ export interface DeltaDressOptions {
     epsilon?: number;
     /** Pre-compute neighbourhood intercepts (default: false) */
     precompute?: boolean;
+    /** Return per-subgraph edge values (default: false) */
+    keepMultisets?: boolean;
 }
 
 export interface DeltaDressResult {
     /** Bin counts of edge delta values (as Float64 for BigInt-free access) */
     histogram: Float64Array;
-    /** Number of histogram bins (floor(2/epsilon) + 1) */
+    /** Number of histogram bins (floor(dmax/epsilon) + 1; dmax = 2 unweighted) */
     histSize: number;
+    /** Per-subgraph edge values, row-major C(N,k) × E (NaN = removed edge; null when not requested) */
+    multisets: Float64Array | null;
+    /** Number of subgraphs C(N,k) */
+    numSubgraphs: number;
 }
 
 /**

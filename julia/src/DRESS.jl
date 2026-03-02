@@ -20,7 +20,7 @@ module DRESS
 
 using Libdl
 
-export dress_fit, delta_dress_fit, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
+export dress_fit, delta_dress_fit, DeltaDRESSResult, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
 
 # ── variant constants ────────────────────────────────────────────────
 const UNDIRECTED = Cint(0)
@@ -188,14 +188,15 @@ function dress_fit(N::Integer,
     #   int *adj_offset;           // Ptr    offset 32
     #   int *adj_target;           // Ptr    offset 40
     #   int *adj_edge_idx;         // Ptr    offset 48
-    #   double *edge_weight;       // Ptr    offset 56
-    #   double *edge_dress;        // Ptr    offset 64
-    #   double *edge_dress_next;   // Ptr    offset 72
-    #   double *node_dress;        // Ptr    offset 80
+    #   double *W;                 // Ptr    offset 56  (raw input weights)
+    #   double *edge_weight;       // Ptr    offset 64
+    #   double *edge_dress;        // Ptr    offset 72
+    #   double *edge_dress_next;   // Ptr    offset 80
+    #   double *node_dress;        // Ptr    offset 88
 
-    edge_weight_ptr = unsafe_load(Ptr{Ptr{Cdouble}}(g + 56))
-    edge_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 64))
-    node_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 80))
+    edge_weight_ptr = unsafe_load(Ptr{Ptr{Cdouble}}(g + 64))
+    edge_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 72))
+    node_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 88))
 
     # Copy results into Julia-owned arrays before freeing the C struct
     ew = copy(unsafe_wrap(Array, edge_weight_ptr, E))
@@ -219,12 +220,17 @@ end
 Holds the output of `delta_dress_fit`.
 
 Fields:
-- `histogram::Vector{Int64}`    – bin-count vector
-- `hist_size::Int`              – number of bins (floor(2/ε) + 1)
+- `histogram::Vector{Int64}`          – bin-count vector
+- `hist_size::Int`                    – number of bins (floor(dmax/ε) + 1; dmax = 2 unweighted)
+- `multisets::Union{Matrix{Float64}, Nothing}` – C(N,k) × E matrix of per-subgraph
+  edge values (NaN = removed edge); `nothing` when `keep_multisets=false`
+- `num_subgraphs::Int`                – C(N,k)
 """
 struct DeltaDRESSResult
     histogram :: Vector{Int64}
     hist_size :: Int
+    multisets :: Union{Matrix{Float64}, Nothing}
+    num_subgraphs :: Int
 end
 
 function Base.show(io::IO, r::DeltaDRESSResult)
@@ -238,7 +244,8 @@ end
     delta_dress_fit(N, sources, targets;
                     k=0, variant=UNDIRECTED,
                     max_iterations=100, epsilon=1e-6,
-                    precompute=false) → DeltaDRESSResult
+                    precompute=false,
+                    keep_multisets=false) → DeltaDRESSResult
 
 Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS on
 each subgraph, and return the pooled histogram.
@@ -254,6 +261,8 @@ each subgraph, and return the pooled histogram.
 - `max_iterations::Int`  – max DRESS iterations per subgraph (default 100)
 - `epsilon::Float64`     – convergence tolerance and bin width (default 1e-6)
 - `precompute::Bool`     – precompute intercepts in subgraphs (default false)
+- `keep_multisets::Bool` – if true, return per-subgraph edge values in a
+                           C(N,k) × E matrix (NaN = removed edge; default false)
 """
 function delta_dress_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
@@ -263,7 +272,8 @@ function delta_dress_fit(N::Integer,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
                          epsilon::Real      = 1e-6,
-                         precompute::Bool   = false)
+                         precompute::Bool   = false,
+                         keep_multisets::Bool = false)
 
     E = length(sources)
     length(targets) == E || throw(ArgumentError("sources and targets must have equal length"))
@@ -299,10 +309,15 @@ function delta_dress_fit(N::Integer,
 
     # delta_fit(g, k, iterations, epsilon, &hist_size, keep_multisets, &multisets, &num_subgraphs) → *int64
     hsize_ref = Ref{Cint}(0)
+    ms_ref    = Ref{Ptr{Cdouble}}(Ptr{Cdouble}(C_NULL))
+    nsub_ref  = Ref{Int64}(0)
     h_ptr = ccall(_FN_DELTA[], Ptr{Int64},
                   (Ptr{Cvoid}, Cint, Cint, Cdouble, Ptr{Cint}, Cint, Ptr{Ptr{Cdouble}}, Ptr{Int64}),
                   g, Cint(k), Cint(max_iterations), Cdouble(epsilon),
-                  hsize_ref, Cint(0), Ptr{Ptr{Cdouble}}(C_NULL), Ptr{Int64}(C_NULL))
+                  hsize_ref,
+                  Cint(keep_multisets),
+                  keep_multisets ? ms_ref : Ptr{Ptr{Cdouble}}(C_NULL),
+                  nsub_ref)
 
     hsize = Int(hsize_ref[])
     histogram = if h_ptr != C_NULL && hsize > 0
@@ -311,13 +326,29 @@ function delta_dress_fit(N::Integer,
         Int64[]
     end
 
+    # Extract multisets if requested
+    ms_mat = nothing
+    nsub = Int(nsub_ref[])
+    if keep_multisets
+        ms_p = ms_ref[]
+        if ms_p != Ptr{Cdouble}(C_NULL) && nsub > 0
+            # C stores row-major: ms_ptr[s * E + e]
+            # Julia Matrix is column-major.  Read flat, then reshape + transpose.
+            flat = copy(unsafe_wrap(Array, ms_p, nsub * E))
+            ms_mat = permutedims(reshape(flat, E, nsub))
+            Libc.free(ms_p)
+        else
+            ms_mat = Matrix{Float64}(undef, 0, 0)
+        end
+    end
+
     # Free the C histogram and graph
     if h_ptr != C_NULL
         Libc.free(h_ptr)
     end
     ccall(_FN_FREE[], Cvoid, (Ptr{Cvoid},), g)
 
-    return DeltaDRESSResult(histogram, hsize)
+    return DeltaDRESSResult(histogram, hsize, ms_mat, nsub)
 end
 
 end # module DRESS

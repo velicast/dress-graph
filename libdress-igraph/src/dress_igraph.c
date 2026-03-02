@@ -173,7 +173,9 @@ int dress_igraph_delta_compute(const igraph_t *graph,
     memset(result, 0, sizeof(*result));
 
     if (E == 0) {
-        /* No edges — return an empty histogram */
+        /* No edges — return an empty histogram.
+         * With no edges we cannot build a DRESS graph to call
+         * compute_dmax_bound, so use the unweighted bound (2.0). */
         int nbins = (int)(2.0 / epsilon) + 1;
         result->hist_size = nbins;
         result->histogram = (int64_t *)calloc((size_t)nbins, sizeof(int64_t));

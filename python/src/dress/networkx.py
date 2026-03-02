@@ -30,6 +30,7 @@ def dress_graph(
     weight: str = "weight",
     max_iterations: int = 100,
     epsilon: float = 1e-6,
+    precompute_intercepts: bool = False,
     set_attributes: bool = False,
 ) -> DRESSResult:
     """Compute DRESS similarity on a NetworkX graph.
@@ -47,6 +48,8 @@ def dress_graph(
         Maximum fitting iterations.
     epsilon : float
         Convergence threshold.
+    precompute_intercepts : bool
+        Pre-compute common-neighbour index (default ``False``).
     set_attributes : bool
         If ``True``, write ``"dress"`` edge attributes and ``"dress_norm"``
         node attributes back onto *G*.
@@ -79,22 +82,31 @@ def dress_graph(
         targets,
         weights=weights if has_weights else None,
         variant=variant,
+        precompute_intercepts=precompute_intercepts,
     )
-    result = g.fit(max_iterations=max_iterations, epsilon=epsilon)
+    fit = g.fit(max_iterations=max_iterations, epsilon=epsilon)
 
     if set_attributes:
         # Write edge attributes
-        for i, (u, v) in enumerate(zip(result.sources, result.targets)):
-            u_label = nodes[u]
-            v_label = nodes[v]
+        for i in range(g.n_edges):
+            u_label = nodes[g.edge_source(i)]
+            v_label = nodes[g.edge_target(i)]
             if G.has_edge(u_label, v_label):
-                G[u_label][v_label]["dress"] = result.edge_dress[i]
+                G[u_label][v_label]["dress"] = g.edge_dress(i)
 
         # Write node attributes
         for i, n in enumerate(nodes):
-            G.nodes[n]["dress_norm"] = result.node_dress[i]
+            G.nodes[n]["dress_norm"] = g.node_dress(i)
 
-    return result
+    return DRESSResult(
+        sources=list(g.sources),
+        targets=list(g.targets),
+        edge_dress=list(g.dress_values),
+        edge_weight=list(g.weights),
+        node_dress=list(g.node_dress_values),
+        iterations=fit.iterations,
+        delta=fit.delta,
+    )
 
 
 def delta_dress_graph(
@@ -106,6 +118,7 @@ def delta_dress_graph(
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute: bool = False,
+    keep_multisets: bool = False,
 ) -> DeltaDRESSResult:
     """Compute the Δ^k-DRESS histogram on a NetworkX graph.
 
@@ -123,20 +136,24 @@ def delta_dress_graph(
     variant : Variant
         ``UNDIRECTED``, ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
     weight : str
-        Edge attribute name for weights (currently unused — delta_dress_fit
-        operates on unweighted topology only).
+        Edge attribute name for weights. If the attribute is missing the
+        edge is treated as unweighted (weight = 1).
     max_iterations : int
         Maximum DRESS fitting iterations per subgraph.
     epsilon : float
         Convergence threshold and histogram bin width.
     precompute : bool
         If ``True``, precompute common-neighbour index per subgraph.
+    keep_multisets : bool
+        If ``True``, return per-subgraph DRESS values in a 2-D array
+        of shape ``(C(N,k), E)``. ``NaN`` marks removed edges.
 
     Returns
     -------
     DeltaDRESSResult
         Dataclass with ``histogram`` (list of int, length ``hist_size``)
-        and ``hist_size``.
+        and ``hist_size``. If *keep_multisets* is ``True``, also
+        ``multisets`` and ``num_subgraphs``.
     """
     from dress import delta_dress_fit as _delta_dress_fit
 
@@ -147,18 +164,27 @@ def delta_dress_graph(
 
     sources = []
     targets = []
-    for u, v in G.edges():
+    weights = []
+    has_weights = False
+
+    for u, v, data in G.edges(data=True):
         sources.append(node_to_idx[u])
         targets.append(node_to_idx[v])
+        w = data.get(weight, 1.0)
+        weights.append(float(w))
+        if w != 1.0:
+            has_weights = True
 
     return _delta_dress_fit(
         n_vertices,
         sources,
         targets,
+        weights=weights if has_weights else None,
         k=k,
         variant=variant,
         max_iterations=max_iterations,
         epsilon=epsilon,
         precompute=precompute,
+        keep_multisets=keep_multisets,
     )
 

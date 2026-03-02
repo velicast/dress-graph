@@ -24,8 +24,9 @@ extern "C" {
 //                k = 0 runs DRESS on the original graph (Δ^0).
 //   iterations - maximum DRESS iterations per subgraph.
 //   epsilon    - convergence tolerance for DRESS and histogram bin width.
-//                The histogram has ceil(2 / epsilon) bins.
-//   hist_size  - [out] if non-NULL, set to floor(2 / epsilon) + 1 on return.
+//                The histogram has floor(dmax / epsilon) + 1 bins
+//                (dmax = 2 for unweighted graphs; larger for weighted).
+//   hist_size  - [out] if non-NULL, set to floor(dmax / epsilon) + 1 on return.
 //   keep_multisets - if non-zero, allocate and fill a flat matrix of
 //                per-subgraph edge DRESS values.
 //   multisets  - [out] on return, *multisets points to a heap-allocated
@@ -36,10 +37,10 @@ extern "C" {
 //   num_subgraphs - [out] if non-NULL, set to C(N,k) on return.
 //
 // Returns:
-//   A heap-allocated int64_t array of length floor(2 / epsilon) + 1.
+//   A heap-allocated int64_t array of length floor(dmax / epsilon) + 1.
 //   hist[i] counts the number of converged edge values falling in bin
-//   i = floor(d / epsilon).  The top bin (index 2/epsilon) holds the
-//   exact value 2.0.  The caller must free() the returned pointer.
+//   i = floor(d / epsilon).  The top bin holds the maximum possible
+//   value.  The caller must free() the returned pointer.
 //
 // Complexity:
 //   O( C(N,k) * iterations * E * d_max )

@@ -42,6 +42,16 @@ const EPS = 1e-3
         @test length(r.histogram) == r.hist_size
     end
 
+    @testset "weighted histogram size" begin
+        # Non-uniform weights → adaptive dmax > 2.0 → hist_size > 2001
+        r = delta_dress_fit(3, K3_SRC, K3_TGT;
+                            weights=Float64[1.0, 10.0, 1.0],
+                            k=0, epsilon=1e-3)
+        @test r.hist_size > 2001
+        @test length(r.histogram) == r.hist_size
+        @test hist_total(r) == 3
+    end
+
     @testset "result type" begin
         r = delta_dress_fit(3, K3_SRC, K3_TGT; k=0, epsilon=EPS)
         @test r isa DeltaDRESSResult
@@ -129,6 +139,37 @@ const EPS = 1e-3
 
     @testset "argument validation" begin
         @test_throws ArgumentError delta_dress_fit(3, Int32[0, 1], Int32[1, 2, 2])
+    end
+
+    # ── multisets ──────────────────────────────────────────────────
+
+    @testset "multisets disabled" begin
+        r = delta_dress_fit(3, K3_SRC, K3_TGT; k=0, epsilon=EPS)
+        @test r.multisets === nothing
+    end
+
+    @testset "multisets Δ^0 K3" begin
+        r = delta_dress_fit(3, K3_SRC, K3_TGT; k=0, epsilon=EPS,
+                            keep_multisets=true)
+        @test r.num_subgraphs == 1
+        @test size(r.multisets) == (1, 3)
+        for v in r.multisets
+            @test abs(v - 2.0) < EPS
+        end
+    end
+
+    @testset "multisets Δ^1 K3 NaN pattern" begin
+        r = delta_dress_fit(3, K3_SRC, K3_TGT; k=1, epsilon=EPS,
+                            keep_multisets=true)
+        @test r.num_subgraphs == 3
+        @test size(r.multisets) == (3, 3)
+        for row in 1:3
+            nans = count(isnan, r.multisets[row, :])
+            @test nans == 2
+            vals = filter(!isnan, r.multisets[row, :])
+            @test length(collect(vals)) == 1
+            @test abs(first(vals) - 2.0) < EPS
+        end
     end
 
 end

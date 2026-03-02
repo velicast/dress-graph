@@ -80,6 +80,40 @@ static void test_hist_size(void)
     free_dress_graph(g);
 }
 
+/* ── test: weighted histogram bin size ─────────────────────────────── */
+
+static double *dup_dbl(const double *src, int n)
+{
+    double *p = (double *)malloc((size_t)n * sizeof(double));
+    memcpy(p, src, (size_t)n * sizeof(double));
+    return p;
+}
+
+static void test_weighted_hist_size(void)
+{
+    printf("test_weighted_hist_size\n");
+
+    int U[] = {0, 1, 0};
+    int V[] = {1, 2, 2};
+    double W[] = {1.0, 10.0, 1.0};
+
+    p_dress_graph_t g = init_dress_graph(3, 3, dup_int(U, 3), dup_int(V, 3),
+                                         dup_dbl(W, 3),
+                                         DRESS_VARIANT_UNDIRECTED, 0);
+    int hsize;
+
+    /* Weighted K3 with non-uniform weights → adaptive dmax > 2.0
+       → hist_size must exceed the unweighted 2001 at eps=1e-3. */
+    int64_t *h = delta_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
+    ASSERT_GT(hsize, 2001, "weighted hist_size > 2001 for eps=1e-3");
+
+    /* Histogram length matches reported hist_size, total = 3 edges */
+    ASSERT_EQ(hist_total(h, hsize), 3, "weighted K3 delta0 total = 3");
+
+    free(h);
+    free_dress_graph(g);
+}
+
 /* ── test: Δ^0 on K3 ──────────────────────────────────────────────── */
 
 static void test_delta0_k3(void)
@@ -392,6 +426,7 @@ static void test_multisets_k0(void)
 int main(void)
 {
     test_hist_size();
+    test_weighted_hist_size();
     test_delta0_k3();
     test_delta1_k3();
     test_delta2_k3();

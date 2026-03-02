@@ -154,13 +154,14 @@ export async function dressFit(opts) {
     //   offset 20: *adj_offset    (ptr32)
     //   offset 24: *adj_target    (ptr32)
     //   offset 28: *adj_edge_idx  (ptr32)
-    //   offset 32: *edge_weight   (ptr32)
-    //   offset 36: *edge_dress    (ptr32)
-    //   offset 40: *edge_dress_next (ptr32)
-    //   offset 44: *node_dress    (ptr32)
-    const ewPtr = M.getValue(g + 32, 'i32');  // edge_weight pointer
-    const edPtr = M.getValue(g + 36, 'i32');  // edge_dress pointer
-    const ndPtr = M.getValue(g + 44, 'i32');  // node_dress pointer
+    //   offset 32: *W             (ptr32)  raw input weights
+    //   offset 36: *edge_weight   (ptr32)
+    //   offset 40: *edge_dress    (ptr32)
+    //   offset 44: *edge_dress_next (ptr32)
+    //   offset 48: *node_dress    (ptr32)
+    const ewPtr = M.getValue(g + 36, 'i32');  // edge_weight pointer
+    const edPtr = M.getValue(g + 40, 'i32');  // edge_dress pointer
+    const ndPtr = M.getValue(g + 48, 'i32');  // node_dress pointer
 
     // Copy results into JS-owned typed arrays
     const edgeWeight = new Float64Array(E);
@@ -244,6 +245,7 @@ export async function deltaDressFit(opts) {
     const maxIter     = opts.maxIterations ?? 100;
     const epsilon     = opts.epsilon ?? 1e-6;
     const precompute  = (opts.precompute ?? false) ? 1 : 0;
+    const keepMS      = (opts.keepMultisets ?? false) ? 1 : 0;
 
     // Allocate C arrays (ownership transfers to init_dress_graph)
     const uPtr = M._malloc(E * 4);
@@ -275,8 +277,20 @@ export async function deltaDressFit(opts) {
     // Allocate out-param for hist_size
     const histSizePtr = M._malloc(4);
 
+    // Allocate out-params for multisets (pointer-to-pointer and num_subgraphs)
+    let msPtrPtr = 0;
+    let numSubPtr = 0;
+    if (keepMS) {
+        msPtrPtr   = M._malloc(4);  // pointer to double*
+        numSubPtr  = M._malloc(8);  // int64_t
+        M.setValue(msPtrPtr, 0, 'i32');
+        M.setValue(numSubPtr, 0, 'i32');
+        M.setValue(numSubPtr + 4, 0, 'i32');
+    }
+
     // Call delta_fit  (returns int64_t* — pointer to histogram on heap)
-    const histPtr = M._delta_fit(g, k, maxIter, epsilon, histSizePtr, 0, 0, 0);
+    const histPtr = M._delta_fit(g, k, maxIter, epsilon, histSizePtr,
+                                 keepMS, msPtrPtr, numSubPtr);
 
     const histSize = M.getValue(histSizePtr, 'i32');
 
@@ -289,13 +303,37 @@ export async function deltaDressFit(opts) {
         histogram[i] = hi * 4294967296 + lo;
     }
 
+    // Extract multisets if requested
+    let multisets = null;
+    let numSubgraphs = 0;
+    if (keepMS && msPtrPtr) {
+        const msPtr = M.getValue(msPtrPtr, 'i32');  // double*
+        // Read int64 num_subgraphs as lo/hi pair
+        const nsLo = M.HEAPU32[(numSubPtr >> 2)];
+        const nsHi = M.HEAP32[(numSubPtr >> 2) + 1];
+        numSubgraphs = nsHi * 4294967296 + nsLo;
+
+        if (msPtr !== 0 && numSubgraphs > 0) {
+            const totalVals = numSubgraphs * E;
+            multisets = new Float64Array(totalVals);
+            for (let i = 0; i < totalVals; i++) {
+                multisets[i] = M.HEAPF64[(msPtr >> 3) + i];
+            }
+            M._free(msPtr);
+        }
+        M._free(msPtrPtr);
+        M._free(numSubPtr);
+    }
+
     // Cleanup
     M._free(histPtr);
     M._free(histSizePtr);
     M._free_dress_graph(g);
 
     return {
-        histogram: histogram,
-        histSize:  histSize,
+        histogram:     histogram,
+        histSize:      histSize,
+        multisets:     multisets,
+        numSubgraphs:  numSubgraphs,
     };
 }

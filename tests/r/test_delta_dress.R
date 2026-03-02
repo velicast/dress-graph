@@ -53,6 +53,18 @@ assert_equal("hist_size with eps=1e-6", r2$hist_size, 2000001L)
 assert("histogram length == hist_size", length(r$histogram) == r$hist_size)
 
 # =======================================================================
+cat("== Weighted histogram size ==\n")
+# =======================================================================
+
+rw <- delta_dress_fit(3L, K3_SRC, K3_TGT,
+                      weights = c(1.0, 10.0, 1.0),
+                      k = 0L, epsilon = 1e-3)
+assert("weighted hist_size > 2001", rw$hist_size > 2001L)
+assert("weighted histogram length == hist_size",
+       length(rw$histogram) == rw$hist_size)
+assert_equal("weighted K3 delta0 total = 3", hist_total(rw), 3)
+
+# =======================================================================
 cat("\n== Return type ==\n")
 # =======================================================================
 

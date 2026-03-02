@@ -49,6 +49,15 @@ class TestHistSize:
         assert "DeltaDRESSResult" in s
         assert "hist_size=" in s
 
+    def test_weighted_hist_size(self):
+        """Weighted K3 with non-uniform weights → adaptive dmax > 2.0."""
+        r = delta_dress_fit(3, K3_SRC, K3_TGT,
+                            weights=[1.0, 10.0, 1.0],
+                            k=0, epsilon=1e-3)
+        assert r.hist_size > 2001, f"expected > 2001, got {r.hist_size}"
+        assert len(r.histogram) == r.hist_size
+        assert _total(r) == 3
+
 
 # ── Δ^0 — full graph ────────────────────────────────────────────────
 
@@ -157,6 +166,39 @@ class TestPath:
 
 
 # ── precompute flag ──────────────────────────────────────────────────
+
+class TestMultisets:
+    def test_disabled_by_default(self):
+        r = delta_dress_fit(3, K3_SRC, K3_TGT, k=0, epsilon=EPS)
+        assert r.multisets is None
+
+    def test_delta0_k3_shape(self):
+        import math
+        r = delta_dress_fit(3, K3_SRC, K3_TGT, k=0, epsilon=EPS,
+                            keep_multisets=True)
+        assert r.num_subgraphs == 1
+        assert len(r.multisets) == 1
+        assert len(r.multisets[0]) == 3
+
+    def test_delta0_k3_values(self):
+        r = delta_dress_fit(3, K3_SRC, K3_TGT, k=0, epsilon=EPS,
+                            keep_multisets=True)
+        for row in r.multisets:
+            for v in row:
+                assert abs(v - 2.0) < EPS, f"expected ~2.0, got {v}"
+
+    def test_delta1_k3_nan_pattern(self):
+        import math
+        r = delta_dress_fit(3, K3_SRC, K3_TGT, k=1, epsilon=EPS,
+                            keep_multisets=True)
+        assert r.num_subgraphs == 3
+        assert len(r.multisets) == 3
+        for row in r.multisets:
+            nans = sum(1 for v in row if math.isnan(v))
+            assert nans == 2, f"expected 2 NaN per row, got {nans}"
+            vals = [v for v in row if not math.isnan(v)]
+            assert abs(vals[0] - 2.0) < EPS
+
 
 class TestPrecompute:
     def test_identical_results(self):

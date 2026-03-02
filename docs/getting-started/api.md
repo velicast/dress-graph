@@ -28,8 +28,9 @@ result = delta_dress_fit(n_vertices, sources, targets, [k], [epsilon], ...)
 
 `delta_dress_fit` returns a histogram of integer counts and its size.
 Each bin \(i\) counts edge values in \([i \cdot \varepsilon,\; (i+1) \cdot \varepsilon)\),
-with the top bin (index \(\lfloor 2/\varepsilon \rfloor\)) holding
-exact value 2.0.  The number of bins is \(\lfloor 2/\varepsilon \rfloor + 1\).
+with the top bin (index \(\lfloor d_{\max}/\varepsilon \rfloor\)) holding
+the maximum possible value.  The number of bins is \(\lfloor d_{\max}/\varepsilon \rfloor + 1\)
+(\(d_{\max} = 2\) for unweighted graphs; larger for weighted).
 
 ## Variants
 
@@ -59,7 +60,7 @@ exact value 2.0.  The number of bins is \(\lfloor 2/\varepsilon \rfloor + 1\).
 | Field | Type | Description |
 |-------|------|-------------|
 | `histogram` | int64 array [hist_size] | Bin counts of converged edge values |
-| `hist_size` | int | Number of bins: \(\lfloor 2/\varepsilon \rfloor + 1\) |
+| `hist_size` | int | Number of bins: \(\lfloor d_{\max}/\varepsilon \rfloor + 1\) (\(d_{\max}=2\) unweighted) |
 
 ## Language-specific APIs
 
@@ -211,7 +212,7 @@ DRESS::DeltaFitResult deltaFit(int k, int maxIterations,
 // Result struct
 struct DeltaFitResult {
     std::vector<int64_t> histogram;   // bin counts
-    int                  hist_size;   // floor(2/epsilon) + 1
+    int                  hist_size;   // floor(dmax/epsilon) + 1 (dmax=2 unweighted)
     std::vector<double>  multisets;   // C(N,k)*E row-major, NaN = removed
     int64_t              num_subgraphs; // C(N,k)
 };
@@ -263,7 +264,7 @@ result = delta_dress_fit(
 )
 
 result.histogram    # list[int], length = hist_size
-result.hist_size    # int, floor(2/epsilon) + 1
+result.hist_size    # int, floor(dmax/epsilon) + 1 (dmax=2 unweighted)
 ```
 
 The same function is available in pure Python via `from dress.core import delta_dress_fit`.

@@ -46,6 +46,7 @@ typedef struct __dress_graph_t {
     int     *adj_edge_idx;         // [S]   maps half-edge to input edge index
 
     // Per-edge arrays — indexed by edge id 0..E-1.
+    double  *W;                    // [E]   raw input weight (NULL when unweighted)
     double  *edge_weight;          // [E]   variant-specific edge weight
     double  *edge_dress;           // [E]   current dress values
     double  *edge_dress_next;      // [E]   next-iteration dress values (double-buffer)
@@ -63,7 +64,8 @@ typedef struct __dress_graph_t {
 } dress_graph_t, *p_dress_graph_t;
 
 // Construct a dress graph from an edge list.
-// Takes ownership of U, V, W (freed by free_dress_graph). W may be NULL (unweighted).
+// Takes ownership of U, V, W (all freed by free_dress_graph).
+// W may be NULL (unweighted).
 p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
                                  double *W, dress_variant_t variant,
                                  int precompute_intercepts);

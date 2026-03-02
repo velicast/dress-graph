@@ -59,6 +59,23 @@ static void test_hist_size()
     ASSERT_EQ(r2.hist_size, 2000001, "hist_size == 2000001 for eps=1e-6");
 }
 
+/* ── test: weighted histogram bin size ─────────────────────────────── */
+
+static void test_weighted_hist_size()
+{
+    std::printf("test_weighted_hist_size\n");
+
+    DRESS g(3, {0, 1, 0}, {1, 2, 2}, {1.0, 10.0, 1.0});
+
+    auto r = g.deltaFit(0, 100, 1e-3);
+    ASSERT_GT(r.hist_size, 2001,
+              "weighted hist_size > 2001 for eps=1e-3");
+    ASSERT_EQ(hist_total(r.histogram), 3,
+              "weighted K3 delta0 total = 3");
+    ASSERT_EQ((int)r.histogram.size(), r.hist_size,
+              "histogram length == hist_size");
+}
+
 /* ── test: Δ^0 on K3 ──────────────────────────────────────────────── */
 
 static void test_delta0_k3()
@@ -208,11 +225,67 @@ static void test_delta0_path()
     ASSERT_GT(nonzero, 1, "delta0 P4: edges not all equal");
 }
 
+/* ── test: multisets disabled ──────────────────────────────────────── */
+
+static void test_multisets_disabled()
+{
+    std::printf("test_multisets_disabled\n");
+
+    DRESS g(3, {0, 1, 0}, {1, 2, 2});
+    auto r = g.deltaFit(0, 100, 1e-3, false);
+
+    ASSERT(r.multisets.empty(), "multisets should be empty");
+}
+
+/* ── test: multisets Δ^0 K3 ───────────────────────────────────────── */
+
+static void test_multisets_delta0_k3()
+{
+    std::printf("test_multisets_delta0_k3\n");
+
+    DRESS g(3, {0, 1, 0}, {1, 2, 2});
+    auto r = g.deltaFit(0, 100, 1e-3, true);
+
+    ASSERT_EQ(r.num_subgraphs, int64_t(1), "C(3,0) = 1");
+    ASSERT_EQ((int)r.multisets.size(), 3, "1 subgraph * 3 edges = 3");
+    for (int i = 0; i < 3; i++)
+        ASSERT(std::fabs(r.multisets[i] - 2.0) < 1e-3,
+               "all K3 edges = 2.0");
+}
+
+/* ── test: multisets Δ^1 K3 (NaN pattern) ─────────────────────────── */
+
+static void test_multisets_delta1_k3()
+{
+    std::printf("test_multisets_delta1_k3\n");
+
+    DRESS g(3, {0, 1, 0}, {1, 2, 2});
+    auto r = g.deltaFit(1, 100, 1e-3, true);
+
+    ASSERT_EQ(r.num_subgraphs, int64_t(3), "C(3,1) = 3");
+    ASSERT_EQ((int)r.multisets.size(), 9, "3 subgraphs * 3 edges = 9");
+
+    int E = 3;
+    for (int s = 0; s < 3; s++) {
+        int nans = 0;
+        for (int e = 0; e < E; e++) {
+            double v = r.multisets[s * E + e];
+            if (std::isnan(v)) {
+                nans++;
+            } else {
+                ASSERT(std::fabs(v - 2.0) < 1e-3, "non-NaN value = 2.0");
+            }
+        }
+        ASSERT_EQ(nans, 2, "2 NaN per row");
+    }
+}
+
 /* ── main ──────────────────────────────────────────────────────────── */
 
 int main()
 {
     test_hist_size();
+    test_weighted_hist_size();
     test_delta0_k3();
     test_delta1_k3();
     test_delta2_k3();
@@ -222,6 +295,9 @@ int main()
     test_k_ge_N();
     test_precompute();
     test_delta0_path();
+    test_multisets_disabled();
+    test_multisets_delta0_k3();
+    test_multisets_delta1_k3();
 
     std::printf("\n%d passed, %d failed\n", g_pass, g_fail);
     return g_fail > 0 ? 1 : 0;
