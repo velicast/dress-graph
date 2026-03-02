@@ -78,5 +78,10 @@ update conda/meta.yaml \
     '^\{% set version = ".*" %\}' \
     "{% set version = \"$NEW\" %}"
 
+# vcpkg — vcpkg.json
+update vcpkg/vcpkg.json \
+    '"version": ".*"' \
+    "\"version\": \"$NEW\""
+
 echo
 echo "Updated $CHANGED file(s)."

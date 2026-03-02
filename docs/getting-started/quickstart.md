@@ -74,6 +74,19 @@ println!("total edge-values: {}", total);
 
 ## C
 
+Install via Homebrew, vcpkg, or build from source:
+
+```bash
+# Homebrew
+brew tap velicast/dress-graph && brew install dress-graph
+
+# vcpkg (overlay port)
+vcpkg install dress-graph --overlay-ports=/path/to/dress-graph/vcpkg
+
+# From source
+mkdir build && cd build && cmake .. && make
+```
+
 ```c
 #include <stdio.h>
 #include <stdlib.h>

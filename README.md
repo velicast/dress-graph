@@ -178,7 +178,7 @@ print("Distinguished:", fp1 != fp2)
 
 DRESS is implemented in C with bindings for:
 
-- **C / C++**: static and shared libraries
+- **C / C++**: static and shared libraries ([Homebrew](https://github.com/velicast/homebrew-dress-graph), [vcpkg](vcpkg/), or build from source)
 - **Python**: pybind11 (`pip install dress-graph`)
 - **Rust**: `dress-graph` crate
 - **Go**: CGo bindings

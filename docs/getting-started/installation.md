@@ -39,10 +39,29 @@ dress-graph = "0.1"
 
 ## C / C++
 
+### Homebrew (macOS / Linux)
+
 ```bash
-mkdir build && cd build
-cmake ..
-make
+brew tap velicast/dress-graph
+brew install dress-graph
+```
+
+### vcpkg (overlay port)
+
+```bash
+# Clone dress-graph and use its vcpkg/ directory as an overlay
+vcpkg install dress-graph --overlay-ports=/path/to/dress-graph/vcpkg
+```
+
+!!! note "Not yet in vcpkg registry"
+    Until the port is accepted into the official vcpkg registry,
+    use the `--overlay-ports` flag pointing to the `vcpkg/` directory
+    in this repo.
+
+### From source
+
+```bash
+./build.sh c cpp
 ```
 
 This builds `libdress` (static and shared) and the header-only C++ wrapper.
@@ -64,8 +83,7 @@ npm install dress-graph
 Or build from source:
 
 ```bash
-cd wasm
-bash build.sh
+./build.sh wasm
 ```
 
 Then in Node.js:
