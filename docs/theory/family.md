@@ -142,14 +142,14 @@ edge weights, node norms may differ and converged values can exceed 2
 Motif-DRESS fixes the aggregation to summation and the norm to the geometric mean. Generalized-DRESS is the most abstract template, allowing any choice of these components as long as the resulting update rule preserves the convergence guarantees (degree-0 homogeneity, boundedness, and contraction). For each edge $(u,v)$:
 
 \[
-d_{uv}^{(t+1)} = \frac{f\bigl(\{d_{e'}^{(t)}\}_{e' \in \mathcal{N}(u,v)}\bigr)}{g^{(t)}(u) \cdot g^{(t)}(v)}
+d_{uv}^{(t+1)} = \frac{f\bigl(\mathbf{d}^{(t)},\, \mathcal{N}(u,v)\bigr)}{g^{(t)}(u) \cdot g^{(t)}(v)}
 \]
 
 where:
 
-- $\mathcal{N}(u,v)$ is a **symmetric neighborhood operator** - the set of edges aggregated for edge $(u,v)$,
-- $f$ is the **aggregation function** over edges in $\mathcal{N}(u,v)$,
-- $g(u)$ is the **node norm**.
+- $\mathcal{N}(u,v)$ is a **symmetric neighborhood operator** — the structural context aggregated for $(u,v)$,
+- $f$ is the **aggregation function** over $\mathcal{N}(u,v)$,
+- $g(u)$ is the **norm function**.
 
 Original-DRESS and Motif-DRESS are both special cases: Original-DRESS fixes $\mathcal{N}$ to triangles, $f = \text{sum}$, $g = \text{geometric norm}$; Motif-DRESS generalizes $\mathcal{N}$ to arbitrary motifs while keeping the same $f$ and $g$. Generalized-DRESS opens all three parameters, enabling variants such as Cosine-DRESS (cosine similarity aggregation) or Minkowski-$r$ norms.
 

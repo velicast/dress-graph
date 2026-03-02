@@ -1,6 +1,6 @@
 # dress-graph
 
-PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph) Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph) NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph) CRAN ![cran status](https://img.shields.io/badge/CRAN-coming%20soon-yellow)
+PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph) Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph) NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph) CRAN ![cran status](https://img.shields.io/badge/CRAN-coming%20soon-yellow) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Quickstart [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/quickstart.ipynb)
 Prism vs K₃,₃ [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/prism_vs_k33.ipynb)
@@ -69,15 +69,21 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 
 | Property |
 |----------|
-| Bounded [0, 2] (unweighted), self-similarity = 2 |
+| Edge-centric refinement (operates only on edges) |
+| Parameter-free core (no damping factor, no hyperparameters) |
+| Unique fixed point via Birkhoff contraction |
+| Bounded exactly in [0, 2] for unweighted graphs, self-similarity $d_{uu} = 2$ |
+| Isomorphism-invariant |
+| Scale-invariant (degree-0 homogeneous) |
+| Completely deterministic |
+| Practical convergence by few iterations (contraction)|
+| Continuous canonical fingerprints (sorted values / ε-binned histogram) |
+| Theoretical per-iteration $\mathcal{O}(\|E\|)$, memory $\mathcal{O}(\|V\| + \|E\|)$ |
+| Massively parallelizable ($\Delta^k$ subproblems and per-edge updates) |
+| Native weighted-graph support via symmetric weight function |
+| Supports directed graphs (four variants: undirected, directed, forward, backward) |
 | Provably numerically stable (no overflows, no undefined behaviors) |
-| Parameter-free (no damping factor) |
-| Scale invariant (degree-0 homogeneous) |
-| Unique deterministic fixed point |
-| Low complexity: O(E) per iteration, O(N + E) memory |
-| Massively parallelizable (Δ^k subproblems and per-edge updates) |
-| Supports weighted graphs |
-| Supports directed graphs |
+| Self-loops on every node (closed neighborhoods ensure $\|u\| > 0$ and well-defined iteration on all graphs, including sparse/isolated edges) |
 
 ## Benchmarks
 
@@ -103,6 +109,7 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 - **Retrieval**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
 - **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs - no GNN required.
 - **Edge Robustness**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
+- **DRESS + GNN**: DRESS node/edge values injected as plug-in features into GIN, PNA, GPS, and custom DRESSNet architectures on ZINC-12K molecular property prediction. GIN+bond+DRESS drops MAE from 0.526 → 0.235; PNA+bond+DRESS achieves 0.212 MAE, competitive with the published PNA baseline (0.188).
 
 ## Quick start (Python)
 

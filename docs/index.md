@@ -59,15 +59,21 @@ and edge-importance ranking.
 
 | Property |
 |----------|
-| Bounded \([0, 2]\) for unweighted graphs, self-similarity \(= 2\) |
-| Provably numerically stable (no overflows, no undefined behaviors) |
-| Parameter-free (self-regularizing, no damping factor) |
-| Scale invariant (degree-0 homogeneous) |
-| Unique deterministic fixed point |
-| Low complexity: \(O(E)\) per iteration, \(O(N + E)\) memory |
+| Edge-centric refinement (operates only on edges) |
+| Parameter-free core (no damping factor, no hyperparameters) |
+| Unique fixed point via Birkhoff contraction |
+| Bounded exactly in \([0, 2]\) for unweighted graphs, self-similarity \(d_{uu} = 2\) |
+| Isomorphism-invariant |
+| Scale-invariant (degree-0 homogeneous) |
+| Completely deterministic |
+| Practical convergence in ≤ 20 iterations |
+| Continuous, ML-usable fingerprints (sorted values / ε-binned histogram) |
+| Theoretical per-iteration \(\mathcal{O}(\|E\|)\), memory \(\mathcal{O}(\|V\| + \|E\|)\) |
 | Massively parallelizable (\(\Delta^k\) subproblems and per-edge updates) |
-| Supports weighted graphs |
-| Supports directed graphs |
+| Native weighted-graph support via symmetric weight function |
+| Supports directed graphs (four variants: undirected, directed, forward, backward) |
+| Provably numerically stable (no overflows, no undefined behaviors) |
+| Self-loops on every node (closed neighborhoods ensure \(\|u\| > 0\) and well-defined iteration on all graphs, including sparse/isolated edges) |
 
 ## The equation at a glance
 
