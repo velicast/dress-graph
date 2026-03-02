@@ -103,13 +103,13 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 
 ## Current Experimented Applications
 
-- **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
-- **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
-- **Classification**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
-- **Retrieval**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
-- **GED Regression**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs - no GNN required.
-- **Edge Robustness**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
-- **DRESS + GNN**: DRESS node/edge values injected as plug-in features into GIN, PNA, GPS, and custom DRESSNet architectures on ZINC-12K molecular property prediction. GIN+bond+DRESS drops MAE from 0.526 → 0.235; PNA+bond+DRESS achieves 0.212 MAE, competitive with the published PNA baseline (0.188).
+- **[Graph Isomorphism](https://velicast.github.io/dress-graph/applications/isomorphism/)**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
+- **[Community Detection](https://velicast.github.io/dress-graph/applications/community-detection/)**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
+- **[Classification](https://velicast.github.io/dress-graph/applications/classification/)**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
+- **[Retrieval](https://velicast.github.io/dress-graph/applications/retrieval/)**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
+- **[GED Regression](https://velicast.github.io/dress-graph/applications/ged-regression/)**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs - no GNN required.
+- **[Edge Robustness](https://velicast.github.io/dress-graph/applications/edge-robustness/)**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
+- **[DRESS + GNN](https://velicast.github.io/dress-graph/applications/dress-gnns/)**: DRESS node/edge values injected as plug-in features into GIN, PNA, GPS, and custom DRESSNet architectures on ZINC-12K molecular property prediction. GIN+bond+DRESS drops MAE from 0.526 → 0.235; PNA+bond+DRESS achieves 0.212 MAE, competitive with the published PNA baseline (0.188).
 
 ## Quick start (Python)
 
