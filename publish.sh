@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Publish all dress-graph packages to their respective registries.
-# Usage: ./publish.sh [pypi|npm|cargo|cran|brew|all]
+# Usage: ./publish.sh [pypi|npm|cargo|cran|julia|brew|vcpkg|all]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 TARGET="${1:-all}"
 
-# GitHub repo for the main project and the Homebrew tap
+# GitHub repo for the main project, the Homebrew tap, and the Julia package
 GH_REPO="velicast/dress-graph"
 GH_TAP_REPO="velicast/homebrew-dress-graph"
+GH_JULIA_REPO="velicast/DRESS.jl"
 
 publish_pypi() {
     echo "=== Publishing to PyPI ==="
@@ -177,6 +178,64 @@ RUBY
     echo "=== Homebrew tap done: brew tap ${GH_TAP_REPO/homebrew-/} && brew install dress-graph ==="
 }
 
+publish_julia() {
+    echo "=== Publishing Julia package to DRESS.jl ==="
+
+    # Detect version from Project.toml
+    VERSION=$(grep -oP '^version = "\K[^"]+' "$ROOT/julia/Project.toml")
+    if [[ -z "$VERSION" ]]; then
+        echo "ERROR: could not detect version from julia/Project.toml"
+        exit 1
+    fi
+    echo "  Version: $VERSION"
+
+    # Clone the DRESS.jl repo into /tmp
+    JULIA_DIR=$(mktemp -d)
+    JULIA_URL="https://github.com/${GH_JULIA_REPO}.git"
+
+    if command -v gh &>/dev/null; then
+        gh repo clone "$GH_JULIA_REPO" "$JULIA_DIR" -- --depth 1 2>/dev/null || {
+            cd "$JULIA_DIR"
+            git init
+            git remote add origin "$JULIA_URL"
+        }
+    else
+        git clone --depth 1 "$JULIA_URL" "$JULIA_DIR"
+    fi
+
+    # Sync package contents
+    cp "$ROOT/julia/Project.toml" "$JULIA_DIR/"
+    cp "$ROOT/julia/README.md"    "$JULIA_DIR/" 2>/dev/null || true
+    rm -rf "$JULIA_DIR/src" "$JULIA_DIR/test"
+    cp -r "$ROOT/julia/src"  "$JULIA_DIR/"
+    cp -r "$ROOT/julia/test" "$JULIA_DIR/" 2>/dev/null || true
+    cp "$ROOT/LICENSE"        "$JULIA_DIR/" 2>/dev/null || true
+
+    # Commit, tag, and push
+    cd "$JULIA_DIR"
+    git add -A
+    if git diff --cached --quiet; then
+        echo "  No changes to commit."
+    else
+        git commit -m "DRESS v${VERSION}"
+    fi
+
+    # Tag if not already tagged
+    if ! git tag -l "v${VERSION}" | grep -q .; then
+        git tag "v${VERSION}"
+    fi
+
+    if command -v gh &>/dev/null; then
+        gh auth setup-git 2>/dev/null || true
+    fi
+    git push -u origin "$(git branch --show-current)"
+    git push origin "v${VERSION}"
+
+    rm -rf "$JULIA_DIR"
+    echo "=== Julia done: tag v${VERSION} pushed to ${GH_JULIA_REPO} ==="
+    echo "  To register: comment '@JuliaRegistrator register' on the tagged commit."
+}
+
 publish_vcpkg() {
     echo "=== Publishing vcpkg port ==="
 
@@ -223,6 +282,7 @@ case "$TARGET" in
     npm)   publish_npm   ;;
     cargo) publish_cargo ;;
     cran)  publish_cran  ;;
+    julia) publish_julia ;;
     brew)  publish_brew  ;;
     vcpkg) publish_vcpkg ;;
     all)
@@ -230,12 +290,13 @@ case "$TARGET" in
         publish_npm
         publish_cargo
         publish_cran
+        publish_julia
         publish_brew
         publish_vcpkg
         echo "=== All packages published ==="
         ;;
     *)
-        echo "Usage: $0 [pypi|npm|cargo|cran|brew|vcpkg|all]"
+        echo "Usage: $0 [pypi|npm|cargo|cran|julia|brew|vcpkg|all]"
         exit 1
         ;;
 esac
