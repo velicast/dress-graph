@@ -1,122 +1,183 @@
 # Installation
 
-## Python (recommended)
+This guide covers installation for all supported languages.
+
+## Python
+
+### From PyPI (Remote)
 
 ```bash
 pip install dress-graph
 ```
 
-### Conda (coming soon)
-
-```bash
-conda install -c conda-forge dress-graph
-```
-
-!!! note "Not yet available"
-    The conda-forge package is pending review. Use `pip install dress-graph` in the meantime.
-
-Or build from source:
+### From Source
 
 ```bash
 cd python
 pip install .
 ```
 
+To install in editable mode for development:
+
+```bash
+pip install -e .
+```
+
 ## Rust
 
-Add to `Cargo.toml`:
+### From Crates.io (Remote)
 
 ```bash
 cargo add dress-graph
 ```
 
-Or add to `Cargo.toml` manually:
+### From Source
+
+Add the local path to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-dress-graph = "0.1"
+dress-graph = { path = "path/to/dress-graph/rust" }
 ```
-
-## C / C++
-
-### Homebrew (macOS / Linux)
-
-```bash
-brew tap velicast/dress-graph
-brew install dress-graph
-```
-
-### vcpkg (overlay port)
-
-```bash
-# Clone dress-graph and use its vcpkg/ directory as an overlay
-vcpkg install dress-graph --overlay-ports=/path/to/dress-graph/vcpkg
-```
-
-!!! note "Not yet in vcpkg registry"
-    Until the port is accepted into the official vcpkg registry,
-    use the `--overlay-ports` flag pointing to the `vcpkg/` directory
-    in this repo.
-
-### From source
-
-```bash
-./build.sh c cpp
-```
-
-This builds `libdress` (static and shared) and the header-only C++ wrapper.
-
-## Go
-
-```go
-import "github.com/velicast/dress-graph/go"
-```
-
-Requires CGo and a C compiler.
 
 ## JavaScript / WASM
+
+### From npm (Remote)
 
 ```bash
 npm install dress-graph
 ```
 
-Or build from source:
+### From Source
+
+Build the WASM package first:
 
 ```bash
 ./build.sh wasm
 ```
 
-Then in Node.js:
+Then install from the local directory:
 
-```javascript
-import { dressFit, Variant } from 'dress-graph';
+```bash
+cd wasm
+npm install .
+```
+
+Or link it:
+
+```bash
+cd wasm
+npm link
+# In your project:
+npm link dress-graph
 ```
 
 ## Julia
 
+### From GitHub (Remote)
+
 ```julia
-# From the repo root (uses Project.toml)
-julia --project=julia
-using DRESS
+using Pkg
+Pkg.add(url="https://github.com/velicast/dress-graph", subdir="julia")
+```
+
+### From Source
+
+```julia
+using Pkg
+Pkg.develop(path="julia")
 ```
 
 ## R
 
+### From CRAN (Remote)
+
 ```r
-# From source
-R CMD INSTALL r/
+install.packages("dress.graph")
 ```
 
-## MATLAB
+### From GitHub (Remote)
 
-```matlab
-cd matlab
-dress_build   % compiles the MEX file
+```r
+# install.packages("devtools")
+devtools::install_github("velicast/dress-graph", subdir="r")
 ```
 
-## Octave
+### From Source
+
+```bash
+R CMD INSTALL r
+```
+
+Or from within R:
+
+```r
+install.packages("./r", repos = NULL, type = "source")
+```
+
+## Go
+
+### From GitHub (Remote)
+
+```bash
+go get github.com/velicast/dress-graph/go
+```
+
+### From Source
+
+If you have the repository cloned locally, you can use a `replace` directive in your `go.mod`:
+
+```bash
+go mod edit -replace github.com/velicast/dress-graph/go=../path/to/dress-graph/go
+```
+
+## C / C++
+
+### From Source (CMake)
+
+You can build the library using CMake directly:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target install
+```
+
+### From Source (Script)
+
+The provided build script handles `libdress` (C), `libdress++` (C++), and `libdress-igraph`.
+
+```bash
+./build.sh c cpp igraph
+```
+
+### vcpkg (Overlay Port)
+
+If you use `vcpkg`, you can use the `vcpkg/` directory in this repository as an overlay port.
+
+```bash
+vcpkg install dress-graph --overlay-ports=/path/to/dress-graph/vcpkg
+```
+
+## MATLAB / Octave
+
+### From Remote (Octave)
 
 ```octave
 pkg install "https://github.com/velicast/dress-graph/releases/download/v0.3.1/dress-graph-0.3.1.tar.gz"
-pkg load dress-graph
+```
+
+### From Source
+
+Add the `matlab` directory to your MATLAB/Octave path.
+
+**MATLAB:**
+```matlab
+addpath('path/to/dress-graph/matlab');
+savepath;
+```
+
+**Octave:**
+```octave
+addpath('path/to/dress-graph/matlab');
+savepath;
 ```
