@@ -5,7 +5,7 @@ essential.
 
 ## Closed vs open neighborhood
 
-By defining \(N[u] = N(u) \cup \{u\}\) (closed neighborhood), every node
+By defining \(N[u] = N(u) \cup \{u\}\) (closed neighborhood), every vertex
 becomes its own neighbor with a virtual self-edge:
 
 - **Original weight:** \(w(u, u) = 1\)
@@ -32,7 +32,7 @@ its power.
 
 ### 3. The denominator can be zero
 
-If a node has no neighbors with nonzero dress values, \(\|u\| = 0\).  The
+If a vertex has no neighbors with nonzero dress values, \(\|u\| = 0\).  The
 self-loop guarantees \(\|u\| \ge \sqrt{\bar{w}_{uu}\,d_{uu}} = \sqrt{4} = 2 > 0\) always.
 
 ## The self-loop makes DRESS a fixed-point equation

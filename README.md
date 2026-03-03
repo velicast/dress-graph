@@ -1,6 +1,6 @@
 # dress-graph
 
-PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph) Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph) NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph) CRAN ![cran status](https://img.shields.io/badge/CRAN-coming%20soon-yellow) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph) Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph) NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph) CRAN [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/dress.graph)](https://cran.r-project.org/package=dress.graph) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Quickstart [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/quickstart.ipynb)
 Prism vs K₃,₃ [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/prism_vs_k33.ipynb)
@@ -74,6 +74,7 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Unique fixed point via Birkhoff contraction |
 | Bounded exactly in [0, 2] for unweighted graphs, self-similarity $d_{uu} = 2$ |
 | Isomorphism-invariant |
+| Symmetric by design ($d(u,v) = d(v,u)$ for all pairs) |
 | Scale-invariant (degree-0 homogeneous) |
 | Completely deterministic |
 | Practical convergence by few iterations (contraction)|

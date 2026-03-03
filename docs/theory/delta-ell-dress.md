@@ -1,6 +1,6 @@
-# Δ^k-DRESS: Iterated Node Deletion
+# Δ^k-DRESS: Iterated Vertex Deletion
 
-Δ^k-DRESS generalizes Δ-DRESS by applying $k$ levels of iterated node deletion, systematically climbing the Weisfeiler–Leman (WL) hierarchy.
+Δ^k-DRESS generalizes Δ-DRESS by applying $k$ levels of iterated vertex deletion, systematically climbing the Weisfeiler–Leman (WL) hierarchy.
 
 ## Definition
 
@@ -17,7 +17,7 @@ At depth $k$, the operator computes DRESS on all $\binom{n}{k}$ subgraphs obtain
 Special cases:
 
 - **$\Delta^0$:** Original-DRESS (no deletion).
-- **$\Delta^1$:** Equivalent to Δ-DRESS - runs DRESS on each single-node-deleted subgraph.
+- **$\Delta^1$:** Equivalent to Δ-DRESS - runs DRESS on each single-vertex-deleted subgraph.
 
 ## Histogram Representation
 
@@ -76,11 +76,11 @@ Each deletion level adds one WL level of expressiveness, with Original-DRESS con
 
 ## Relationship to Subgraph GNNs
 
-Methods such as ESAN and GNN-AK+ also use node-deleted or node-marked subgraphs to boost expressiveness. However, these are supervised methods that learn aggregation functions from data. $\Delta^k$-DRESS is entirely unsupervised: the aggregation is the deterministic DRESS fixed point, and the histogram comparison is parameter-free. This makes it a canonical baseline for the expressiveness of subgraph-based approaches.
+Methods such as ESAN and GNN-AK+ also use vertex-deleted or vertex-marked subgraphs to boost expressiveness. However, these are supervised methods that learn aggregation functions from data. $\Delta^k$-DRESS is entirely unsupervised: the aggregation is the deterministic DRESS fixed point, and the histogram comparison is parameter-free. This makes it a canonical baseline for the expressiveness of subgraph-based approaches.
 
 ## Connection to the Reconstruction Conjecture
 
-The Kelly–Ulam conjecture states that graphs with $n \ge 3$ are determined by their deck of node-deleted subgraphs. Conceptually, $\Delta^1$-DRESS computes a continuous relaxation of this deck: each "card" is the DRESS fingerprint of a node-deleted subgraph. In practice, all edge values are accumulated into a fixed-size histogram for memory efficiency, though individual cards are not recoverable.
+The Kelly–Ulam conjecture states that graphs with $n \ge 3$ are determined by their deck of vertex-deleted subgraphs. Conceptually, $\Delta^1$-DRESS computes a continuous relaxation of this deck: each "card" is the DRESS fingerprint of a vertex-deleted subgraph. In practice, all edge values are accumulated into a fixed-size histogram for memory efficiency, though individual cards are not recoverable.
 
 ## Fixed-Parameter Tractability
 

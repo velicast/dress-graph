@@ -64,6 +64,7 @@ and edge-importance ranking.
 | Unique fixed point via Birkhoff contraction |
 | Bounded exactly in \([0, 2]\) for unweighted graphs, self-similarity \(d_{uu} = 2\) |
 | Isomorphism-invariant |
+| Symmetric by design (\(d(u,v) = d(v,u)\) for all pairs) |
 | Scale-invariant (degree-0 homogeneous) |
 | Completely deterministic |
 | Practical convergence in ≤ 20 iterations |
@@ -73,7 +74,7 @@ and edge-importance ranking.
 | Native weighted-graph support via symmetric weight function |
 | Supports directed graphs (four variants: undirected, directed, forward, backward) |
 | Provably numerically stable (no overflows, no undefined behaviors) |
-| Self-loops on every node (closed neighborhoods ensure \(\|u\| > 0\) and well-defined iteration on all graphs, including sparse/isolated edges) |
+| Self-loops on every vertex (closed neighborhoods ensure \(\|u\| > 0\) and well-defined iteration on all graphs, including sparse/isolated edges) |
 
 ## The equation at a glance
 

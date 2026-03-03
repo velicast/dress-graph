@@ -8,7 +8,7 @@ equation and have a clean structural interpretation.
 Every term in the DRESS update has the form \(\bar{w}(u,x) \cdot d_{ux}\).
 Weights always appear as a multiplicative factor on the similarity value.
 This coupling means weights and similarity are inseparable: the structural
-profile of a node is the vector of \(\bar{w} \cdot d\) products over its
+profile of a vertex is the vector of \(\bar{w} \cdot d\) products over its
 incident edges.
 
 ## Interpretation

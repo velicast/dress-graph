@@ -96,26 +96,26 @@ Since 1-WL cannot distinguish them and DRESS can, DRESS distinguishes beyond 1-W
 \paragraph{Remark.} This result holds for Original-DRESS alone--the simplest member of the DRESS family, using only triangle neighborhoods and $\mathcal{O}(E)$ computation per iteration. The generalizations that follow (Motif-DRESS, $\Delta$-DRESS) extend this advantage further to graphs that resist even 3-WL.
 
 \section{Motif-DRESS}
-Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by replacing the common-neighbor aggregation with a motif-defined symmetric vertex neighborhood $\mathcal{N}_M(u,v) = \mathcal{N}_M(v,u)$: the set of endpoints of edges in instances of an undirected motif $M$ containing edge $(u,v)$ that are adjacent to $u$ or $v$, always including $u$ and $v$ themselves, with an optional symmetric weight function $w: E \to \mathbb{R}_{>0}$ (with $w_e = 1$ for unweighted graphs).
+Original-DRESS is limited to triangle neighborhoods. What if we use other structural motifs? Motif-DRESS generalizes Original-DRESS by replacing the common-neighbor aggregation with a motif-defined symmetric vertex neighborhood $\mathcal{N}_M(u,v) = \mathcal{N}_M(v,u)$: the set of endpoints of edges in instances of a motif $M$ containing edge $(u,v)$ that are adjacent to $u$ or $v$, always including $u$ and $v$ themselves, with an optional symmetric weight function $\bar{w}: E \to \mathbb{R}_{>0}$ (with $\bar{w}_e = 1$ for unweighted graphs).
 
 \begin{equation}
-d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{x \in \mathcal{N}_M(u,v)} \bigl(w_{ux} \cdot d_{ux}^{(t)} + w_{xv} \cdot d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
+d_{uv}^{(t+1)} = \frac{\displaystyle\sum_{x \in \mathcal{N}_M(u,v)} \bigl(\bar{w}_{ux} \cdot d_{ux}^{(t)} + \bar{w}_{xv} \cdot d_{xv}^{(t)}\bigr)}{\|u\|^{(t)} \cdot \|v\|^{(t)}}
 \end{equation}
 
-where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} w_{ux} \cdot d_{ux}^{(t)}}$, and $w_{ab} \cdot d_{ab} = 0$ whenever $(a,b) \notin E$. The symmetric weight function $w(e)$ acts as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $w \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
+where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} \bar{w}_{ux} \cdot d_{ux}^{(t)}}$, and $\bar{w}_{ab} \cdot d_{ab} = 0$ whenever $(a,b) \notin E$. The symmetric weight function $\bar{w}(e)$ acts as a multiplicative factor, controlling how much structural information flows along each edge. Because the weights appear identically in the numerator and denominator (both are degree-1 in $\bar{w} \cdot d$), uniformly scaling all weights does not change the fixed point; only the relative weights matter.
 
 Different choices of motif $M$ yield different neighborhoods:
 \begin{itemize}
-    \item \textbf{Triangle ($M = K_3$):} $\mathcal{N}_{K_3}(u,v) = N[u] \cap N[v]$, the closed common neighborhood. This recovers Original-DRESS exactly: $\sum_{x \in N[u] \cap N[v]} \bigl(w_{ux}\,d_{ux} + w_{xv}\,d_{xv}\bigr)$.
-    \item \textbf{$K_4$ clique:} For each pair $x, y$ with $\{u,v,x,y\}$ forming a $K_4$, $\mathcal{N}_{K_4}(u,v)$ contains $u$, $v$, $x$, and $y$. Each vertex contributes $w_{ux}\,d_{ux} + w_{xv}\,d_{xv}$.
-    \item \textbf{4-cycle ($M = C_4$):} For each 4-cycle $u$-$x$-$y$-$v$, $\mathcal{N}_{C_4}(u,v)$ contains $u$, $v$, $x$, and $y$. Vertex $x$ contributes $w_{ux}\,d_{ux}$; vertex $y$ contributes $w_{yv}\,d_{yv}$ (cross-terms are zero since $(x,v), (u,y) \notin E$ in the $C_4$).
+    \item \textbf{Triangle ($M = K_3$):} $\mathcal{N}_{K_3}(u,v) = N[u] \cap N[v]$, the closed common neighborhood. This recovers Original-DRESS exactly: $\sum_{x \in N[u] \cap N[v]} \bigl(\bar{w}_{ux}\,d_{ux} + \bar{w}_{xv}\,d_{xv}\bigr)$.
+    \item \textbf{$K_4$ clique:} For each pair $x, y$ with $\{u,v,x,y\}$ forming a $K_4$, $\mathcal{N}_{K_4}(u,v)$ contains $u$, $v$, $x$, and $y$. Each vertex contributes $\bar{w}_{ux}\,d_{ux} + \bar{w}_{xv}\,d_{xv}$.
+    \item \textbf{4-cycle ($M = C_4$):} For each 4-cycle $u$-$x$-$y$-$v$, $\mathcal{N}_{C_4}(u,v)$ contains $u$, $v$, $x$, and $y$. Vertex $x$ contributes $\bar{w}_{ux}\,d_{ux}$; vertex $y$ contributes $\bar{w}_{yv}\,d_{yv}$ (cross-terms are zero since $(x,v), (u,y) \notin E$ in the $C_4$).
 \end{itemize}
 
 \subsection{Properties}
 
 \textbf{Complexity:} $\mathcal{O}(\text{Motif Extraction}) + \mathcal{O}\!\bigl(I \cdot \sum_{e} |\mathcal{N}_M(e)|\bigr)$, where $I$ is the number of iterations and $\sum_e |\mathcal{N}_M(e)|$ is the total size of all motif neighborhoods. For Original-DRESS (triangles), this reduces to $\mathcal{O}(I \cdot m \cdot T)$, where $T$ is the number of triangles. For motifs such as 4-cycles or $K_4$ cliques in sparse graphs, the motif neighborhoods can be significantly smaller, making Motif-DRESS faster than Original-DRESS.
 
-\textbf{Invariant: $d_{uu} = 2$.} The self-similarity $d_{uu} = 2$ is a constant maintained throughout iteration. Since the iteration only updates $d_{uv}$ for $u \ne v$, and the norm $\|u\| = \sqrt{\sum_{x \in N[u]} w_{ux} \cdot d_{ux}}$ always includes $d_{uu} = 2$, this is a fixed property of the equation, not a free parameter.
+\textbf{Invariant: $d_{uu} = 2$.} The self-similarity $d_{uu} = 2$ is a constant maintained throughout iteration. Since the iteration only updates $d_{uv}$ for $u \ne v$, and the norm $\|u\| = \sqrt{\sum_{x \in N[u]} \bar{w}_{ux} \cdot d_{ux}}$ always includes $d_{uu} = 2$, this is a fixed property of the equation, not a free parameter.
 
 \subsection{Expressiveness}
 All experiments below use the $K_4$ clique motif. The specific SRG pairs tested below are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
@@ -135,27 +135,30 @@ Let $F: \mathbb{R}_+^{|E|} \to \mathbb{R}_+^{|E|}$ be the Motif-DRESS update ope
 The argument proceeds in three steps:
 \begin{enumerate}
     \item \textbf{Scale Invariance (Degree-0 Homogeneity):} The aggregation function is positively homogeneous of degree $p$, and the norm of degree $q$. Since $p = 2q$, the ratio $F(d)$ is homogeneous of degree $0$: for any $\lambda > 0$, $F(\lambda d) = F(d)$. Hence the iteration is self-regularizing and cannot diverge or collapse to zero.
-    \item \textbf{Boundedness:} The motif neighborhood $\mathcal{N}_M(u,v)$ is a subset of each vertex's full neighborhood, so the numerator decomposes as $\sum_{\mathcal{N}_M} \bar{w}_{ux}d_{ux} + \sum_{\mathcal{N}_M} \bar{w}_{vx}d_{vx} \leq \|u\|^2 + \|v\|^2$. Self-loop inclusion ensures $\|u\|,\|v\|>0$, giving the per-step bound $F(d)_{uv} \leq \|u\|/\|v\| + \|v\|/\|u\|$, which equals~$2$ iff $\|u\|=\|v\|$ (AM--GM). In the unweighted case the fixed-point contraction forces all norms to equalize, yielding $d^* \in [0,2]$. With non-uniform edge weights, node norms may differ and converged values can exceed~$2$.
+    \item \textbf{Boundedness:} The motif neighborhood $\mathcal{N}_M(u,v)$ is a subset of each vertex's full neighborhood, so the numerator decomposes as $\sum_{\mathcal{N}_M} \bar{w}_{ux}d_{ux} + \sum_{\mathcal{N}_M} \bar{w}_{vx}d_{vx} \leq \|u\|^2 + \|v\|^2$. Self-loop inclusion ensures $\|u\|,\|v\|>0$, giving the per-step bound $F(d)_{uv} \leq \|u\|/\|v\| + \|v\|/\|u\|$, which equals~$2$ iff $\|u\|=\|v\|$ (AM--GM). In the unweighted case the fixed-point contraction forces all norms to equalize, yielding $d^* \in [0,2]$. With non-uniform edge weights, vertex norms may differ and converged values can exceed~$2$.
     \item \textbf{Contraction on the Hilbert Projective Metric:} Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part--which follows from the finite per-step bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to a finite vector~$d^*$ (in the unweighted case, $d^* \in [0, 2]^{|E|}$).
 \end{enumerate}
 A complete formal verification of the contraction constant is deferred to future work; all empirical tests in this paper confirm convergence within 20 iterations.
 \end{proof}
 
 \section{Generalized-DRESS}
-Motif-DRESS fixes the aggregation to summation and the norm to the geometric mean. Generalized-DRESS is the most abstract template, allowing any choice of these components as long as the resulting update rule preserves the convergence guarantees (degree-0 homogeneity, boundedness, and contraction; see Section~\ref{sec:convergence}). For each edge $(u,v)$:
+Motif-DRESS fixes the aggregation to summation and the norm to the product of geometric means. Generalized-DRESS is the most abstract template, allowing any choice of these components as long as the resulting update rule preserves the convergence guarantees (degree-0 homogeneity, boundedness, and contraction; see Section~\ref{sec:convergence}). For each edge $(u,v)$:
 
 \begin{equation}
-d_{uv}^{(t+1)} = \frac{f\bigl(\mathbf{d}^{(t)},\, \mathcal{N}(u,v)\bigr)}{g^{(t)}(u) \cdot g^{(t)}(v)}
+d^{(t+1)} = \frac{f\bigl(\mathbf{d}^{(t)},\, \mathcal{N},\, \bar{w}\bigr)}{g\bigl(\mathbf{d}^{(t)},\, \mathcal{N},\, \bar{w}\bigr)}
 \end{equation}
 
-where:
+where $d \equiv d_{uv}$ is the similarity value assigned to edge $(u,v)$, and:
 \begin{itemize}
     \item $\mathcal{N}(u,v)$ is a \textbf{symmetric neighborhood operator}--the structural context aggregated for $(u,v)$,
-    \item $f$ is the \textbf{aggregation function} over $\mathcal{N}(u,v)$,
-    \item $g(u)$ is the \textbf{norm function}.
+    \item $\bar{w}: E \to \mathbb{R}_{>0}$ is a \textbf{symmetric weight function} ($\bar{w}(u,v) = \bar{w}(v,u)$; $\bar{w} \equiv 1$ for unweighted graphs),
+    \item $f$ is the \textbf{aggregation function},
+    \item $g$ is the \textbf{norm function}.
 \end{itemize}
 
-Original-DRESS and Motif-DRESS are both special cases: Original-DRESS fixes $\mathcal{N}$ to triangles, $f = \text{sum}$, $g = \text{geometric norm}$; Motif-DRESS generalizes $\mathcal{N}$ to arbitrary motifs while keeping the same $f$ and $g$. Generalized-DRESS opens all three parameters, enabling variants such as Cosine-DRESS (cosine similarity aggregation) or Minkowski-$r$ norms.
+Because $\mathcal{N}$ and $\bar{w}$ are symmetric, $f$ and $g$ receive the same inputs for $(u,v)$ and $(v,u)$, so $d(u,v) = d(v,u)$ holds for every member of the family. For Original-DRESS and Motif-DRESS this follows directly from the equation; in the general case it is guaranteed by the symmetry of the inputs.
+
+Original-DRESS and Motif-DRESS are both special cases: Original-DRESS fixes $\mathcal{N}$ to triangles, $f = \text{sum}$, $g = \|u\| \cdot \|v\|$ (product of geometric means), $\bar{w} \equiv 1$; Motif-DRESS generalizes $\mathcal{N}$ to arbitrary motifs and $\bar{w}$ to non-uniform weights while keeping the same $f$ and $g$. Generalized-DRESS opens all four parameters, enabling variants such as Cosine-DRESS (cosine similarity aggregation) or Minkowski-$r$ norms.
 
 \section{$\Delta$-DRESS: Deletion}
 $\Delta$-DRESS breaks symmetry by running DRESS on each vertex-deleted subgraph $G \setminus \{v\}$ for every $v \in V$. The $\Delta$-DRESS fingerprint is the multiset of per-vertex DRESS fingerprints, or equivalently a pooled histogram accumulating all converged edge values across all $n$ deletions.
@@ -179,7 +182,7 @@ $\Delta$-DRESS empirically distinguishes the following non-isomorphic pairs:
 \end{itemize}
 
 \section{Family Structure}
-The DRESS variants introduced in this paper form a nested hierarchy with two orthogonal composition operators:
+The DRESS variants introduced in this paper form a nested hierarchy with one orthogonal composition operator:
 \[
 \text{Generalized-DRESS} \supset \text{Motif-DRESS} \supset \text{Original-DRESS}
 \]
@@ -188,7 +191,7 @@ $\Delta(\cdot)$ is an \textbf{orthogonal wrapper} applicable to any of the above
 \[
 \Delta\text{-DRESS}(\mathcal{F}) = \{\!\{ \mathcal{F}(G \setminus \{v\}) : v \in V \}\!\}
 \]
-This strategy is independent of the choice of $\mathcal{N}$, $f$, and $g$. $\Delta$-DRESS breaks symmetry by deletion and generalizes to depth $k$: $\Delta^k$ runs DRESS on all $\binom{n}{k}$ vertex-deleted subgraphs. The exploration of this iterated hierarchy and its relationship to the WL hierarchy is developed in the companion paper~\cite{castrillo2026kdress}.
+This strategy is independent of the choice of $\mathcal{N}$, $f$, $g$, and $\bar{w}$. $\Delta$-DRESS breaks symmetry by deletion and generalizes to depth $k$: $\Delta^k$ runs DRESS on all $\binom{n}{k}$ vertex-deleted subgraphs. The exploration of this iterated hierarchy and its relationship to the WL hierarchy is developed in the companion paper~\cite{castrillo2026kdress}.
 
 \section{Conclusion}
 We presented the DRESS family, a hierarchy of continuous structural refinement algorithms. Starting from Original-DRESS--a single equation proposed in 2018--we showed it distinguishes graphs that 1-WL cannot (Theorem~\ref{thm:dress-gt-1wl}). We then generalized it to Motif-DRESS, which replaces triangle neighborhoods with arbitrary structural motifs and converges to a unique fixed point under three sufficient conditions. Generalized-DRESS abstracts further, opening the aggregation function and norm as free parameters. $\Delta$-DRESS extends the framework by running DRESS on each vertex-deleted subgraph, connecting it to the Kelly--Ulam reconstruction conjecture, and empirically distinguishes Strongly Regular Graphs that confound 3-WL, while maintaining scalability well below $\mathcal{O}(n^3)$ for sparse graphs. These results establish the DRESS family as a highly scalable framework that empirically surpasses both 1-WL and 3-WL, without the prohibitive computational cost of higher-order WL tests. An open-source implementation with bindings for C, C++, Python, Rust, Go, Julia, R, MATLAB, and WebAssembly is publicly available at \url{https://github.com/velicast/dress-graph}.

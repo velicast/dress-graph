@@ -10,8 +10,8 @@ In the unweighted case, DRESS values are bounded in \([0, 2]\).
 - For edges between nodes with no common neighbors beyond the self-loop,
   values are small but strictly positive.
 
-With non-uniform edge weights, node norms \(\|u\|\) and \(\|v\|\) may
-differ even for structurally identical nodes, and converged values can
+With non-uniform edge weights, vertex norms \(\|u\|\) and \(\|v\|\) may
+differ even for structurally identical vertices, and converged values can
 exceed 2.  The per-step bound is
 \(d_{uv} \leq \|u\|/\|v\| + \|v\|/\|u\|\), which equals 2 only when
 \(\|u\| = \|v\|\).  See [Proof Sketch – Boundedness](family.md#proof-sketch-of-convergence)
@@ -69,7 +69,7 @@ value vectors.
   neighbors in the previous step.  After \(t\) iterations, each edge
   effectively integrates structural information from paths of length up
   to \(t\).
-- **Self-regulation.** The denominator (product of node norms) acts as an
+- **Self-regulation.** The denominator (product of vertex norms) acts as an
   automatic gain control: if all values grow, the norms grow proportionally
   and the ratio stays bounded. This is the degree-0 homogeneity property.
 - **Contraction.** The combined effect of additive diffusion in the numerator
@@ -82,7 +82,7 @@ nodes \(u\) and \(v\) are, as seen by the entire graph.
 
 - **Normalized structural overlap.**  The numerator aggregates shared
   neighborhood contributions; the denominator normalizes by the structural
-  size of each node.  The ratio is a cosine-like similarity between the
+  size of each vertex.  The ratio is a cosine-like similarity between the
   structural profiles of \(u\) and \(v\).
 - **Recursive depth.**  Similarity is not based on raw adjacency but on the
   similarity values of neighboring edges, which in turn depend on *their*
@@ -104,7 +104,7 @@ In practice:
   (same degree pattern, same community, same role).
 - **Low \(d_{uv}\):** \(u\) and \(v\) are structurally different (bridge
   edge, cross-community link, hub-to-leaf).
-- **\(d_{uu} = 2\):** a node is maximally similar to itself (the self-loop
+- **\(d_{uu} = 2\):** a vertex is maximally similar to itself (the self-loop
   upper bound).
 
 ## Determinism
@@ -193,7 +193,7 @@ where:
   common-neighbor contribution (known from the fitted graph),
 - \(D_u = \displaystyle\sum_{x \in N[u]} \bar{w}(u,x)\,d_{ux}\) and
   \(D_v = \displaystyle\sum_{x \in N[v]} \bar{w}(v,x)\,d_{vx}\) are the
-  squared node norms without the queried edge,
+  squared vertex norms without the queried edge,
 - \(c = \bar{w}(u,v)\) accounts for the edge appearing in both the
   numerator and denominator through the self-loop path.
 
