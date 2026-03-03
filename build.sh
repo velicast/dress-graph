@@ -6,7 +6,7 @@
 #   ./build.sh --no-test  # build only, skip tests
 #   ./build.sh c cpp      # build + test only the listed targets
 #
-# Targets: c cpp igraph python rust go r julia wasm
+# Targets: c cpp igraph python rust go r julia wasm octave
 #
 # A target is silently skipped when its toolchain is not installed.
 set -uo pipefail
@@ -32,7 +32,7 @@ done
 
 # Default: all targets
 if [[ ${#TARGETS[@]} -eq 0 ]]; then
-    TARGETS=(c cpp igraph python rust go r julia wasm)
+    TARGETS=(c cpp igraph python rust go r julia wasm octave)
 fi
 
 PASS=0
@@ -274,6 +274,57 @@ build_julia() {
     fi
 }
 
+# ── Octave (Forge tarball) ──────────────────────────────────────────
+build_octave() {
+    want octave || return 0
+    header "Octave (Forge tarball)"
+
+    # Detect version from DESCRIPTION
+    local VERSION
+    VERSION=$(grep -oP '^Version: \K.*' "$ROOT/octave/DESCRIPTION")
+    if [[ -z "$VERSION" ]]; then
+        fail "Octave (could not detect version)"; return
+    fi
+
+    # Assemble package in a temp directory
+    local WORK PKG TARBALL
+    WORK=$(mktemp -d)
+    PKG="$WORK/dress-graph"
+    mkdir -p "$PKG/inst/include/dress" "$PKG/src"
+
+    # Octave scaffolding
+    cp "$ROOT/octave/DESCRIPTION" "$PKG/"
+    cp "$ROOT/octave/INDEX"       "$PKG/"
+    cp "$ROOT/octave/PKG_ADD"     "$PKG/"
+    cp "$ROOT/octave/PKG_DEL"     "$PKG/"
+    cp "$ROOT/LICENSE"            "$PKG/COPYING" 2>/dev/null || true
+
+    # Vendor .m files into inst/
+    cp "$ROOT/matlab/dress_fit.m"        "$PKG/inst/"
+    cp "$ROOT/matlab/delta_dress_fit.m"  "$PKG/inst/"
+    cp "$ROOT/matlab/dress_to_table.m"   "$PKG/inst/"
+
+    # Vendor C sources into src/
+    cp "$ROOT/matlab/dress_mex.c"        "$PKG/src/"
+    cp "$ROOT/matlab/delta_dress_mex.c"  "$PKG/src/"
+    cp "$ROOT/libdress/src/dress.c"          "$PKG/src/"
+    cp "$ROOT/libdress/src/delta_dress.c"    "$PKG/src/"
+
+    # Headers (used at build time via -I../inst/include)
+    cp "$ROOT/libdress/include/dress/dress.h"       "$PKG/inst/include/dress/"
+    cp "$ROOT/libdress/include/dress/delta_dress.h" "$PKG/inst/include/dress/"
+
+    # Makefile
+    cp "$ROOT/octave/src/Makefile" "$PKG/src/"
+
+    # Build tarball
+    TARBALL="$ROOT/dress-graph-${VERSION}.tar.gz"
+    (cd "$WORK" && tar czf "$TARBALL" dress-graph/)
+
+    rm -rf "$WORK"
+    pass "Octave tarball: dress-graph-${VERSION}.tar.gz"
+}
+
 # ── WASM (Emscripten) ──────────────────────────────────────────────
 build_wasm() {
     want wasm || return 0
@@ -302,6 +353,7 @@ build_go
 build_r
 build_julia
 build_wasm
+build_octave
 
 # ── Summary ─────────────────────────────────────────────────────────
 echo

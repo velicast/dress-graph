@@ -73,6 +73,19 @@ update julia/Project.toml \
     '^version = ".*"' \
     "version = \"$NEW\""
 
+# Octave — DESCRIPTION
+update octave/DESCRIPTION \
+    '^Version: .*' \
+    "Version: $NEW"
+
+# Docs — Octave install URL in installation.md
+if [[ -f docs/getting-started/installation.md ]]; then
+    sedi -E 's|/download/v[^/]+/dress-graph-[^"]+\.tar\.gz|/download/v'"${NEW}"'/dress-graph-'"${NEW}"'.tar.gz|g' \
+        docs/getting-started/installation.md
+    echo "  ✓ docs/getting-started/installation.md"
+    CHANGED=$((CHANGED + 1))
+fi
+
 # Conda — meta.yaml (in-repo recipe)
 update conda/meta.yaml \
     '^\{% set version = ".*" %\}' \

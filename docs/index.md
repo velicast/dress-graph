@@ -74,7 +74,6 @@ and edge-importance ranking.
 | Native weighted-graph support via symmetric weight function |
 | Supports directed graphs (four variants: undirected, directed, forward, backward) |
 | Provably numerically stable (no overflows, no undefined behaviors) |
-| Self-loops on every vertex (closed neighborhoods ensure \(\|u\| > 0\) and well-defined iteration on all graphs, including sparse/isolated edges) |
 
 ## The equation at a glance
 

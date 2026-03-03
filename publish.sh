@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Publish all dress-graph packages to their respective registries.
-# Usage: ./publish.sh [pypi|npm|cargo|cran|julia|brew|vcpkg|all]
+# Usage: ./publish.sh [pypi|npm|cargo|cran|julia|octave|brew|vcpkg|all]
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -236,6 +236,49 @@ publish_julia() {
     echo "  To register: comment '@JuliaRegistrator register' on the tagged commit."
 }
 
+publish_octave() {
+    echo "=== Publishing Octave package (GitHub Release attachment) ==="
+
+    # Detect version from DESCRIPTION
+    VERSION=$(grep -oP '^Version: \K.*' "$ROOT/octave/DESCRIPTION")
+    if [[ -z "$VERSION" ]]; then
+        echo "ERROR: could not detect version from octave/DESCRIPTION"
+        exit 1
+    fi
+    echo "  Version: $VERSION"
+
+    TARBALL="$ROOT/dress-graph-${VERSION}.tar.gz"
+    if [[ ! -f "$TARBALL" ]]; then
+        echo "ERROR: $TARBALL not found. Run './build.sh octave' first."
+        exit 1
+    fi
+
+    if ! command -v gh &>/dev/null; then
+        echo "ERROR: gh CLI is required to attach assets to GitHub Releases."
+        echo "  Install: https://cli.github.com"
+        exit 1
+    fi
+
+    TAG="v${VERSION}"
+
+    # Create the release if it doesn't exist yet
+    if ! gh release view "$TAG" --repo "$GH_REPO" &>/dev/null; then
+        echo "  Creating GitHub release $TAG ..."
+        gh release create "$TAG" --repo "$GH_REPO" \
+            --title "dress-graph $VERSION" \
+            --notes "Release $VERSION"
+    fi
+
+    # Upload (overwrite if already attached)
+    echo "  Attaching $TARBALL to release $TAG ..."
+    gh release upload "$TAG" "$TARBALL" --repo "$GH_REPO" --clobber
+
+    echo "  ✓ Attached to https://github.com/${GH_REPO}/releases/tag/${TAG}"
+    echo "  Users install with:"
+    echo "    pkg install \"https://github.com/${GH_REPO}/releases/download/${TAG}/dress-graph-${VERSION}.tar.gz\""
+    echo "=== Octave done ==="
+}
+
 publish_vcpkg() {
     echo "=== Publishing vcpkg port ==="
 
@@ -282,21 +325,23 @@ case "$TARGET" in
     npm)   publish_npm   ;;
     cargo) publish_cargo ;;
     cran)  publish_cran  ;;
-    julia) publish_julia ;;
-    brew)  publish_brew  ;;
-    vcpkg) publish_vcpkg ;;
+    julia)  publish_julia  ;;
+    octave) publish_octave ;;
+    brew)   publish_brew   ;;
+    vcpkg)  publish_vcpkg  ;;
     all)
         publish_pypi
         publish_npm
         publish_cargo
         publish_cran
         publish_julia
+        publish_octave
         publish_brew
         publish_vcpkg
         echo "=== All packages published ==="
         ;;
     *)
-        echo "Usage: $0 [pypi|npm|cargo|cran|julia|brew|vcpkg|all]"
+        echo "Usage: $0 [pypi|npm|cargo|cran|julia|octave|brew|vcpkg|all]"
         exit 1
         ;;
 esac

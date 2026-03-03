@@ -107,9 +107,16 @@ using DRESS
 R CMD INSTALL r/
 ```
 
-## MATLAB / Octave
+## MATLAB
 
 ```matlab
 cd matlab
 dress_build   % compiles the MEX file
+```
+
+## Octave
+
+```octave
+pkg install "https://github.com/velicast/dress-graph/releases/download/v0.3.1/dress-graph-0.3.1.tar.gz"
+pkg load dress-graph
 ```
