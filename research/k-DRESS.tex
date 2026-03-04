@@ -11,6 +11,7 @@
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{definition}[theorem]{Definition}
 \newtheorem{remark}[theorem]{Remark}
 
 \begin{document}
@@ -220,7 +221,7 @@ $\Delta$-DRESS breaks symmetry by running DRESS on each vertex-deleted subgraph 
 Deleting a vertex from a regular graph produces an irregular subgraph where DRESS can now distinguish structure that was hidden by the uniform regularity.
 
 \subsection{Connection to the Reconstruction Conjecture}
-The multiset $\{\!\{ \text{DRESS}(G \setminus \{v\}) : v \in V \}\!\}$ is directly analogous to the \textit{deck} in the Kelly--Ulam reconstruction conjecture, which posits that graphs with $n \ge 3$ are determined (up to isomorphism) by their multiset of vertex-deleted subgraphs. $\Delta$-DRESS computes a continuous relaxation of this deck.
+The multiset $\{\!\{ \text{DRESS}(G \setminus \{v\}) : v \in V \}\!\}$ is directly analogous to the \textit{deck} in the Kelly--Ulam reconstruction conjecture \cite{kelly1942congruence, ulam1960collection}, which posits that graphs with $n \ge 3$ are determined (up to isomorphism) by their multiset of vertex-deleted subgraphs. $\Delta$-DRESS computes a continuous relaxation of this deck.
 
 \subsection{Properties}
 
