@@ -4,10 +4,16 @@ Date: 2026-03-03
 Author: Eduar Castrillo Velilla
 Maintainer: Eduar Castrillo Velilla
 Title: DRESS: A Continuous Framework for Structural Graph Refinement
-Description: DRESS computes
- continuous edge similarity values on graphs. The base algorithm is provably
- at least as powerful as 2-WL in expressiveness, and each higher-order level
- adds one WL dimension. Computation cost is O(I * m * d_max) per run.
+Description: DRESS is a deterministic, parameter-free framework that
+ iteratively refines the structural similarity of edges in a graph to produce
+ a canonical fingerprint: a real-valued edge vector, obtained by converging a
+ non-linear dynamical system to its unique fixed point. The fingerprint is
+ isomorphism-invariant by construction, numerically stable, fast and
+ embarrassingly parallel to compute: each iteration costs O(m * d_max) and
+ convergence is guaranteed by Birkhoff contraction. As a direct consequence
+ of these properties, DRESS is provably at least as expressive as the
+ 2-dimensional Weisfeiler-Leman (2-WL) test, at a fraction of the cost
+ (O(m * d_max) vs. O(n^3) per iteration).
 Categories: Graph Theory
 Depends: octave (>= 5.0.0)
 License: MIT

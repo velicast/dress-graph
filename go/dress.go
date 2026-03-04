@@ -1,5 +1,15 @@
-// Package dress provides Go bindings for the DRESS C library — iterative
-// edge-similarity computation on graphs.
+// Package dress provides Go bindings for the DRESS C library.
+//
+// DRESS is a deterministic, parameter-free framework that iteratively refines
+// the structural similarity of edges in a graph to produce a canonical
+// fingerprint: a real-valued edge vector, obtained by converging a non-linear
+// dynamical system to its unique fixed point. The fingerprint is
+// isomorphism-invariant by construction, numerically stable, fast and
+// embarrassingly parallel to compute: each iteration costs O(m * d_max) and
+// convergence is guaranteed by Birkhoff contraction. As a direct consequence
+// of these properties, DRESS is provably at least as expressive as the
+// 2-dimensional Weisfeiler-Leman (2-WL) test, at a fraction of the cost
+// (O(m * d_max) vs. O(n^3) per iteration).
 //
 // # Quick start
 //
