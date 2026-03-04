@@ -10,26 +10,7 @@ Rook vs Shrikhande [![Open in Colab](https://colab.research.google.com/assets/co
 
 ## A Continuous Framework for Structural Graph Refinement
 
-DRESS is a provably (Under Reconstruction Conjecture) continuous relaxation of the Weisfeiler–Leman algorithm.
-At depth $k$, higher-order DRESS is **provably at least as powerful as $(k{+}2)$-WL**
-in expressiveness - the base algorithm ( $k{=}0$ ) already matches 2-WL, and each
-level adds one WL dimension.
-Yet it is cheaper to compute: a single DRESS run costs
-$\mathcal{O}(I \cdot m \cdot d_{\max})$ where $I$ is the number of iterations,
-and depth- $k$ requires ${n \choose k}$ independent runs - a total of
-$\mathcal{O}\bigl({n \choose k} \cdot I \cdot m \cdot d_{\max}\bigr)$,
-compared to $\mathcal{O}(n^{k+3})$ for $(k{+}2)$-WL.
-Space complexity is $\mathcal{O}(n + m)$, compared to $\mathcal{O}(n^{k+2})$ for $(k{+}2)$-WL.
-The algorithm is embarrassingly parallel in two orthogonal ways -
-across the ${n \choose k}$ subproblems and across edge updates within each iteration -
-enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
-
-DRESS is a parameter-free algorithm that computes a unique, self-consistent
-edge similarity for any graph.  Given an edge list, it iteratively solves a
-nonlinear fixed-point system where every edge's value depends on its
-neighbors' values.  The result is bounded in [0, 2] for unweighted graphs,
-deterministic, and
-requires no tuning.  Sorting the edge values produces a canonical **graph fingerprint**.
+We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ-DRESS empirically separates all 7,983 graphs in a comprehensive Strongly Regular Graph benchmark, and iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. Successfully applied to anoter handful of downstream applications.
 
 > **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, JS, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
 
