@@ -235,6 +235,21 @@ $\Delta$-DRESS empirically distinguishes the following non-isomorphic pairs:
     \item \textbf{Petersen vs.\ Pentagonal Prism:} Successfully distinguished (both 3-regular on 10 vertices).
 \end{itemize}
 
+\subsection{Iterated Deletion: $\Delta^k$-DRESS}
+
+We now define the iterated vertex deletion operator formally.
+
+\begin{definition}[$\Delta^k$-DRESS]
+\label{def:delta-k}
+For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k \ge 0$:
+\[
+\Delta^k\text{-DRESS}(\mathcal{F}, G) = h\!\left(\bigsqcup_{\substack{S \subset V,\; |S|=k}} \mathcal{F}(G \setminus S)\right)
+\]
+where $G \setminus S$ is the subgraph induced by $V \setminus S$, $\mathcal{F}(G \setminus S)$ is the converged DRESS edge-value vector, and $h$ maps the pooled edge values into a histogram fingerprint.
+\end{definition}
+
+At depth $k = 0$, no vertices are deleted and $\Delta^0$-DRESS reduces to Original-DRESS. At $k = 1$, $\Delta^1$-DRESS runs DRESS on each of the $n$ vertex-deleted subgraphs $G \setminus \{v\}$. In general, $\Delta^k$-DRESS enumerates all $\binom{n}{k}$ vertex subsets of size $k$ and collects the resulting fingerprints into a multiset. The histogram $h$ serves a practical purpose: storing the full multiset of per-deletion edge vectors requires $\mathcal{O}\!\bigl(\binom{n}{k} \cdot |E|\bigr)$ space, which quickly becomes prohibitive; the histogram compresses this into a fixed-size bin-count vector of $\lceil 2/\epsilon \rceil$ bins, independent of $k$.
+
 \section{Family Structure}
 The DRESS variants introduced in this paper form a nested hierarchy with one orthogonal composition operator:
 \[
@@ -273,7 +288,7 @@ Facebook (KONECT)      & 59{,}216{,}215 & 92{,}522{,}012 & 26 & $6.84 \times 10^
 \subsection{Strongly Regular Graphs}
 \label{sec:srg-results}
 
-Strongly Regular Graphs (SRGs) are the canonical hard instances for polynomial-time isomorphism methods: all edges share identical local structure (same degree, same common-neighbor counts), so Original-DRESS ($\Delta^0$) assigns the same value to every edge and produces a uniform fingerprint. This is expected: SRGs are regular, and the triangle-based DRESS iteration sees no local variation.
+Strongly Regular Graphs (SRGs) are the canonical hard instances for polynomial-time isomorphism methods: all edges share identical local structure (same degree, same common-neighbor counts), so Original-DRESS ($\Delta^0$) assigns the same value to every edge and produces a uniform fingerprint. This is expected: SRGs are regular, and the Original-DRESS iteration sees no local variation.
 
 $\Delta^1$-DRESS overcomes this limitation. By running DRESS on each vertex-deleted subgraph $G \setminus \{v\}$, the uniform regularity is broken and structurally distinct edges emerge. We tested $\Delta^1$-DRESS on 7{,}983 strongly regular graphs from the repository of Krystal Guo~\cite{guo2024srg}, spanning three parameter families:
 
