@@ -31,7 +31,7 @@ Different choices of motif $M$ yield different neighborhood operators:
 
 ### Expressiveness
 
-All experiments below use the $K_4$ clique motif. The specific SRG pairs tested below are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
+All experiments below use the $K_4$ clique motif. The specific SRG pairs tested below are known to be indistinguishable by 2-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 2-WL on these instances.
 
 - **Rook vs. Shrikhande:** Successfully distinguishes this pair of SRGs with parameters $(16, 6, 2, 2)$. The Rook graph ($K_4 \square K_4$) contains $K_4$ cliques while the Shrikhande graph does not, so the $K_4$-neighborhood sizes differ per edge.
 - **Chang Graphs:** Distinguishes 3 of the 6 pairwise comparisons among the four SRGs with parameters $(28, 12, 6, 4)$: T(8) vs each of Chang-1, Chang-2, and Chang-3. The three Chang graphs are pairwise indistinguishable by Motif-$K_4$ (all three have identical $K_4$-neighborhood structure per edge).

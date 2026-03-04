@@ -105,7 +105,40 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 
 ## Current Experimented Applications
 
-- **[Graph Isomorphism](https://velicast.github.io/dress-graph/applications/isomorphism/)**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
+- **[Graph Isomorphism](https://velicast.github.io/dress-graph/applications/isomorphism/)**: sorting DRESS edge values produces a canonical fingerprint.
+
+  **Strongly Regular Graphs — Δ¹-DRESS (7,983 graphs, 100 % separated)**
+
+  Plain DRESS (Δ⁰) assigns a single uniform value to every edge in an SRG, producing zero separation. Δ¹-DRESS breaks this symmetry by running DRESS on each vertex-deleted subgraph:
+
+  | Family | Parameters | Graphs | Δ¹ unique | Separated | Min L∞ |
+  |--------|-----------|:------:|:---------:|:---------:|:------:|
+  | Conference (Mathon) | (45, 22, 10, 11) | 6 | 6 | **100 %** | 4.16 × 10⁻³ |
+  | Steiner block S(2,4,28) | (63, 32, 16, 16) | 4,466 | 4,466 | **100 %** | 1.95 × 10⁻³ |
+  | Quasi-symmetric 2-designs | (63, 32, 16, 16) | 3,511 | 3,511 | **100 %** | 2.23 × 10⁻³ |
+
+  SRG data from [Krystal Guo's repository](https://github.com/kguo-sagecode/Strongly-regular-graphs). Min L∞ is the closest-pair distance (1,000 random pairs); separation is stable across all rounding precisions 6d–14d.
+
+  **CFI Staircase — Δᵏ-DRESS climbs the WL hierarchy**
+
+  The [CFI construction](https://en.wikipedia.org/wiki/Cai%E2%80%93F%C3%BCrer%E2%80%93Immerman_graph) produces the canonical hard instances for every WL level. Δᵏ-DRESS matches $(k{+}2)$-WL on each:
+
+  | Base graph | \|V(CFI)\| | WL req. | Δ⁰ | Δ¹ | Δ² | Δ³ |
+  |:----------:|:----------:|:-------:|:--:|:--:|:--:|:--:|
+  | $K_3$ | 6 | 2-WL | ✓ | ✓ | ✓ | ✓ |
+  | $K_4$ | 16 | 3-WL | ✗ | ✓ | ✓ | ✓ |
+  | $K_5$ | 40 | 4-WL | ✗ | ✗ | ✓ | ✓ |
+  | $K_6$ | 96 | 5-WL | ✗ | ✗ | ✗ | ✓ |
+  | $K_7$ | 224 | 6-WL | ✗ | ✗ | ✗ | ✗ |
+
+  Each deletion level adds exactly one WL dimension. See [Paper 2](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) for proofs and the full table up to $K_{10}$.
+
+  **Standard benchmarks — Original-DRESS (Δ⁰)**
+
+  | Benchmark | Accuracy |
+  |-----------|----------|
+  | MiVIA database | 100 % |
+  | IsoBench | 100 % |
 - **[Community Detection](https://velicast.github.io/dress-graph/applications/community-detection/)**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
 - **[Classification](https://velicast.github.io/dress-graph/applications/classification/)**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
 - **[Retrieval](https://velicast.github.io/dress-graph/applications/retrieval/)**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.

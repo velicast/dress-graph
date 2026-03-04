@@ -4,7 +4,7 @@
 
 ## Core concepts
 
-All bindings expose the same underlying algorithm through three main function
+All bindings expose the same underlying algorithm through two main function
 calls: **`dress_fit()`** and **`delta_dress_fit()`**.
 
 **`dress_fit()`** - Pass in the graph (vertices, edges, optional

@@ -23,7 +23,7 @@ Special cases:
 
 The graph fingerprint can be represented equivalently as the sorted vector $\text{sort}(d^*)$ or as the histogram $h(d^*)$; both uniquely identify the multiset of converged edge values. In the unweighted case DRESS values are bounded in $[0, 2]$ and convergence tolerance is $\epsilon$, so each edge value maps to one of $\lfloor 2/\epsilon \rfloor + 1$ integer bins (e.g., $2 \times 10^{6} + 1$ bins for $\epsilon = 10^{-6}$). For weighted graphs, where values may exceed $2$, the bin count grows to $\lfloor d_{\max}/\epsilon \rfloor + 1$ where $d_{\max}$ is an a priori upper bound computed from the edge weights.
 
-Individual subgraph fingerprints are not recoverable from the pooled histogram. The memory footprint is constant regardless of $k$ - a single fixed-size integer array - whereas storing the raw multiset of $\binom{n}{k} \cdot |E|$ floating-point values would be prohibitive. This fixed-size representation, combined with the deletion operator, empirically matches the discriminative power of $k$-WL methods that require $\mathcal{O}(n^{k+1})$ storage.
+Individual subgraph fingerprints are not recoverable from the pooled histogram. The memory footprint is constant regardless of $k$ - a single fixed-size integer array - whereas storing the raw multiset of $\binom{n}{k} \cdot |E|$ floating-point values would be prohibitive. This fixed-size representation, combined with the deletion operator, empirically matches the discriminative power of $(k{+}2)$-WL methods that require $\mathcal{O}(n^{k+2})$ storage.
 
 ## Complexity
 
@@ -68,7 +68,7 @@ The results reveal a strikingly regular pattern:
 $\Delta^k$-DRESS empirically matches $(k+2)$-WL on the CFI family:
 
 - **$\Delta^0$ (Original-DRESS)** distinguishes CFI($K_3$) (2-WL) but fails on all larger CFI pairs.
-- **$\Delta^1$** extends the range to CFI($K_4$) (3-WL), consistent with Δ-DRESS distinguishing SRG pairs that confound 3-WL.
+- **$\Delta^1$** extends the range to CFI($K_4$) (3-WL), consistent with Δ-DRESS distinguishing SRG pairs that confound 2-WL.
 - **$\Delta^2$** reaches CFI($K_5$) (4-WL).
 - **$\Delta^3$** reaches CFI($K_6$) (5-WL) but fails on CFI($K_7$) (6-WL), confirming the sharp boundary at $(k+2)$-WL. The CFI($K_7$) test required processing all $\binom{224}{3} = 1{,}848{,}224$ subgraphs (approximately 19.3 billion edge values).
 

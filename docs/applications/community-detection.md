@@ -28,7 +28,7 @@ This improvement was introduced in
 
 Beyond improving existing algorithms, a dedicated **agglomerative hierarchical
 clustering algorithm** was designed around DRESS and benchmarked in the
-ASOMAN 2017 and arXiv:1805.12238 papers.  The algorithm:
+ASONAM 2017 and arXiv:1805.12238 papers.  The algorithm:
 
 1. Computes DRESS values for all edges.
 2. Uses the DRESS values as the merging criterion in an agglomerative

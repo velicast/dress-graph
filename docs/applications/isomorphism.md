@@ -47,18 +47,20 @@ ambiguity that the single D-DRESS fingerprint misses.
 | MiVIA database | 100 % |
 | IsoBench | 100 % |
 
-## Limitations
+## Limitations of Original-DRESS (Δ⁰)
 
-DRESS provides a **necessary condition**, not a sufficient one.  Non-isomorphic
+Original-DRESS provides a **necessary condition**, not a sufficient one.  Non-isomorphic
 graphs *can* produce identical DRESS vectors:
 
 - **CFI graphs** (Cai–Fürer–Immerman): constructed to defeat the
-  Weisfeiler–Leman hierarchy.  DRESS fails these, as expected for any
-  polynomial-time local method.
+  Weisfeiler–Leman hierarchy.  Original-DRESS fails on CFI(\(K_4\)) and above.
+  **Δ^k-DRESS overcomes this**: each deletion level adds one WL dimension,
+  matching \((k{+}2)\)-WL. See [CFI Staircase](#cfi-staircase) below.
 - **Strongly Regular Graphs (SRG)**: every edge has identical local structure
-  (same degree, same common-neighbor counts).  DRESS assigns the same value to
+  (same degree, same common-neighbor counts).  Original-DRESS assigns the same value to
   every edge and cannot distinguish non-isomorphic SRGs with the same
-  parameters.
+  parameters.  **Δ¹-DRESS overcomes this**: all 7,983 tested SRGs are fully
+  separated. See [Large-scale SRG separation](#large-scale-srg-separation) below.
 
 ## Relationship to Weisfeiler–Leman
 
@@ -83,15 +85,16 @@ Original-DRESS **matches 2-WL**: it
 [distinguishes the prism graph from \(K_{3,3}\)](#dress-matches-2-wl),
 a pair that 1-WL cannot separate but 2-WL can
 (see [Theorem 1 in the DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)).
-It still fails on CFI constructions and strongly regular graphs with
-identical parameters.
+Original-DRESS fails on CFI constructions and strongly regular graphs with
+identical parameters — but higher-order Δ^k-DRESS overcomes both; see
+[CFI Staircase](#cfi-staircase) and [Large-scale SRG separation](#large-scale-srg-separation) below.
 See [Properties - WL comparison](../theory/properties.md#weisfeilerleman-wl-color-refinement)
 for a detailed side-by-side table.
 
 ### DRESS matches 2-WL
 
 The **prism graph** (\(C_3 \square K_2\)) and \(K_{3,3}\) are both
-3-regular on 6 nodes with 9 edges.  WL-1 assigns all nodes the same color
+3-regular on 6 nodes with 9 edges.  1-WL assigns all nodes the same color
 in both graphs (every node has degree 3 and all neighbor multisets are
 identical), so it cannot distinguish them.
 
@@ -178,7 +181,7 @@ values**:
 
 All 10 node DRESS values are identical (\(\approx 4.022\)), which is
 expected: the graph is vertex-transitive.  But the edges carry three
-different roles that WL-1 is completely blind to.
+different roles that 1-WL is completely blind to.
 
 ### DRESS also has limits: strongly regular graphs
 
@@ -230,12 +233,53 @@ edge has exactly the same local structure (2 common neighbors).  The DRESS
 update equation sees identical inputs at every edge in both graphs, so it
 converges to the same fixed point.
 
-This confirms that Original-DRESS (triangle motif), like WL-1, fails on strongly regular graphs where
+This confirms that Original-DRESS (triangle motif), like 1-WL, fails on strongly regular graphs where
 all edges are structurally indistinguishable.
 
 ## Higher-order DRESS for harder cases
 
 The [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf) introduces Motif-DRESS and Δ-DRESS, and the [WL hierarchy paper](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) introduces Δ^k-DRESS as the primary higher-order variant.
+
+### CFI Staircase
+
+The [Cai–Fürer–Immerman construction](https://en.wikipedia.org/wiki/Cai%E2%80%93F%C3%BCrer%E2%80%93Immerman_graph)
+produces the canonical hard instances for the WL hierarchy: distinguishing
+CFI($K_n$) from CFI'($K_n$) requires $(n{-}1)$-WL. Δ^k-DRESS
+climbs the staircase one level per deletion depth:
+
+| Base graph | Vertices | WL req. | Δ⁰ | Δ¹ | Δ² | Δ³ |
+|:----------:|:--------:|:-------:|:---:|:---:|:---:|:---:|
+| $K_3$ | 6 | 2-WL | ✓ | ✓ | ✓ | ✓ |
+| $K_4$ | 16 | 3-WL | ✗ | ✓ | ✓ | ✓ |
+| $K_5$ | 40 | 4-WL | ✗ | ✗ | ✓ | ✓ |
+| $K_6$ | 96 | 5-WL | ✗ | ✗ | ✗ | ✓ |
+| $K_7$ | 224 | 6-WL | ✗ | ✗ | ✗ | ✗ |
+| $K_8$ | 512 | 7-WL | ✗ | ✗ | — | — |
+| $K_9$ | 1,152 | 8-WL | ✗ | ✗ | — | — |
+| $K_{10}$ | 2,560 | 9-WL | ✗ | ✗ | — | — |
+
+The pattern is exact: **Δ^k-DRESS matches $(k{+}2)$-WL**. Each
+additional deletion level adds one WL dimension. The boundary is sharp:
+Δ³-DRESS distinguishes CFI($K_6$) (requires 5-WL) but fails on
+CFI($K_7$) (requires 6-WL). "—" entries were not executed due to
+time constraints.
+
+*Summary of WL level per deletion depth:*
+
+| Deletion depth $k$ | Max WL matched | Effective WL |
+|:------------------:|:--------------:|:------------:|
+| 0 | 2-WL | $k + 2$ |
+| 1 | 3-WL | $k + 2$ |
+| 2 | 4-WL | $k + 2$ |
+| 3 | 5-WL | $k + 2$ |
+
+The computational cost is $\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$
+— polynomial in $n$ for fixed $k$ — while the equivalent
+$(k{+}2)$-WL costs $\mathcal{O}(n^{k+3})$.
+
+See [Paper 2](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
+for the full proofs (Theorem 2: Δ^k-DRESS ≥ (k+2)-WL under the
+Reconstruction Conjecture) and discussion.
 
 ### Motif-DRESS (K4 clique)
 
@@ -251,7 +295,7 @@ Motif-DRESS generalizes the neighborhood operator from triangles to arbitrary mo
 | Chang-1 vs Chang-3 | FAIL | |
 | Chang-2 vs Chang-3 | FAIL | |
 
-Motif-$K_4$ distinguishes 3 of the 6 Chang pairs (T(8) vs each Chang graph) and 1/1 Rook vs Shrikhande. The three Chang graphs are pairwise indistinguishable because they share identical $K_4$-neighborhood structure per edge. The specific SRG pairs tested above are known to be indistinguishable by 3-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 3-WL on these instances.
+Motif-$K_4$ distinguishes 3 of the 6 Chang pairs (T(8) vs each Chang graph) and 1/1 Rook vs Shrikhande. The three Chang graphs are pairwise indistinguishable because they share identical $K_4$-neighborhood structure per edge. The specific SRG pairs tested above are known to be indistinguishable by 2-WL; each successful distinction therefore demonstrates that Motif-DRESS empirically exceeds 2-WL on these instances.
 
 ### Δ-DRESS
 
@@ -268,5 +312,38 @@ Motif-$K_4$ distinguishes 3 of the 6 Chang pairs (T(8) vs each Chang graph) and 
 | Chang-1 vs Chang-2 | **PASS** | |
 | Chang-1 vs Chang-3 | **PASS** | |
 | Chang-2 vs Chang-3 | **PASS** | |
+
+#### Large-scale SRG separation
+
+To test Δ-DRESS (i.e. Δ^1-DRESS) beyond isolated pairs, we ran it on
+**7,983 strongly regular graphs** from the repository of
+[Krystal Guo](https://github.com/kguo-sagecode/Strongly-regular-graphs).
+These graphs share SRG parameters within each family —
+identical degree, λ, μ, spectrum — so they all confound 2-WL.
+Plain DRESS (Δ^0) maps every graph in each family to a single
+uniform edge value: **zero separation**.
+
+| Family | Parameters | Graphs | Δ^1 unique | Separated | Min L∞ between closest pair |
+|--------|-----------|:------:|:----------:|:---------:|:---------------------------:|
+| Conference (Mathon) | (45, 22, 10, 11) | 6 | 6 | **100 %** | 4.16 × 10⁻³ |
+| Steiner block S(2,4,28) | (63, 32, 16, 16) | 4,466 | 4,466 | **100 %** | 1.95 × 10⁻³ |
+| Quasi-symmetric 2-designs | (63, 32, 16, 16) | 3,511 | 3,511 | **100 %** | 2.23 × 10⁻³ |
+
+**All 7,983 graphs are pairwise distinguished by Δ^1-DRESS.**
+
+The "Min L∞" column reports the smallest element-wise maximum difference
+between the sorted fingerprints of any sampled graph pair (1,000 random
+pairs per family). Values around 10⁻³ confirm that the separations are
+genuine, not floating-point artifacts — this was further validated by
+checking that the unique count remains **stable across all rounding
+precisions** from 6 to 14 decimal digits.
+
+Cross-file analysis between the two SRG(63, 32, 16, 16) sources
+(Steiner and quasi-symmetric) found **zero collisions**, confirming that
+the two constructions produce entirely disjoint isomorphism classes.
+
+Computation used 32 CPU cores with the pure-Python DRESS backend:
+~10 min for 4,466 graphs (281,358 DRESS runs) and ~8 min for 3,511
+graphs (221,193 DRESS runs).
 
 See also [Δ^k-DRESS (Iterated Deletion)](../theory/delta-ell-dress.md) for the generalization of Δ-DRESS to arbitrary depth.
