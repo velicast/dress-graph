@@ -10,7 +10,7 @@ Rook vs Shrikhande [![Open in Colab](https://colab.research.google.com/assets/co
 
 ## A Continuous Framework for Structural Graph Refinement
 
-We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ-DRESS empirically separates all 7,983 graphs in a comprehensive Strongly Regular Graph benchmark, and iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. Successfully applied to anoter handful of downstream applications. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations.
+We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ-DRESS empirically separates all 7,983 graphs in a comprehensive Strongly Regular Graph benchmark, and iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations. Successfully applied to a handful of downstream applications.
 
 > **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, JS, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
 
@@ -57,13 +57,14 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Symmetric by design ($d(u,v) = d(v,u)$ for all pairs) |
 | Scale-invariant (degree-0 homogeneous) |
 | Completely deterministic |
-| Practical convergence by few iterations (contraction)|
+| Practical convergence in few iterations (contraction)|
 | Continuous canonical fingerprints (sorted values / ε-binned histogram) |
 | Theoretical per-iteration $\mathcal{O}(\|E\|)$, memory $\mathcal{O}(\|V\| + \|E\|)$ |
 | Massively parallelizable ($\Delta^k$ subproblems and per-edge updates) |
 | Native weighted-graph support via symmetric weight function |
 | Supports directed graphs (four variants: undirected, directed, forward, backward) |
-| Provably numerically stable (no overflows, no undefined behaviors) |
+| Provably numerically stable (no overflows, no error amplification, no undefined behaviors) |
+| Provably at least as powerful as 2-WL (>= 2-WL) |
 
 ## Benchmarks
 
