@@ -6,10 +6,6 @@
 E. Castrillo. arXiv preprint, 2026.
 [arXiv:2602.20833](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 
-**DRESS and the WL Hierarchy: Climbing One Deletion at a Time**
-E. Castrillo. arXiv preprint, 2026.
-[arXiv:2602.21557](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
-
 **Dynamic Structural Similarity on Graphs**
 E. Castrillo, E. León, J. Gómez. arXiv preprint, 2018.
 [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)

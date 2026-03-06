@@ -7,9 +7,6 @@ We introduce DRESS, a deterministic, parameter-free framework that iteratively r
 For the theory and generalizations (DRESS Family), see the research paper:
 [**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 
-For the relationship between DRESS and the Weisfeiler–Leman hierarchy:
-[**arXiv:2602.21557**](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
-
 ---
 
 This work is an independent continuation of research from the author's master's thesis:

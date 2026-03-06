@@ -238,7 +238,7 @@ all edges are structurally indistinguishable.
 
 ## Higher-order DRESS for harder cases
 
-The [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf) introduces Motif-DRESS and Δ-DRESS, and the [WL hierarchy paper](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) introduces Δ^k-DRESS as the primary higher-order variant.
+The [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf) introduces Motif-DRESS, Δ-DRESS, and Δ^k-DRESS as higher-order variants.
 
 ### CFI Staircase
 
@@ -277,9 +277,8 @@ The computational cost is $\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d
 — polynomial in $n$ for fixed $k$ — while the equivalent
 $(k{+}2)$-WL costs $\mathcal{O}(n^{k+3})$.
 
-See [Paper 2](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
-for the full proofs (Theorem 2: Δ^k-DRESS ≥ (k+2)-WL under the
-Reconstruction Conjecture) and discussion.
+See the [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
+for the full proofs and discussion.
 
 ### Motif-DRESS (K4 clique)
 

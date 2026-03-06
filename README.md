@@ -14,13 +14,10 @@ We introduce DRESS, a deterministic, parameter-free framework that iteratively r
 
 > **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, JS, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
 
-The arXiv papers are outdated and will be updated next week. The latest versions including the proof in Paper 2, are in the GitHub repo.
+The arXiv papers is outdated and will be updated next week.
 
 For the theory and generalizations (DRESS Family), see the research paper:
 [**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
-
-For the relationship between DRESS and the Weisfeiler–Leman hierarchy:
-[**arXiv:2602.21557**](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
 
 ## The equation
 
@@ -224,9 +221,8 @@ Full documentation (theory, applications, API reference):
 
 ## Publications
 
-The arXiv papers are outdated and will be updated next week. The latest versions including the proof in Paper 2, are in the GitHub repo.
+The arXiv papers is outdated and will be updated next week.
 
-- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [arxiv:2602.21557](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf)
 - E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)
@@ -247,16 +243,6 @@ If you use DRESS in your research, please cite:
   archivePrefix = {arXiv},
   primaryClass  = {cs.DS},
   url     = {https://arxiv.org/abs/2602.20833}
-}
-
-@misc{castrillo2026kdress,
-  title   = {DRESS and the WL Hierarchy: Climbing One Deletion at a Time},
-  author  = {Eduar Castrillo Velilla},
-  year    = {2026},
-  eprint  = {2602.21557},
-  archivePrefix = {arXiv},
-  primaryClass  = {cs.DS},
-  url     = {https://arxiv.org/abs/2602.21557}
 }
 
 @misc{castrillo2018dress,
