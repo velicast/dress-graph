@@ -65,7 +65,7 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Supports directed graphs (four variants: undirected, directed, forward, backward) |
 | Provably numerically stable (no overflows, no error amplification, no undefined behaviors) |
 | Provably at least as powerful as 2-WL (>= 2-WL) |
-| [Locally invertible](https://velicast.github.io/dress-graph/theory/properties/#local-invertibility-incremental-edge-query) — any single edge value recoverable from its neighborhood in O(deg) after one global fit |
+| [Locally invertible](https://velicast.github.io/dress-graph/theory/properties/#local-invertibility-incremental-edge-query): Any single edge value recoverable from its neighborhood in O(deg) after one global fit |
 
 ## Benchmarks
 

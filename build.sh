@@ -317,6 +317,7 @@ build_octave() {
     cp "$ROOT/matlab/dress_free_mex.c"   "$PKG/src/"
     cp "$ROOT/libdress/src/dress.c"          "$PKG/src/"
     cp "$ROOT/libdress/src/delta_dress.c"    "$PKG/src/"
+    cp "$ROOT/libdress/src/delta_dress_impl.h" "$PKG/src/"
 
     # Headers (used at build time via -I../inst/include)
     cp "$ROOT/libdress/include/dress/dress.h"       "$PKG/inst/include/dress/"

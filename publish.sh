@@ -33,6 +33,7 @@ publish_cargo() {
     mkdir -p "$ROOT/rust/vendor/include/dress"
     cp "$ROOT/libdress/src/dress.c"                "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/src/delta_dress.c"          "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/delta_dress_impl.h"     "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/include/dress/dress.h"       "$ROOT/rust/vendor/include/dress/"
     cp "$ROOT/libdress/include/dress/delta_dress.h" "$ROOT/rust/vendor/include/dress/"
     cp "$ROOT/LICENSE"                              "$ROOT/rust/LICENSE"
@@ -54,6 +55,7 @@ publish_cran() {
     # Vendor C sources into r/src/ (not committed to git)
     cp "$ROOT/libdress/src/dress.c"                "$ROOT/r/src/"
     cp "$ROOT/libdress/src/delta_dress.c"          "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/delta_dress_impl.h"     "$ROOT/r/src/"
     mkdir -p "$ROOT/r/src/dress"
     cp "$ROOT/libdress/include/dress/dress.h"       "$ROOT/r/src/dress/"
     cp "$ROOT/libdress/include/dress/delta_dress.h" "$ROOT/r/src/dress/"
@@ -63,7 +65,7 @@ publish_cran() {
     echo "=== R tarball built. Submit dress.graph_*.tar.gz at https://cran.r-project.org/submit.html ==="
 
     # Cleanup vendored sources
-    rm -f  "$ROOT/r/src/dress.c" "$ROOT/r/src/delta_dress.c"
+    rm -f  "$ROOT/r/src/dress.c" "$ROOT/r/src/delta_dress.c" "$ROOT/r/src/delta_dress_impl.h"
     rm -rf "$ROOT/r/src/dress"
 }
 

@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.4.0] — 2026-03-08
 
 ### Added
 - CUDA support for igraph wrapper via `#include "cuda/dress_igraph.h"` — redirects `dress_fit_igraph()` / `delta_dress_fit_igraph()` to CUDA via macros

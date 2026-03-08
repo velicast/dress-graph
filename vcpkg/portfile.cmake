@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO velicast/dress-graph
-    REF "v0.3.1"
-    SHA512 fc7ea1c7fd96436653297a8246b16ee844caa458b58f7daf48ae1be694c728dfcf40190719a711dd1a8f59241e1d91c9c502db10759855b764ac0640ef43212d
+    REF "v0.4.0"
+    SHA512 5bfa76770db80bf53412296a176c8b7058a1f96e7d02454a1f0b80479c5b389a19b1d76aeae45737899d89295d5474bf34d8d5b8aa54641fe411657fa0d8b7ef
 )
 
 vcpkg_cmake_configure(
