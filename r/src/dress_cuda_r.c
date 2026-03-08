@@ -203,3 +203,6 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
 }
 
 #endif /* DRESS_CUDA */
+
+/* Avoid "empty translation unit" warning (-Wpedantic) when CUDA is disabled. */
+typedef int dress_cuda_r_dummy_;
