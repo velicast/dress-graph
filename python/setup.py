@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 DRESS_C_SRC = os.path.join(ROOT, "libdress", "src", "dress.c")
 DELTA_DRESS_C_SRC = os.path.join(ROOT, "libdress", "src", "delta_dress.c")
+DELTA_IMPL_SRC = os.path.join(ROOT, "libdress", "src", "delta_dress_impl.h")
 
 ext_modules = []
 cmdclass = {}
@@ -33,6 +34,8 @@ if _build_native and os.path.isfile(DRESS_C_SRC):
     shutil.copy2(DRESS_C_SRC, DRESS_C_LOCAL)
     if os.path.isfile(DELTA_DRESS_C_SRC):
         shutil.copy2(DELTA_DRESS_C_SRC, DELTA_DRESS_C_LOCAL)
+    if os.path.isfile(DELTA_IMPL_SRC):
+        shutil.copy2(DELTA_IMPL_SRC, os.path.join(HERE, "delta_dress_impl.h"))
 
     class build_ext(_build_ext):
         """Defer pybind11 include lookup until build time."""

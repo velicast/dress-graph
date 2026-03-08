@@ -177,4 +177,45 @@ path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
         @test occursin("E=3", s)
     end
 
+    # ── Persistent DressGraph ────────────────────────────────────────
+    @testset "DressGraph" begin
+        g = DressGraph(3, Int32[0, 1, 0], Int32[1, 2, 2])
+
+        @testset "show" begin
+            s = sprint(show, g)
+            @test occursin("DressGraph", s)
+            @test occursin("open", s)
+        end
+
+        @testset "fit!" begin
+            iters, delta = fit!(g, max_iterations=100, epsilon=1e-8)
+            @test iters >= 1
+            @test delta < 1e-6
+        end
+
+        @testset "get" begin
+            d01 = Base.get(g, 0, 1)
+            @test d01 > 0
+            # Virtual edge (no crash)
+            d00 = Base.get(g, 0, 0)
+            @test isa(d00, Float64)
+        end
+
+        @testset "result" begin
+            r = DRESS.result(g)
+            @test length(r.edge_dress) == 3
+            @test length(r.node_dress) == 3
+            d0 = r.edge_dress[1]
+            for e in 2:3
+                @test r.edge_dress[e] ≈ d0 atol=1e-6
+            end
+        end
+
+        @testset "close!" begin
+            close!(g)
+            s = sprint(show, g)
+            @test occursin("closed", s)
+        end
+    end
+
 end  # top-level testset

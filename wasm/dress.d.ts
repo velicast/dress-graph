@@ -24,7 +24,7 @@ export interface DressOptions {
     maxIterations?: number;
     /** Convergence threshold (default: 1e-6) */
     epsilon?: number;
-    /** Pre-compute neighbourhood intercepts (default: true) */
+    /** Pre-compute neighbourhood intercepts (default: false) */
     precomputeIntercepts?: boolean;
 }
 
@@ -49,6 +49,33 @@ export interface DressResult {
  * Run the DRESS iterative fitting algorithm on an edge list.
  */
 export declare function dressFit(opts: DressOptions): Promise<DressResult>;
+
+export interface DressGraphOptions {
+    /** Number of vertices (vertex ids must be in 0..numVertices-1) */
+    numVertices: number;
+    /** Edge source vertices (0-based) */
+    sources: Int32Array | number[];
+    /** Edge target vertices (0-based) */
+    targets: Int32Array | number[];
+    /** Optional edge weights (same length as sources) */
+    weights?: Float64Array | number[] | null;
+    /** Graph variant (default: Variant.UNDIRECTED) */
+    variant?: number;
+    /** Pre-compute neighbourhood intercepts (default: false) */
+    precomputeIntercepts?: boolean;
+}
+
+/**
+ * A persistent DRESS graph supporting repeated fit / get calls.
+ */
+export declare class DressGraph {
+    private constructor();
+    static create(opts: DressGraphOptions): Promise<DressGraph>;
+    fit(maxIterations?: number, epsilon?: number): { iterations: number; delta: number };
+    get(u: number, v: number, maxIterations?: number, epsilon?: number, edgeWeight?: number): number;
+    result(): DressResult;
+    free(): void;
+}
 
 export interface DeltaDressOptions {
     /** Number of vertices (vertex ids must be in 0..numVertices-1) */
@@ -89,3 +116,4 @@ export interface DeltaDressResult {
  * all k-vertex subsets and measuring edge similarity changes.
  */
 export declare function deltaDressFit(opts: DeltaDressOptions): Promise<DeltaDressResult>;
+

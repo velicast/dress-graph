@@ -4,8 +4,8 @@
 
 ## Core concepts
 
-All bindings expose the same underlying algorithm through two main function
-calls: **`dress_fit()`** and **`delta_dress_fit()`**.
+All bindings expose the same underlying algorithm through three main
+calls: **`dress_fit()`**, **`delta_dress_fit()`**, and **`dress_get()`**.
 
 **`dress_fit()`** - Pass in the graph (vertices, edges, optional
 weights), and get back a result struct containing every output array.
@@ -31,6 +31,17 @@ Each bin \(i\) counts edge values in \([i \cdot \varepsilon,\; (i+1) \cdot \vare
 with the top bin (index \(\lfloor d_{\max}/\varepsilon \rfloor\)) holding
 the maximum possible value.  The number of bins is \(\lfloor d_{\max}/\varepsilon \rfloor + 1\)
 (\(d_{\max} = 2\) for unweighted graphs; larger for weighted).
+
+**`dress_get()`** - Query the DRESS value of a **single edge** on an
+already-fitted persistent graph object.  The edge can be an existing,
+removed, or hypothetical edge — its value is recovered from the
+immediate neighborhood alone in \(O(\deg u + \deg v)\) time, without
+re-fitting.  See [Local invertibility](../theory/properties.md#local-invertibility-incremental-edge-query)
+for the theory behind this operation.
+
+```
+value = g.get(u, v, [max_iterations], [epsilon], [edge_weight])
+```
 
 ## Variants
 
@@ -62,7 +73,24 @@ the maximum possible value.  The number of bins is \(\lfloor d_{\max}/\varepsilo
 | `histogram` | int64 array [hist_size] | Bin counts of converged edge values |
 | `hist_size` | int | Number of bins: \(\lfloor d_{\max}/\varepsilon \rfloor + 1\) (\(d_{\max}=2\) unweighted) |
 
+### `dress_get` parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `u` | int | — | Source vertex (0-based) |
+| `v` | int | — | Target vertex (0-based) |
+| `max_iterations` | int | 100 | Max iterations for the scalar fixed-point solve |
+| `epsilon` | float | 1e-6 | Convergence tolerance |
+| `edge_weight` | float | 1.0 | Weight of the queried edge |
+
+Returns a single `float` — the DRESS value \(d_{uv}\).
+
 ## Language-specific APIs
+
+> **CUDA Switching:** Every language wrapper (except WASM) supports
+> GPU-accelerated fitting via an import-based switch.  The API is
+> identical — only the import or namespace changes.
+> WASM runs in the browser and does not support CUDA.
 
 ### C
 
@@ -86,8 +114,8 @@ p_dress_graph_t init_dress_graph(int N, int E,
                                  int precompute_intercepts);
 
 /* Run iterative fitting. */
-void fit(p_dress_graph_t g, int max_iterations, double epsilon,
-         int *iterations, double *delta);
+void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
+               int *iterations, double *delta);
 
 /* Free all memory. */
 void free_dress_graph(p_dress_graph_t g);
@@ -98,6 +126,11 @@ g->edge_weight[e]  /* per-edge weight */
 g->node_dress[u]   /* per-node norm */
 g->U[e], g->V[e]   /* edge endpoints */
 g->N, g->E         /* vertex / edge count */
+
+/* Query a single edge after fitting (local invertibility). */
+double dress_get(const p_dress_graph_t g, int u, int v,
+                 int max_iterations, double epsilon,
+                 double edge_weight);
 ```
 
 #### Δ^k-DRESS (C)
@@ -107,7 +140,7 @@ g->N, g->E         /* vertex / edge count */
 
 /* Compute the Δ^k-DRESS histogram.
    Returns a malloc'd int64_t array; caller must free(). */
-int64_t *delta_fit(p_dress_graph_t g,
+int64_t *delta_dress_fit(p_dress_graph_t g,
                    int k,              /* deletion depth (0 = original) */
                    int iterations,     /* max DRESS iterations per subgraph */
                    double epsilon,     /* convergence tol / bin width */
@@ -115,6 +148,18 @@ int64_t *delta_fit(p_dress_graph_t g,
                    int keep_multisets,     /* if non-zero, allocate multisets */
                    double **multisets,     /* [out] internally-allocated C(N,k)*E, or NULL */
                    int64_t *num_subgraphs);/* [out] C(N,k), or NULL */
+```
+
+#### CUDA (C)
+
+Switch to GPU by changing the include — no source changes required:
+
+```c
+#include "dress/cuda/dress.h"   /* instead of dress/dress.h */
+
+/* Same calls as CPU — redirected to CUDA via macros */
+dress_fit(g, 100, 1e-6, &iters, &delta);
+delta_dress_fit(g, k, 100, 1e-3, &hist_size, 0, NULL, NULL);
 ```
 
 ### C (igraph wrapper)
@@ -133,24 +178,53 @@ typedef struct {
     const double *node_dress; /* [N] per-node DRESS norm             */
     int     iterations;  /* iterations performed                     */
     double  delta;       /* final max-delta at convergence           */
-} dress_igraph_result_t;
+} dress_result_igraph_t;
 
-/* Compute DRESS on an igraph graph.
+/* Fit DRESS on an igraph graph.
    weight_attr: edge attribute name (e.g. "weight"), or NULL.
    Returns 0 on success. */
-int dress_igraph_compute(const igraph_t *graph,
-                         const char *weight_attr,
-                         dress_variant_t variant,
-                         int max_iters, double epsilon,
-                         int precompute,
-                         dress_igraph_result_t *result);
+int dress_fit_igraph(const igraph_t *graph,
+                     const char *weight_attr,
+                     dress_variant_t variant,
+                     int max_iters, double epsilon,
+                     int precompute,
+                     dress_result_igraph_t *result);
 
 /* Free internal memory (struct itself is not freed). */
-void dress_igraph_free(dress_igraph_result_t *result);
+void dress_free_igraph(dress_result_igraph_t *result);
 
 /* Copy per-edge DRESS values into an igraph_vector_t. */
-int dress_igraph_to_vector(const dress_igraph_result_t *result,
+int dress_to_vector_igraph(const dress_result_igraph_t *result,
                            igraph_vector_t *out);
+```
+
+#### Δ^k-DRESS (igraph)
+
+```c
+#include "dress_igraph.h"
+
+typedef struct {
+    int64_t *histogram;  /* [hist_size] bin counts                   */
+    int      hist_size;  /* floor(dmax/epsilon) + 1 (dmax=2 unwtd)  */
+} delta_dress_result_igraph_t;
+
+/* Compute Δ^k-DRESS on an igraph graph.
+   Returns 0 on success. */
+int delta_dress_fit_igraph(const igraph_t *graph,
+                           const char *weight_attr,
+                           dress_variant_t variant,
+                           int k,
+                           int max_iters, double epsilon,
+                           int precompute,
+                           delta_dress_result_igraph_t *result);
+
+/* Free histogram memory. */
+void delta_dress_free_igraph(delta_dress_result_igraph_t *result);
+
+/* Copy histogram into an igraph_vector_t. */
+int delta_dress_to_vector_igraph(
+        const delta_dress_result_igraph_t *result,
+        igraph_vector_t *out);
 ```
 
 Build with:
@@ -165,6 +239,20 @@ Or via CMake:
 ```bash
 cmake -B build -DDRESS_BUILD_IGRAPH=ON
 cmake --build build
+```
+
+#### CUDA (igraph wrapper)
+
+Switch to GPU by changing the include — no source changes required:
+
+```c
+#include "cuda/dress_igraph.h"   /* instead of dress_igraph.h */
+
+/* Same calls as CPU — redirected to CUDA via macros */
+dress_fit_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+                 100, 1e-6, 1, &result);
+delta_dress_fit_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+                       1, 100, 1e-3, 0, &delta_result);
 ```
 
 ### C++
@@ -199,6 +287,10 @@ g.edgeWeights()        // const double*
 g.nodeDressValues()    // const double*
 g.edgeSources()        // const int*
 g.edgeTargets()        // const int*
+
+/* Query a single edge after fitting */
+double val = g.get(u, v);                          // defaults
+double val = g.get(u, v, maxIters, eps, weight);   // explicit
 ```
 
 #### Δ^k-DRESS (C++)
@@ -216,6 +308,17 @@ struct DeltaFitResult {
     std::vector<double>  multisets;   // C(N,k)*E row-major, NaN = removed
     int64_t              num_subgraphs; // C(N,k)
 };
+```
+
+#### CUDA (C++)
+
+```cpp
+#include "dress/cuda/dress.hpp"  // or dress/cuda/dress_cuda.hpp
+
+// Same DRESS class, namespace-switched
+dress::cuda::DRESS g(N, sources, targets,
+                     DRESS_VARIANT_UNDIRECTED, false);
+auto [iters, delta] = g.fit(100, 1e-6);
 ```
 
 ### Python
@@ -269,6 +372,29 @@ result.hist_size    # int, floor(dmax/epsilon) + 1 (dmax=2 unweighted)
 
 The same function is available in pure Python via `from dress.core import delta_dress_fit`.
 
+#### CUDA (Python)
+
+```python
+# Switch to GPU — same API, different import
+from dress.cuda import dress_fit, delta_dress_fit
+
+result = dress_fit(n_vertices, sources, targets)
+delta  = delta_dress_fit(n_vertices, sources, targets, k=1)
+```
+
+#### NetworkX + CUDA (Python)
+
+```python
+from dress.cuda.networkx import dress_graph, NxDRESS
+
+result = dress_graph(G)  # GPU-accelerated
+
+# Persistent object (CPU get, GPU fit)
+with NxDRESS(G) as g:
+    g.fit()
+    d = g.get('Alice', 'Bob')
+```
+
 For advanced use (e.g. re-fitting with different parameters), the
 low-level `DRESS` class is also available:
 
@@ -286,6 +412,11 @@ g.edge_weight(e)      # float
 g.node_dress(u)       # float
 g.n_vertices          # int
 g.n_edges             # int
+
+# Query a single edge after fitting (local invertibility)
+d = g.get(u, v)                                       # defaults
+d = g.get(u, v, max_iterations=100, epsilon=1e-6,
+          edge_weight=1.0)                             # explicit
 ```
 
 ### Python (pure, no C dependencies)
@@ -346,6 +477,11 @@ r.edge_weight   // Vec<f64>
 r.node_dress    // Vec<f64>
 r.iterations    // i32
 r.delta         // f64
+
+// Persistent graph with get()
+let mut g = DRESS::builder(n, sources, targets).build()?;
+g.fit(100, 1e-6);
+let d: f64 = g.get(u, v, 100, 1e-6, 1.0);
 ```
 
 #### Δ^k-DRESS (Rust)
@@ -366,6 +502,22 @@ let result: Result<DeltaDressResult, DressError> =
 let r = result.unwrap();
 r.histogram     // Vec<i64>
 r.hist_size     // i32
+```
+
+#### CUDA (Rust)
+
+```rust
+// Switch to GPU — same API, different import
+use dress_graph::cuda::DRESS;
+
+let result = DRESS::builder(n, sources, targets)
+    .variant(Variant::Undirected)
+    .build_and_fit()?;
+
+// Persistent graph (GPU fit, CPU get)
+let mut g = DRESS::builder(n, sources, targets).build()?;
+g.fit(100, 1e-6);
+let d = g.get(0, 2, 100, 1e-6, 1.0);
 ```
 
 ### Go
@@ -391,6 +543,13 @@ result.EdgeWeight  // []float64
 result.NodeDress   // []float64
 result.Iterations  // int
 result.Delta       // float64
+
+// Persistent graph with Get()
+g, err := dress.NewDRESS(n, sources, targets, nil,
+    dress.Undirected, false)
+defer g.Close()
+g.Fit(100, 1e-6)
+d, err := g.Get(u, v, 100, 1e-6, 1.0)   // float64
 ```
 
 #### Δ^k-DRESS (Go)
@@ -409,6 +568,23 @@ result, err := dress.DeltaFit(
 
 result.Histogram   // []int64
 result.HistSize    // int
+```
+
+#### CUDA (Go)
+
+```go
+// Switch to GPU — same API, different import path
+import dress "github.com/velicast/dress-graph/go/cuda"
+
+result, err := dress.DressFit(n, sources, targets, weights,
+    dress.Undirected, 100, 1e-6, false)
+
+// Persistent graph (GPU fit, CPU get)
+g, err := dress.NewDRESS(n, sources, targets, nil,
+    dress.Undirected, false)
+g.Fit(100, 1e-6)
+d, err := g.Get(0, 2, 100, 1e-6, 1.0)
+g.Close()
 ```
 
 ### JavaScript (WASM)
@@ -434,6 +610,12 @@ result.edgeWeight  // Float64Array
 result.nodeDress   // Float64Array
 result.iterations  // number
 result.delta       // number
+
+// Persistent graph with get()
+const g = new DressGraph(n, sources, targets);
+g.fit(100, 1e-6);
+const d = g.get(u, v, 100, 1e-6, 1.0);   // number
+g.close();
 ```
 
 #### Δ^k-DRESS (WASM)
@@ -475,6 +657,12 @@ result.edge_weight  # Vector{Float64}
 result.node_dress   # Vector{Float64}
 result.iterations   # Int
 result.delta        # Float64
+
+# Persistent graph with get()
+g = DressGraph(N, sources, targets)
+fit!(g, max_iterations=100, epsilon=1e-6)
+d = get(g, u, v)                              # Float64
+close(g)
 ```
 
 #### Δ^k-DRESS (Julia)
@@ -489,6 +677,16 @@ result = delta_dress_fit(N, sources, targets;
 
 result.histogram    # Vector{Int64}
 result.hist_size    # Int
+```
+
+#### CUDA (Julia)
+
+```julia
+# Switch to GPU — same API, different module
+using DRESS.CUDA
+
+result = dress_fit(N, sources, targets)
+delta  = delta_dress_fit(N, sources, targets; k=1)
 ```
 
 ### R
@@ -515,6 +713,12 @@ result$edge_weight  # numeric [E]
 result$node_dress   # numeric [N]
 result$iterations   # integer
 result$delta        # numeric
+
+# Persistent graph with get()
+g <- DRESS(n_vertices, sources, targets)
+g$fit(max_iterations = 100L, epsilon = 1e-6)
+d <- g$get(u, v)                        # numeric scalar
+g$close()
 ```
 
 #### Δ^k-DRESS (R)
@@ -535,6 +739,14 @@ result$histogram    # numeric [hist_size]
 result$hist_size    # integer
 ```
 
+#### CUDA (R)
+
+```r
+# Switch to GPU — same API, through the cuda environment
+result <- cuda$dress_fit(n_vertices, sources, targets)
+delta  <- cuda$delta_dress_fit(n_vertices, sources, targets, k = 1L)
+```
+
 ### MATLAB / Octave
 
 ```matlab
@@ -553,6 +765,12 @@ result.edge_weight  % double [E x 1]
 result.node_dress   % double [N x 1]
 result.iterations   % int32
 result.delta        % double
+
+% Persistent graph with get()
+g = DRESS(n_vertices, sources, targets);
+g.fit('MaxIterations', 100, 'Epsilon', 1e-6);
+d = g.get(u, v);                       % double
+g.close();
 ```
 
 #### Δ^k-DRESS (MATLAB / Octave)
@@ -567,4 +785,11 @@ result = delta_dress_fit(n_vertices, sources, targets, ...
 
 result.histogram    % double [hist_size x 1]
 result.hist_size    % int32
+```
+#### CUDA (MATLAB / Octave)
+
+```matlab
+% Switch to GPU — same API, different namespace
+result = cuda.dress_fit(n_vertices, sources, targets);
+delta  = cuda.delta_dress_fit(n_vertices, sources, targets, 'K', 1);
 ```

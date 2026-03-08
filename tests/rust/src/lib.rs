@@ -277,4 +277,46 @@ mod tests {
             assert!((vals[0] - 2.0).abs() < EPS, "row {}: val={}, expected ~2.0", s, vals[0]);
         }
     }
+
+    // ── Persistent DRESS tests ─────────────────────────────────
+
+    #[test]
+    fn test_dress_graph_triangle() {
+
+        let mut g = DRESS::builder(3, vec![0, 1, 0], vec![1, 2, 2])
+            .variant(Variant::Undirected)
+            .build()
+            .unwrap();
+
+        let (iters, delta) = g.fit(100, 1e-8);
+        assert!(iters >= 1, "expected at least 1 iteration");
+        assert!(delta < 1e-6, "expected convergence");
+
+        // Result snapshot
+        let r = g.result();
+        let d0 = r.edge_dress[0];
+        for &d in &r.edge_dress {
+            assert!((d - d0).abs() < 1e-6, "triangle edges should be equal");
+        }
+
+        // Get existing edge
+        let d01 = g.get(0, 1, 100, 1e-8, 1.0);
+        assert!((d01 - d0).abs() < 1e-4, "get(0,1) should match result");
+
+        // Get virtual edge (no crash)
+        let _ = g.get(0, 0, 100, 1e-6, 1.0);
+
+        // Explicit close
+        g.close();
+    }
+
+    #[test]
+    fn test_dress_graph_drop() {
+        // Ensure Drop impl doesn't double-free
+        let mut g = DRESS::builder(3, vec![0, 1, 0], vec![1, 2, 2])
+            .build()
+            .unwrap();
+        g.fit(10, 1e-6);
+        // g is dropped here — should not panic
+    }
 }

@@ -59,12 +59,13 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Completely deterministic |
 | Practical convergence in few iterations (contraction)|
 | Continuous canonical fingerprints (sorted values / ε-binned histogram) |
-| Theoretical per-iteration $\mathcal{O}(\|E\|)$, memory $\mathcal{O}(\|V\| + \|E\|)$ |
+| Theoretical per-iteration $\mathcal{O}(\|V\| + \|E\|)$, memory $\mathcal{O}(\|V\| + \|E\|)$ |
 | Massively parallelizable ($\Delta^k$ subproblems and per-edge updates) |
 | Native weighted-graph support via symmetric weight function |
 | Supports directed graphs (four variants: undirected, directed, forward, backward) |
 | Provably numerically stable (no overflows, no error amplification, no undefined behaviors) |
 | Provably at least as powerful as 2-WL (>= 2-WL) |
+| [Locally invertible](https://velicast.github.io/dress-graph/theory/properties/#local-invertibility-incremental-edge-query) — any single edge value recoverable from its neighborhood in O(deg) after one global fit |
 
 ## Benchmarks
 

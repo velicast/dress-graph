@@ -66,7 +66,7 @@ export const Variant = Object.freeze({
  * @property {number} [variant=0]                   - Variant (see Variant enum)
  * @property {number} [maxIterations=100]           - Max fitting iterations
  * @property {number} [epsilon=1e-6]                - Convergence threshold
- * @property {boolean} [precomputeIntercepts=true]  - Pre-compute intercepts
+ * @property {boolean} [precomputeIntercepts=false]  - Pre-compute intercepts
  */
 
 /**
@@ -102,7 +102,7 @@ export async function dressFit(opts) {
     const variant     = opts.variant ?? Variant.UNDIRECTED;
     const maxIter     = opts.maxIterations ?? 100;
     const epsilon     = opts.epsilon ?? 1e-6;
-    const precompute  = (opts.precomputeIntercepts ?? true) ? 1 : 0;
+    const precompute  = (opts.precomputeIntercepts ?? false) ? 1 : 0;
 
     // Allocate C arrays (ownership transfers to dress.c — freed by free_dress_graph)
     const uPtr = M._malloc(E * 4);
@@ -138,8 +138,8 @@ export async function dressFit(opts) {
     const iterPtr  = M._malloc(4);  // int*
     const deltaPtr = M._malloc(8);  // double*
 
-    // Call fit
-    M._fit(g, maxIter, epsilon, iterPtr, deltaPtr);
+    // Call dress_fit
+    M._dress_fit(g, maxIter, epsilon, iterPtr, deltaPtr);
 
     const iterations = M.getValue(iterPtr, 'i32');
     const delta      = M.getValue(deltaPtr, 'double');
@@ -199,6 +199,162 @@ export async function dressFit(opts) {
         iterations: iterations,
         delta:      delta,
     };
+}
+
+// ── Persistent DressGraph class ─────────────────────────────────────
+
+/**
+ * A persistent DRESS graph that supports repeated fit and get calls.
+ *
+ * Usage:
+ *   const g = await DressGraph.create({
+ *     numVertices: 4,
+ *     sources: [0,1,2,0],
+ *     targets: [1,2,3,3],
+ *   });
+ *   g.fit();                          // fit with defaults
+ *   const d = g.get(0, 2);           // virtual edge query
+ *   const res = g.result();          // snapshot of current results
+ *   g.free();                        // explicitly free C graph
+ */
+export class DressGraph {
+    /** @private */
+    constructor(module, gPtr, n, e, sources, targets) {
+        this._M = module;
+        this._g = gPtr;
+        this._n = n;
+        this._e = e;
+        this._sources = new Int32Array(sources);
+        this._targets = new Int32Array(targets);
+        this._iterPtr  = module._malloc(4);
+        this._deltaPtr = module._malloc(8);
+    }
+
+    /**
+     * Create a persistent DressGraph.
+     *
+     * @param {Object} opts
+     * @param {number}              opts.numVertices
+     * @param {Int32Array|number[]} opts.sources
+     * @param {Int32Array|number[]} opts.targets
+     * @param {Float64Array|number[]|null} [opts.weights]
+     * @param {number} [opts.variant=0]
+     * @param {boolean} [opts.precomputeIntercepts=false]
+     * @returns {Promise<DressGraph>}
+     */
+    static async create(opts) {
+        const M = await getModule();
+
+        const N = opts.numVertices;
+        const E = opts.sources.length;
+
+        if (opts.targets.length !== E)
+            throw new Error('sources and targets must have equal length');
+
+        const variant    = opts.variant ?? Variant.UNDIRECTED;
+        const precompute = (opts.precomputeIntercepts ?? false) ? 1 : 0;
+
+        const uPtr = M._malloc(E * 4);
+        const vPtr = M._malloc(E * 4);
+        for (let i = 0; i < E; i++) {
+            M.HEAP32[(uPtr >> 2) + i] = opts.sources[i];
+            M.HEAP32[(vPtr >> 2) + i] = opts.targets[i];
+        }
+
+        let wPtr = 0;
+        if (opts.weights && opts.weights.length === E) {
+            wPtr = M._malloc(E * 8);
+            for (let i = 0; i < E; i++) {
+                M.HEAPF64[(wPtr >> 3) + i] = opts.weights[i];
+            }
+        }
+
+        const g = M._init_dress_graph(N, E, uPtr, vPtr, wPtr, variant, precompute);
+        if (g === 0) throw new Error('init_dress_graph returned NULL');
+
+        return new DressGraph(M, g, N, E, opts.sources, opts.targets);
+    }
+
+    /**
+     * Fit the DRESS model.
+     * @param {number} [maxIterations=100]
+     * @param {number} [epsilon=1e-6]
+     * @returns {{iterations: number, delta: number}}
+     */
+    fit(maxIterations = 100, epsilon = 1e-6) {
+        if (!this._g) throw new Error('DressGraph already freed');
+        const M = this._M;
+        M._dress_fit(this._g, maxIterations, epsilon, this._iterPtr, this._deltaPtr);
+        return {
+            iterations: M.getValue(this._iterPtr, 'i32'),
+            delta:      M.getValue(this._deltaPtr, 'double'),
+        };
+    }
+
+    /**
+     * Query the DRESS value for an edge (existing or virtual).
+     * @param {number} u - source vertex (0-based)
+     * @param {number} v - target vertex (0-based)
+     * @param {number} [maxIterations=100]
+     * @param {number} [epsilon=1e-6]
+     * @param {number} [edgeWeight=1.0]
+     * @returns {number}
+     */
+    get(u, v, maxIterations = 100, epsilon = 1e-6, edgeWeight = 1.0) {
+        if (!this._g) throw new Error('DressGraph already freed');
+        return this._M._dress_get(this._g, u, v, maxIterations, epsilon, edgeWeight);
+    }
+
+    /**
+     * Extract a snapshot of the current results.
+     * @returns {DressResult}
+     */
+    result() {
+        if (!this._g) throw new Error('DressGraph already freed');
+        const M = this._M;
+        const E = this._e;
+        const N = this._n;
+
+        // WASM32 offsets
+        const ewPtr = M.getValue(this._g + 36, 'i32');
+        const edPtr = M.getValue(this._g + 40, 'i32');
+        const ndPtr = M.getValue(this._g + 48, 'i32');
+
+        const edgeWeight = new Float64Array(E);
+        const edgeDress  = new Float64Array(E);
+        const nodeDress  = new Float64Array(N);
+
+        for (let i = 0; i < E; i++) {
+            edgeWeight[i] = M.HEAPF64[(ewPtr >> 3) + i];
+            edgeDress[i]  = M.HEAPF64[(edPtr >> 3) + i];
+        }
+        for (let i = 0; i < N; i++) {
+            nodeDress[i] = M.HEAPF64[(ndPtr >> 3) + i];
+        }
+
+        return {
+            sources:    new Int32Array(this._sources),
+            targets:    new Int32Array(this._targets),
+            edgeWeight,
+            edgeDress,
+            nodeDress,
+            iterations: 0,
+            delta:      0,
+        };
+    }
+
+    /**
+     * Free the underlying C graph.
+     */
+    free() {
+        if (this._g) {
+            const M = this._M;
+            M._free_dress_graph(this._g);
+            M._free(this._iterPtr);
+            M._free(this._deltaPtr);
+            this._g = 0;
+        }
+    }
 }
 
 // ── Delta-k-DRESS API ───────────────────────────────────────────────
@@ -288,8 +444,8 @@ export async function deltaDressFit(opts) {
         M.setValue(numSubPtr + 4, 0, 'i32');
     }
 
-    // Call delta_fit  (returns int64_t* — pointer to histogram on heap)
-    const histPtr = M._delta_fit(g, k, maxIter, epsilon, histSizePtr,
+    // Call delta_dress_fit  (returns int64_t* — pointer to histogram on heap)
+    const histPtr = M._delta_dress_fit(g, k, maxIter, epsilon, histSizePtr,
                                  keepMS, msPtrPtr, numSubPtr);
 
     const histSize = M.getValue(histSizePtr, 'i32');
@@ -337,3 +493,4 @@ export async function deltaDressFit(opts) {
         numSubgraphs:  numSubgraphs,
     };
 }
+

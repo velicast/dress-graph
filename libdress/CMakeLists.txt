@@ -29,6 +29,15 @@ if(OpenMP_C_FOUND)
     target_link_libraries(dress_shared PUBLIC OpenMP::OpenMP_C)
 endif()
 
+# CUDA (optional)
+find_package(CUDAToolkit QUIET)
+if(CUDAToolkit_FOUND)
+    target_compile_definitions(dress_static PRIVATE DRESS_CUDA)
+    target_compile_definitions(dress_shared PRIVATE DRESS_CUDA)
+    target_link_libraries(dress_static PRIVATE CUDA::cudart)
+    target_link_libraries(dress_shared PRIVATE CUDA::cudart)
+endif()
+
 target_compile_options(dress_static PRIVATE -O3)
 target_compile_options(dress_shared PRIVATE -O3)
 

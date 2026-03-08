@@ -63,6 +63,7 @@ vendor_sources() {
     mkdir -p rust/vendor/include/dress
     cp libdress/src/dress.c            rust/vendor/dress.c
     cp libdress/src/delta_dress.c      rust/vendor/delta_dress.c
+    cp libdress/src/delta_dress_impl.h rust/vendor/delta_dress_impl.h
     cp libdress/include/dress/dress.h       rust/vendor/include/dress/dress.h
     cp libdress/include/dress/delta_dress.h rust/vendor/include/dress/delta_dress.h
 
@@ -70,6 +71,7 @@ vendor_sources() {
     mkdir -p r/src/dress
     cp libdress/src/dress.c            r/src/dress.c
     cp libdress/src/delta_dress.c      r/src/delta_dress.c
+    cp libdress/src/delta_dress_impl.h r/src/delta_dress_impl.h
     cp libdress/include/dress/dress.h       r/src/dress/dress.h
     cp libdress/include/dress/delta_dress.h r/src/dress/delta_dress.h
 }
@@ -77,7 +79,7 @@ vendor_sources() {
 # Remove vendored copies.
 unvendor_sources() {
     rm -rf rust/vendor
-    rm -f  r/src/dress.c r/src/delta_dress.c
+    rm -f  r/src/dress.c r/src/delta_dress.c r/src/delta_dress_impl.h
     rm -rf r/src/dress
 }
 
@@ -303,10 +305,16 @@ build_octave() {
     cp "$ROOT/matlab/dress_fit.m"        "$PKG/inst/"
     cp "$ROOT/matlab/delta_dress_fit.m"  "$PKG/inst/"
     cp "$ROOT/matlab/dress_to_table.m"   "$PKG/inst/"
+    cp "$ROOT/matlab/DRESS.m"       "$PKG/inst/"
 
     # Vendor C sources into src/
     cp "$ROOT/matlab/dress_mex.c"        "$PKG/src/"
     cp "$ROOT/matlab/delta_dress_mex.c"  "$PKG/src/"
+    cp "$ROOT/matlab/dress_init_mex.c"   "$PKG/src/"
+    cp "$ROOT/matlab/dress_fit_obj_mex.c" "$PKG/src/"
+    cp "$ROOT/matlab/dress_get_mex.c"    "$PKG/src/"
+    cp "$ROOT/matlab/dress_result_mex.c" "$PKG/src/"
+    cp "$ROOT/matlab/dress_free_mex.c"   "$PKG/src/"
     cp "$ROOT/libdress/src/dress.c"          "$PKG/src/"
     cp "$ROOT/libdress/src/delta_dress.c"    "$PKG/src/"
 

@@ -111,7 +111,7 @@ public:
         ensureValid();
         int    iters = 0;
         double d     = 0.0;
-        ::fit(g_, maxIterations, epsilon, &iters, &d);
+        ::dress_fit(g_, maxIterations, epsilon, &iters, &d);
         return {iters, d};
     }
 
@@ -142,7 +142,7 @@ public:
 
         double *ms_ptr = nullptr;
         int64_t cnk = 0;
-        int64_t *h = ::delta_fit(g_, k, maxIterations, epsilon,
+        int64_t *h = ::delta_dress_fit(g_, k, maxIterations, epsilon,
                                  &hsize,
                                  keepMultisets ? 1 : 0,
                                  keepMultisets ? &ms_ptr : nullptr,
@@ -186,6 +186,26 @@ public:
     const double* edgeWeights()     const { ensureValid(); return g_->edge_weight; }
     const double* edgeDressValues() const { ensureValid(); return g_->edge_dress; }
     const double* nodeDressValues() const { ensureValid(); return g_->node_dress; }
+
+    // ------- virtual-edge query -------
+
+    // Query the DRESS value for any vertex pair (u, v).
+    //
+    // If edge (u,v) exists, returns its converged edge_dress value.
+    // If the edge does not exist (virtual edge), estimates the value
+    // using a local fixed-point iteration against the frozen steady state.
+    // Useful for link prediction.
+    //
+    // The graph must have been fitted (fit()) before calling this.
+    // edgeWeight is the hypothetical weight of the virtual edge (ignored
+    // when the edge already exists).  Pass 1.0 for unweighted graphs.
+    double get(int u, int v,
+               int maxIterations = 100,
+               double epsilon = 1e-6,
+               double edgeWeight = 1.0) const {
+        ensureValid();
+        return ::dress_get(g_, u, v, maxIterations, epsilon, edgeWeight);
+    }
 
     // CSR adjacency access.
     const int*    adjOffset()       const { ensureValid(); return g_->adj_offset; }

@@ -196,3 +196,98 @@ delta_dress_fit <- function(n_vertices,
 dress_version <- function() {
   .Call(C_dress_version)
 }
+
+# ---- Persistent DRESS object -----------------------------------------
+
+#' Create a persistent DRESS graph object
+#'
+#' Initialises the underlying C graph and returns an environment-based
+#' object with \code{$fit()}, \code{$get()}, \code{$result()} and
+#' \code{$close()} methods.  The C graph is freed automatically when
+#' garbage-collected, or explicitly via \code{$close()}.
+#'
+#' @param n_vertices Integer. Number of vertices (0-based).
+#' @param sources Integer vector [E] — edge source endpoints (0-based).
+#' @param targets Integer vector [E] — edge target endpoints (0-based).
+#' @param weights Optional numeric vector [E] (NULL = unweighted).
+#' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
+#' @param precompute_intercepts Logical (default FALSE).
+#'
+#' @return An environment (class \code{"DRESS"}) with methods:
+#' \describe{
+#'   \item{\code{$fit(max_iterations, epsilon)}}{Fit the DRESS model.
+#'     Returns list(iterations, delta).}
+#'   \item{\code{$get(u, v, max_iterations, epsilon, edge_weight)}}{
+#'     Query the DRESS value for an existing or virtual edge.}
+#'   \item{\code{$result()}}{Extract current results (sources, targets,
+#'     edge_dress, edge_weight, node_dress).}
+#'   \item{\code{$close()}}{Explicitly free the C graph.}
+#' }
+#'
+#' @examples
+#' g <- DRESS(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
+#' g$fit(100L, 1e-6)
+#' g$get(0L, 3L, 100L, 1e-6, 1.0)
+#' g$close()
+#'
+#' @useDynLib dress.graph, .registration = TRUE
+#' @export
+DRESS <- function(n_vertices,
+                       sources,
+                       targets,
+                       weights               = NULL,
+                       variant               = DRESS_UNDIRECTED,
+                       precompute_intercepts = FALSE) {
+
+  n_vertices <- as.integer(n_vertices)
+  sources    <- as.integer(sources)
+  targets    <- as.integer(targets)
+  variant    <- as.integer(variant)
+  precompute <- as.integer(precompute_intercepts)
+
+  stopifnot(length(sources) == length(targets))
+  stopifnot(n_vertices >= 1L)
+  stopifnot(variant >= 0L && variant <= 3L)
+
+  if (!is.null(weights)) {
+    weights <- as.double(weights)
+    stopifnot(length(weights) == length(sources))
+  }
+
+  ptr <- .Call(C_dress_init,
+               n_vertices, sources, targets, weights,
+               variant, precompute)
+
+  self <- new.env(parent = emptyenv())
+  self$.ptr <- ptr
+
+  self$fit <- function(max_iterations = 100L, epsilon = 1e-6) {
+    .Call(C_dress_fit_obj,
+          self$.ptr,
+          as.integer(max_iterations),
+          as.double(epsilon))
+  }
+
+  self$get <- function(u, v, max_iterations = 100L, epsilon = 1e-6,
+                       edge_weight = 1.0) {
+    .Call(C_dress_get_obj,
+          self$.ptr,
+          as.integer(u),
+          as.integer(v),
+          as.integer(max_iterations),
+          as.double(epsilon),
+          as.double(edge_weight))
+  }
+
+  self$result <- function() {
+    .Call(C_dress_result, self$.ptr)
+  }
+
+  self$close <- function() {
+    .Call(C_dress_close, self$.ptr)
+    invisible(NULL)
+  }
+
+  class(self) <- "DRESS"
+  self
+}

@@ -178,6 +178,36 @@ catch e
     fprintf('FAIL: determinism: %s\n', e.message);
 end
 
+%% === Persistent DRESS ===
+
+try
+    g = DRESS(3, int32([0;1;0]), int32([1;2;2]));
+    fr = g.fit();
+    assert_true(fr.iterations > 0, 'DRESS: iterations > 0');
+    assert_true(fr.delta >= 0, 'DRESS: delta >= 0');
+
+    % Get existing edge
+    d01 = g.get(0, 1);
+    assert_true(d01 > 0, 'DRESS: get(0,1) > 0');
+
+    % Get virtual edge (no crash)
+    d00 = g.get(0, 0);
+    assert_true(isfinite(d00), 'DRESS: get(0,0) is finite');
+
+    % Result snapshot
+    res = g.result();
+    assert_eq(length(res.edge_dress), 3, 'DRESS: 3 edge_dress');
+    assert_eq(length(res.node_dress), 3, 'DRESS: 3 node_dress');
+    assert_near(res.edge_dress, 2*ones(3,1), 1e-6, 'DRESS: triangle edges = 2');
+
+    g.close();
+    passed = passed + 1;
+    fprintf('PASS: persistent DRESS\n');
+catch e
+    failed = failed + 1;
+    fprintf('FAIL: persistent DRESS: %s\n', e.message);
+end
+
 %% --- summary ---
 
 fprintf('\n%d passed, %d failed, %d total\n', passed, failed, passed + failed);

@@ -13,6 +13,7 @@ fn main() {
     println!("cargo:rustc-link-lib=dylib=m");
     println!("cargo:rerun-if-changed=vendor/dress.c");
     println!("cargo:rerun-if-changed=vendor/delta_dress.c");
+    println!("cargo:rerun-if-changed=vendor/delta_dress_impl.h");
     println!("cargo:rerun-if-changed=vendor/include/dress/dress.h");
     println!("cargo:rerun-if-changed=vendor/include/dress/delta_dress.h");
 }

@@ -31,3 +31,16 @@ mex('-O', ...
     '-lm');
 
 fprintf('Done. delta_dress_mex.%s is ready.\n', mexext);
+
+% Persistent DRESS MEX files
+dress_src = fullfile('..', 'libdress', 'src', 'dress.c');
+inc_flag  = ['-I' fullfile('..', 'libdress', 'include')];
+omp_c     = 'CFLAGS=$CFLAGS -fopenmp';
+omp_ld    = 'LDFLAGS=$LDFLAGS -fopenmp';
+
+for name = {'dress_init_mex', 'dress_fit_obj_mex', 'dress_get_mex', ...
+            'dress_result_mex', 'dress_free_mex'}
+    fprintf('Compiling %s ...\n', name{1});
+    mex('-O', inc_flag, omp_c, omp_ld, [name{1} '.c'], dress_src, '-lm');
+    fprintf('Done. %s.%s is ready.\n', name{1}, mexext);
+end

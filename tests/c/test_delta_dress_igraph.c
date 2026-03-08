@@ -17,7 +17,7 @@
 
 #include "dress_igraph.h"
 #include "dress/dress.h"
-#include "dress/delta_dress.h"
+
 
 #include <igraph/igraph.h>
 #include <math.h>
@@ -72,8 +72,8 @@ static void test_delta0_triangle(void)
     int edges[] = {0,1, 1,2, 0,2};
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t result;
-    int rc = dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_result_igraph_t result;
+    int rc = delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                         0, 100, 1e-6, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "delta compute returned 0");
@@ -90,7 +90,7 @@ static void test_delta0_triangle(void)
     ASSERT_GT(result.histogram[result.hist_size - 1], 0,
               "top bin non-zero for triangle");
 
-    dress_igraph_delta_free(&result);
+    delta_dress_free_igraph(&result);
     igraph_destroy(&g);
 }
 
@@ -103,8 +103,8 @@ static void test_delta1_triangle(void)
     int edges[] = {0,1, 1,2, 0,2};
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t result;
-    int rc = dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_result_igraph_t result;
+    int rc = delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                         1, 100, 1e-6, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "delta compute returned 0");
@@ -122,7 +122,7 @@ static void test_delta1_triangle(void)
                + result.histogram[result.hist_size - 2];
     ASSERT_EQ_INT((int)top, 3, "all in top bins");
 
-    dress_igraph_delta_free(&result);
+    delta_dress_free_igraph(&result);
     igraph_destroy(&g);
 }
 
@@ -135,8 +135,8 @@ static void test_delta0_k4(void)
     int edges[] = {0,1, 0,2, 0,3, 1,2, 1,3, 2,3};
     igraph_t g = make_graph(edges, 6, 4, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t result;
-    int rc = dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_result_igraph_t result;
+    int rc = delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                         0, 100, 1e-6, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "compute returned 0");
@@ -151,7 +151,7 @@ static void test_delta0_k4(void)
                + result.histogram[result.hist_size - 2];
     ASSERT_EQ_INT((int)top, 6, "all in top bins");
 
-    dress_igraph_delta_free(&result);
+    delta_dress_free_igraph(&result);
     igraph_destroy(&g);
 }
 
@@ -164,8 +164,8 @@ static void test_delta1_k4(void)
     int edges[] = {0,1, 0,2, 0,3, 1,2, 1,3, 2,3};
     igraph_t g = make_graph(edges, 6, 4, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t result;
-    int rc = dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_result_igraph_t result;
+    int rc = delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                         1, 100, 1e-6, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "compute returned 0");
@@ -180,7 +180,7 @@ static void test_delta1_k4(void)
                + result.histogram[result.hist_size - 2];
     ASSERT_EQ_INT((int)top, 12, "all in top bins");
 
-    dress_igraph_delta_free(&result);
+    delta_dress_free_igraph(&result);
     igraph_destroy(&g);
 }
 
@@ -193,8 +193,8 @@ static void test_delta_empty_graph(void)
     igraph_t g;
     igraph_empty(&g, 5, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t result;
-    int rc = dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_result_igraph_t result;
+    int rc = delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                         0, 100, 1e-6, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "empty graph returns 0");
@@ -205,7 +205,7 @@ static void test_delta_empty_graph(void)
         total += result.histogram[i];
     ASSERT_EQ_INT((int)total, 0, "empty graph: 0 edge values");
 
-    dress_igraph_delta_free(&result);
+    delta_dress_free_igraph(&result);
     igraph_destroy(&g);
 }
 
@@ -215,17 +215,17 @@ static void test_delta_null_params(void)
 {
     printf("test_delta_null_params\n");
 
-    dress_igraph_delta_result_t result;
+    delta_dress_result_igraph_t result;
     int rc;
 
-    rc = dress_igraph_delta_compute(NULL, NULL, DRESS_VARIANT_UNDIRECTED,
+    rc = delta_dress_fit_igraph(NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                                     0, 100, 1e-6, 0, &result);
     ASSERT(rc != 0, "NULL graph returns error");
 
     igraph_t g;
     igraph_empty(&g, 3, IGRAPH_UNDIRECTED);
 
-    rc = dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    rc = delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                     0, 100, 1e-6, 0, NULL);
     ASSERT(rc != 0, "NULL result returns error");
 
@@ -241,13 +241,13 @@ static void test_delta_to_vector(void)
     int edges[] = {0,1, 1,2, 0,2};
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t result;
-    dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_result_igraph_t result;
+    delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                0, 100, 1e-6, 0, &result);
 
     igraph_vector_t vec;
     igraph_vector_init(&vec, 0);
-    int rc = dress_igraph_delta_to_vector(&result, &vec);
+    int rc = delta_dress_to_vector_igraph(&result, &vec);
 
     ASSERT_EQ_INT(rc, 0, "to_vector returned 0");
     ASSERT_EQ_INT((int)igraph_vector_size(&vec), result.hist_size,
@@ -262,7 +262,7 @@ static void test_delta_to_vector(void)
     ASSERT(vec_match, "vector matches histogram for all bins");
 
     igraph_vector_destroy(&vec);
-    dress_igraph_delta_free(&result);
+    delta_dress_free_igraph(&result);
     igraph_destroy(&g);
 }
 
@@ -283,8 +283,8 @@ static void test_cross_validate_with_c_api(void)
     int edges[] = {0,1, 1,2, 2,3, 0,2};
     igraph_t g = make_graph(edges, 4, 4, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t ig_result;
-    dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_result_igraph_t ig_result;
+    delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                1, 100, 1e-6, 0, &ig_result);
 
     /* Build via raw C API with the same edge list */
@@ -295,7 +295,7 @@ static void test_cross_validate_with_c_api(void)
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
     int hist_size = 0;
-    int64_t *histogram = delta_fit(dg, 1, 100, 1e-6, &hist_size, 0, NULL, NULL);
+    int64_t *histogram = delta_dress_fit(dg, 1, 100, 1e-6, &hist_size, 0, NULL, NULL);
     free_dress_graph(dg);
 
     /* Compare histogram sizes */
@@ -307,7 +307,7 @@ static void test_cross_validate_with_c_api(void)
            "igraph matches raw C delta histogram for all bins");
 
     free(histogram);
-    dress_igraph_delta_free(&ig_result);
+    delta_dress_free_igraph(&ig_result);
     igraph_destroy(&g);
 }
 
@@ -320,11 +320,11 @@ static void test_delta_precompute(void)
     int edges[] = {0,1, 1,2, 0,2};
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
 
-    dress_igraph_delta_result_t r_no, r_yes;
+    delta_dress_result_igraph_t r_no, r_yes;
 
-    dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                1, 100, 1e-6, 0, &r_no);
-    dress_igraph_delta_compute(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    delta_dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
                                1, 100, 1e-6, 1, &r_yes);
 
     ASSERT_EQ_INT(r_no.hist_size, r_yes.hist_size, "same hist_size");
@@ -332,8 +332,8 @@ static void test_delta_precompute(void)
                   (size_t)r_no.hist_size * sizeof(int64_t)) == 0,
            "precompute gives same histogram for all bins");
 
-    dress_igraph_delta_free(&r_no);
-    dress_igraph_delta_free(&r_yes);
+    delta_dress_free_igraph(&r_no);
+    delta_dress_free_igraph(&r_yes);
     igraph_destroy(&g);
 }
 

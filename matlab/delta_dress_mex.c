@@ -182,7 +182,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
                           "init_dress_graph returned NULL.");
 
     /* ---- compute delta-k-dress ---- */
-    hist = delta_fit(g, k, max_iterations, epsilon, &hist_size,
+    hist = delta_dress_fit(g, k, max_iterations, epsilon, &hist_size,
                     keep_ms,
                     keep_ms ? &ms_ptr : NULL,
                     keep_ms ? &num_sub : NULL);

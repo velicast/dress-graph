@@ -473,8 +473,8 @@ static double fit_impl(p_dress_graph_t g, int e)
 // On return:
 //   *iterations = number of iterations performed (or max_iterations)
 //   *delta      = final maximum per-edge change (only set on early stop)
-void fit(p_dress_graph_t g, int max_iterations, double epsilon,
-         int *iterations, double *delta)
+void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
+               int *iterations, double *delta)
 {
     int iter;
 
@@ -557,4 +557,90 @@ void free_dress_graph(p_dress_graph_t g)
     free(g->U);
     free(g->V);
     free(g);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Virtual-edge DRESS query                                           */
+/* ------------------------------------------------------------------ */
+
+// Query the DRESS value for any vertex pair (u, v).
+// See dress.h for full documentation.
+double dress_get(const p_dress_graph_t g, int u, int v,
+                 int max_iterations, double epsilon,
+                 double edge_weight)
+{
+    // Binary search for v in u's sorted adjacency list.
+    int left  = g->adj_offset[u];
+    int right = g->adj_offset[u + 1] - 1;
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        int nb  = g->adj_target[mid];
+        if (nb == v)
+            return g->edge_dress[g->adj_edge_idx[mid]];
+        if (nb < v)
+            left = mid + 1;
+        else
+            right = mid - 1;
+    }
+
+    // Virtual edge: merge-join neighbour lists to sum common-neighbour
+    // contributions from the frozen steady state.
+    double intercept = 0.0;
+    {
+        int iu = g->adj_offset[u], iu_end = g->adj_offset[u + 1];
+        int iv = g->adj_offset[v], iv_end = g->adj_offset[v + 1];
+        while (iu < iu_end && iv < iv_end) {
+            int x = g->adj_target[iu], y = g->adj_target[iv];
+            if (x == y) {
+                int eu = g->adj_edge_idx[iu];
+                int ev = g->adj_edge_idx[iv];
+                intercept += g->edge_weight[eu] * g->edge_dress[eu]
+                           + g->edge_weight[ev] * g->edge_dress[ev];
+                ++iu; ++iv;
+            } else if (x < y) {
+                ++iu;
+            } else {
+                ++iv;
+            }
+        }
+    }
+
+    // Self-loop constant: 8.0 for UNDIRECTED/DIRECTED, 4.0 for FORWARD/BACKWARD.
+    double self_loop = (g->variant == DRESS_VARIANT_FORWARD ||
+                        g->variant == DRESS_VARIANT_BACKWARD)
+                     ? 4.0 : 8.0;
+
+    double cross_factor = (g->variant == DRESS_VARIANT_FORWARD ||
+                           g->variant == DRESS_VARIANT_BACKWARD)
+                        ? 1.0 : 2.0;
+
+    // Combined edge weight c(u,v).
+    double cw = (g->variant == DRESS_VARIANT_UNDIRECTED)
+              ? 2.0 * edge_weight
+              : edge_weight;
+
+    double A   = intercept + self_loop;
+    double Du2 = g->node_dress[u] * g->node_dress[u];
+    double Dv2 = g->node_dress[v] * g->node_dress[v];
+
+    if (Du2 <= 0.0 || Dv2 <= 0.0)
+        return 0.0;
+
+    // Local fixed-point iteration: only the virtual edge's self-consistent
+    // contribution is iterated; all other values stay frozen.
+    double d_uv = 1.0;
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        double wd   = cw * d_uv;
+        double denom = sqrt(Du2 + wd) * sqrt(Dv2 + wd);
+        if (denom <= 0.0)
+            return 0.0;
+        double next = (A + cross_factor * wd) / denom;
+        if (fabs(next - d_uv) <= epsilon) {
+            d_uv = next;
+            break;
+        }
+        d_uv = next;
+    }
+
+    return d_uv;
 }

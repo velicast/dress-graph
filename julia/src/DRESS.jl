@@ -20,7 +20,8 @@ module DRESS
 
 using Libdl
 
-export dress_fit, delta_dress_fit, DeltaDRESSResult, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
+export dress_fit, delta_dress_fit, DRESSResult, DeltaDRESSResult, DressGraph, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
+export fit!, close!
 
 # ── variant constants ────────────────────────────────────────────────
 const UNDIRECTED = Cint(0)
@@ -61,6 +62,7 @@ const _LIB_HANDLE = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_INIT    = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_FIT     = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_FREE    = Ref{Ptr{Cvoid}}(C_NULL)
+const _FN_GET     = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_DELTA   = Ref{Ptr{Cvoid}}(C_NULL)
 
 function _ensure_lib()
@@ -68,9 +70,10 @@ function _ensure_lib()
     isfile(_SO_PATH) || dress_build()
     _LIB_HANDLE[] = dlopen(_SO_PATH)
     _FN_INIT[]    = dlsym(_LIB_HANDLE[], :init_dress_graph)
-    _FN_FIT[]     = dlsym(_LIB_HANDLE[], :fit)
+    _FN_FIT[]     = dlsym(_LIB_HANDLE[], :dress_fit)
     _FN_FREE[]    = dlsym(_LIB_HANDLE[], :free_dress_graph)
-    _FN_DELTA[]   = dlsym(_LIB_HANDLE[], :delta_fit)
+    _FN_GET[]     = dlsym(_LIB_HANDLE[], :dress_get)
+    _FN_DELTA[]   = dlsym(_LIB_HANDLE[], :delta_dress_fit)
 end
 
 # ── result type ──────────────────────────────────────────────────────
@@ -110,7 +113,7 @@ end
     dress_fit(N, sources, targets;
               weights=nothing, variant=UNDIRECTED,
               max_iterations=100, epsilon=1e-6,
-              precompute_intercepts=true) → DRESSResult
+              precompute_intercepts=false) → DRESSResult
 
 Run the DRESS iterative fitting algorithm.
 
@@ -133,7 +136,7 @@ function dress_fit(N::Integer,
                    variant::Integer   = UNDIRECTED,
                    max_iterations::Integer = 100,
                    epsilon::Real      = 1e-6,
-                   precompute_intercepts::Bool = true)
+                   precompute_intercepts::Bool = false)
 
     E = length(sources)
     length(targets) == E || throw(ArgumentError("sources and targets must have equal length"))
@@ -168,7 +171,7 @@ function dress_fit(N::Integer,
 
     g == C_NULL && error("init_dress_graph returned NULL")
 
-    # fit(g, max_iterations, epsilon, &iterations, &delta)
+    # dress_fit(g, max_iterations, epsilon, &iterations, &delta)
     iters_ref = Ref{Cint}(0)
     delta_ref = Ref{Cdouble}(0.0)
     ccall(_FN_FIT[], Cvoid,
@@ -210,6 +213,139 @@ function dress_fit(N::Integer,
 
     return DRESSResult(src_out, tgt_out, ew, ed, nd,
                        Int(iters_ref[]), Float64(delta_ref[]))
+end
+
+# ── persistent DressGraph object ─────────────────────────────────────
+
+"""
+    DressGraph
+
+A persistent DRESS graph that supports repeated `fit!` and `get` calls.
+
+```julia
+g = DressGraph(4, [0,1,2,0], [1,2,3,3])
+fit!(g)
+d = get(g, 0, 2)           # virtual edge query
+close!(g)                   # explicit cleanup (also runs at GC)
+```
+"""
+mutable struct DressGraph
+    ptr      :: Ptr{Cvoid}
+    n        :: Int
+    e        :: Int
+    sources  :: Vector{Int32}
+    targets  :: Vector{Int32}
+end
+
+"""
+    DressGraph(N, sources, targets; weights=nothing,
+               variant=UNDIRECTED, precompute_intercepts=false)
+
+Create a persistent DRESS graph object.
+"""
+function DressGraph(N::Integer,
+                    sources::AbstractVector{<:Integer},
+                    targets::AbstractVector{<:Integer};
+                    weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                    variant::Integer   = UNDIRECTED,
+                    precompute_intercepts::Bool = false)
+
+    E = length(sources)
+    length(targets) == E || throw(ArgumentError("sources/targets length mismatch"))
+    if weights !== nothing
+        length(weights) == E || throw(ArgumentError("weights length mismatch"))
+    end
+
+    _ensure_lib()
+
+    U_c = Libc.malloc(E * sizeof(Cint))
+    V_c = Libc.malloc(E * sizeof(Cint))
+    unsafe_wrap(Array, Ptr{Cint}(U_c), E) .= Cint.(sources)
+    unsafe_wrap(Array, Ptr{Cint}(V_c), E) .= Cint.(targets)
+
+    W_c = if weights !== nothing
+        w_ptr = Libc.malloc(E * sizeof(Cdouble))
+        unsafe_wrap(Array, Ptr{Cdouble}(w_ptr), E) .= Cdouble.(weights)
+        Ptr{Cdouble}(w_ptr)
+    else
+        Ptr{Cdouble}(C_NULL)
+    end
+
+    g = ccall(_FN_INIT[], Ptr{Cvoid},
+              (Cint, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cint),
+              Cint(N), Cint(E),
+              Ptr{Cint}(U_c), Ptr{Cint}(V_c), W_c,
+              Cint(variant), Cint(precompute_intercepts))
+
+    g == C_NULL && error("init_dress_graph returned NULL")
+
+    obj = DressGraph(g, Int(N), E, Int32.(sources), Int32.(targets))
+    finalizer(obj) do o
+        close!(o)
+    end
+    obj
+end
+
+"""
+    fit!(g::DressGraph; max_iterations=100, epsilon=1e-6) → (iterations, delta)
+
+Fit the DRESS model on a persistent graph.
+"""
+function fit!(g::DressGraph; max_iterations::Integer=100, epsilon::Real=1e-6)
+    g.ptr == C_NULL && error("DressGraph already closed")
+    iters_ref = Ref{Cint}(0)
+    delta_ref = Ref{Cdouble}(0.0)
+    ccall(_FN_FIT[], Cvoid,
+          (Ptr{Cvoid}, Cint, Cdouble, Ptr{Cint}, Ptr{Cdouble}),
+          g.ptr, Cint(max_iterations), Cdouble(epsilon),
+          iters_ref, delta_ref)
+    (Int(iters_ref[]), Float64(delta_ref[]))
+end
+
+"""
+    Base.get(g::DressGraph, u, v; max_iterations=100, epsilon=1e-6, edge_weight=1.0) → Float64
+
+Query the DRESS value for an edge (existing or virtual).
+"""
+function Base.get(g::DressGraph, u::Integer, v::Integer;
+                  max_iterations::Integer=100, epsilon::Real=1e-6,
+                  edge_weight::Real=1.0)
+    g.ptr == C_NULL && error("DressGraph already closed")
+    ccall(_FN_GET[], Cdouble,
+          (Ptr{Cvoid}, Cint, Cint, Cint, Cdouble, Cdouble),
+          g.ptr, Cint(u), Cint(v), Cint(max_iterations),
+          Cdouble(epsilon), Cdouble(edge_weight))
+end
+
+"""
+    result(g::DressGraph) → DRESSResult
+
+Extract a snapshot of the current DRESS results without freeing.
+"""
+function result(g::DressGraph)
+    g.ptr == C_NULL && error("DressGraph already closed")
+    ew = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 64)), g.e))
+    ed = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 72)), g.e))
+    nd = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 88)), g.n))
+    DRESSResult(copy(g.sources), copy(g.targets), ew, ed, nd, 0, 0.0)
+end
+
+"""
+    close!(g::DressGraph)
+
+Explicitly free the underlying C graph.
+"""
+function close!(g::DressGraph)
+    if g.ptr != C_NULL
+        ccall(_FN_FREE[], Cvoid, (Ptr{Cvoid},), g.ptr)
+        g.ptr = C_NULL
+    end
+    nothing
+end
+
+function Base.show(io::IO, g::DressGraph)
+    state = g.ptr == C_NULL ? "closed" : "open"
+    print(io, "DressGraph(N=$(g.n), E=$(g.e), $state)")
 end
 
 # ── delta result type ────────────────────────────────────────────────
@@ -307,7 +443,7 @@ function delta_dress_fit(N::Integer,
 
     g == C_NULL && error("init_dress_graph returned NULL")
 
-    # delta_fit(g, k, iterations, epsilon, &hist_size, keep_multisets, &multisets, &num_subgraphs) → *int64
+    # delta_dress_fit(g, k, iterations, epsilon, &hist_size, keep_multisets, &multisets, &num_subgraphs) → *int64
     hsize_ref = Ref{Cint}(0)
     ms_ref    = Ref{Ptr{Cdouble}}(Ptr{Cdouble}(C_NULL))
     nsub_ref  = Ref{Int64}(0)
@@ -350,5 +486,9 @@ function delta_dress_fit(N::Integer,
 
     return DeltaDRESSResult(histogram, hsize, ms_mat, nsub)
 end
+
+# ── CUDA submodule ───────────────────────────────────────────────────
+
+include("CUDA.jl")
 
 end # module DRESS

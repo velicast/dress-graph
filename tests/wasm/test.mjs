@@ -7,7 +7,7 @@
  * Requires: dress_wasm.js + dress_wasm.wasm built by wasm/build.sh
  */
 
-import { dressFit, Variant } from '../../wasm/dress.js';
+import { dressFit, DressGraph, Variant } from '../../wasm/dress.js';
 
 function assert(cond, msg) {
     if (!cond) {
@@ -84,12 +84,47 @@ async function testWeighted() {
     console.log('  OK');
 }
 
+async function testDressGraph() {
+    console.log('test: persistent DressGraph …');
+    const g = await DressGraph.create({
+        numVertices: 3,
+        sources: [0, 1, 0],
+        targets: [1, 2, 2],
+    });
+
+    const fitRes = g.fit(100, 1e-8);
+    assert(fitRes.iterations >= 1, 'expected ≥1 iteration');
+    assert(fitRes.delta < 1e-6, 'expected convergence');
+
+    // Get existing edge
+    const d01 = g.get(0, 1, 100, 1e-8, 1.0);
+    assert(d01 > 0, 'get(0,1) should be positive');
+
+    // Get virtual edge (no crash)
+    const d00 = g.get(0, 0, 100, 1e-6, 1.0);
+    assert(typeof d00 === 'number', 'get(0,0) should return a number');
+
+    // Result snapshot
+    const res = g.result();
+    assert(res.edgeDress.length === 3, 'result: expected 3 edge_dress');
+    assert(res.nodeDress.length === 3, 'result: expected 3 node_dress');
+    const d0 = res.edgeDress[0];
+    for (let i = 1; i < 3; i++) {
+        assert(Math.abs(res.edgeDress[i] - d0) < 1e-6,
+            `result: edge ${i} dress should equal edge 0`);
+    }
+
+    g.free();
+    console.log('  OK');
+}
+
 async function main() {
     console.log('DRESS WASM tests\n');
     await testTriangle();
     await testPath();
     await testVariants();
     await testWeighted();
+    await testDressGraph();
     console.log('\nAll tests passed.');
 }
 

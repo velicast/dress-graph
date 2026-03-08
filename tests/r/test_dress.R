@@ -208,6 +208,39 @@ assert("K4 nodes equal dress",
        max(res_k4$node_dress) - min(res_k4$node_dress) < 1e-6)
 
 # =======================================================================
+cat("\n== Persistent DRESS ==\n")
+# =======================================================================
+
+g <- DRESS(3L, c(0L, 1L, 0L), c(1L, 2L, 2L))
+
+assert("DRESS returns environment", is.environment(g))
+assert("DRESS has class",           inherits(g, "DRESS"))
+
+fit_res <- g$fit(100L, 1e-8)
+assert("fit returns iterations",         fit_res$iterations > 0L)
+assert("fit returns delta",              fit_res$delta >= 0.0)
+
+# Get existing edge
+d01 <- g$get(0L, 1L, 100L, 1e-8, 1.0)
+assert("get(0,1) > 0",                  d01 > 0)
+
+# Get virtual edge (no crash)
+d00 <- g$get(0L, 0L, 100L, 1e-6, 1.0)
+assert("get(0,0) is numeric",           is.numeric(d00))
+
+# Result snapshot
+res <- g$result()
+assert("result has edge_dress",          length(res$edge_dress) == 3L)
+assert("result has node_dress",          length(res$node_dress) == 3L)
+
+# Triangle edges equal
+assert("DRESS triangle equal dress",
+       max(res$edge_dress) - min(res$edge_dress) < 1e-6)
+
+# Close
+g$close()
+
+# =======================================================================
 cat("\n== Summary ==\n")
 # =======================================================================
 

@@ -1,5 +1,5 @@
 /*
- * dress_igraph.h — igraph wrapper for the dress edge similarity algorithm.
+ * dress_igraph.h — igraph wrapper for the DRESS edge similarity algorithm.
  *
  * Provides a simple bridge between igraph_t graphs and the DRESS C API.
  *
@@ -7,23 +7,22 @@
  *   igraph_t graph;
  *   igraph_read_graph_edgelist(&graph, fp, 0, IGRAPH_UNDIRECTED);
  *
- *   dress_igraph_result_t result;
- *   dress_igraph_compute(&graph, NULL,         // NULL = unweighted
- *                        DRESS_VARIANT_UNDIRECTED,
- *                        100, 1e-6, 1,          // maxIters, eps, precompute
- *                        &result);
+ *   dress_result_igraph_t result;
+ *   dress_fit_igraph(&graph, NULL,              // NULL = unweighted
+ *                    DRESS_VARIANT_UNDIRECTED,
+ *                    100, 1e-6, 1,              // maxIters, eps, precompute
+ *                    &result);
  *
  *   for (int e = 0; e < result.E; e++)
  *       printf("%d %d %.6f\n", result.src[e], result.dst[e], result.dress[e]);
  *
- *   dress_igraph_free(&result);
+ *   dress_free_igraph(&result);
  *   igraph_destroy(&graph);
  */
 #ifndef DRESS_IGRAPH_H
 #define DRESS_IGRAPH_H
 
 #include "dress/dress.h"
-#include "dress/delta_dress.h"
 #include <igraph/igraph.h>
 #include <stdint.h>
 
@@ -35,7 +34,7 @@ extern "C" {
 /*  Result structures                                                  */
 /* ------------------------------------------------------------------ */
 
-typedef struct dress_igraph_result_t {
+typedef struct dress_result_igraph_t {
     int     N;           /* number of vertices                        */
     int     E;           /* number of edges                           */
     const int    *src;   /* [E] edge source endpoints (owned by dg_)  */
@@ -46,16 +45,16 @@ typedef struct dress_igraph_result_t {
     int     iterations;  /* iterations performed                      */
     double  delta;       /* final max-delta at convergence            */
     p_dress_graph_t dg_; /* internal — do not access directly         */
-} dress_igraph_result_t;
+} dress_result_igraph_t;
 
 /* ------------------------------------------------------------------ */
 /*  API                                                                */
 /* ------------------------------------------------------------------ */
 
 /*
- * dress_igraph_compute
+ * dress_fit_igraph
  *
- * Run dress on an igraph graph and write the results into `result`.
+ * Run DRESS on an igraph graph and write the results into `result`.
  *
  * Parameters:
  *   graph        — pointer to a valid igraph_t (not modified)
@@ -70,47 +69,47 @@ typedef struct dress_igraph_result_t {
  *
  * Returns 0 on success, non-zero on error.
  */
-int dress_igraph_compute(const igraph_t *graph,
-                         const char *weight_attr,
-                         dress_variant_t variant,
-                         int max_iters,
-                         double epsilon,
-                         int precompute,
-                         dress_igraph_result_t *result);
+int dress_fit_igraph(const igraph_t *graph,
+                     const char *weight_attr,
+                     dress_variant_t variant,
+                     int max_iters,
+                     double epsilon,
+                     int precompute,
+                     dress_result_igraph_t *result);
 
 /*
- * dress_igraph_free
+ * dress_free_igraph
  *
- * Free all heap memory inside a dress_igraph_result_t.
+ * Free all heap memory inside a dress_result_igraph_t.
  * The struct itself is not freed (it may be stack-allocated).
  */
-void dress_igraph_free(dress_igraph_result_t *result);
+void dress_free_igraph(dress_result_igraph_t *result);
 
 /*
- * dress_igraph_to_vector
+ * dress_to_vector_igraph
  *
  * Copy the per-edge dress values from a result into an igraph_vector_t,
  * ordered by igraph edge id [0..E-1].  The igraph_vector_t must be
  * initialized by the caller.
  */
-int dress_igraph_to_vector(const dress_igraph_result_t *result,
+int dress_to_vector_igraph(const dress_result_igraph_t *result,
                            igraph_vector_t *out);
 
 /* ------------------------------------------------------------------ */
 /*  Δ^k-DRESS result structure                                         */
 /* ------------------------------------------------------------------ */
 
-typedef struct dress_igraph_delta_result_t {
+typedef struct delta_dress_result_igraph_t {
     int64_t *histogram;  /* [hist_size] bin counts (caller frees via delta_free) */
     int      hist_size;  /* number of bins = floor(dmax/epsilon) + 1 (dmax=2 unweighted) */
-} dress_igraph_delta_result_t;
+} delta_dress_result_igraph_t;
 
 /* ------------------------------------------------------------------ */
 /*  Δ^k-DRESS API                                                      */
 /* ------------------------------------------------------------------ */
 
 /*
- * dress_igraph_delta_compute
+ * delta_dress_fit_igraph
  *
  * Run Δ^k-DRESS on an igraph graph and write results into `result`.
  *
@@ -126,31 +125,31 @@ typedef struct dress_igraph_delta_result_t {
  *
  * Returns 0 on success, non-zero on error.
  */
-int dress_igraph_delta_compute(const igraph_t *graph,
-                               const char *weight_attr,
-                               dress_variant_t variant,
-                               int k,
-                               int max_iters,
-                               double epsilon,
-                               int precompute,
-                               dress_igraph_delta_result_t *result);
+int delta_dress_fit_igraph(const igraph_t *graph,
+                           const char *weight_attr,
+                           dress_variant_t variant,
+                           int k,
+                           int max_iters,
+                           double epsilon,
+                           int precompute,
+                           delta_dress_result_igraph_t *result);
 
 /*
- * dress_igraph_delta_free
+ * delta_dress_free_igraph
  *
- * Free all heap memory inside a dress_igraph_delta_result_t.
+ * Free all heap memory inside a delta_dress_result_igraph_t.
  * The struct itself is not freed (it may be stack-allocated).
  */
-void dress_igraph_delta_free(dress_igraph_delta_result_t *result);
+void delta_dress_free_igraph(delta_dress_result_igraph_t *result);
 
 /*
- * dress_igraph_delta_to_vector
+ * delta_dress_to_vector_igraph
  *
  * Copy the histogram from a delta result into an igraph_vector_t,
  * ordered by bin index [0..hist_size-1].  The igraph_vector_t must be
  * initialized by the caller.
  */
-int dress_igraph_delta_to_vector(const dress_igraph_delta_result_t *result,
+int delta_dress_to_vector_igraph(const delta_dress_result_igraph_t *result,
                                  igraph_vector_t *out);
 
 #ifdef __cplusplus

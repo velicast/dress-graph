@@ -203,7 +203,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
         mexErrMsgIdAndTxt("dress:initFailed",
                           "init_dress_graph returned NULL.");
 
-    fit(g, max_iterations, epsilon, &iterations, &delta);
+    dress_fit(g, max_iterations, epsilon, &iterations, &delta);
 
     /* ---- pack output struct ---- */
     plhs[0] = mxCreateStructMatrix(1, 1, 7, field_names);

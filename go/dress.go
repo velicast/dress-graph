@@ -4,16 +4,14 @@
 // the structural similarity of edges in a graph to produce a canonical
 // fingerprint: a real-valued edge vector, obtained by converging a non-linear
 // dynamical system to its unique fixed point. The fingerprint is
-// isomorphism-invariant by construction, numerically stable, fast and
-// embarrassingly parallel to compute: each iteration costs O(m * d_max) and
-// convergence is guaranteed by Birkhoff contraction. As a direct consequence
-// of these properties, DRESS is provably at least as expressive as the
-// 2-dimensional Weisfeiler-Leman (2-WL) test, at a fraction of the cost
-// (O(m * d_max) vs. O(n^3) per iteration).
+// isomorphism-invariant by construction, numerically stable (no overflow, no
+// error amplification, no undefined behavior), fast and embarrassingly parallel to compute: DRESS total runtime
+// is O(I * m * d_max) for I iterations to convergence, and convergence is
+// guaranteed by Birkhoff contraction.
 //
 // # Quick start
 //
-//	result, err := dress.Fit(4,
+//	result, err := dress.DressFit(4,
 //	    []int32{0, 1, 2, 0},
 //	    []int32{1, 2, 3, 3},
 //	    nil, // no weights
@@ -65,7 +63,7 @@ func (r *Result) String() string {
 		len(r.Sources), r.Iterations, r.Delta)
 }
 
-// Fit runs the DRESS iterative fitting algorithm.
+// DressFit runs the DRESS iterative fitting algorithm.
 //
 // Parameters:
 //   - n: number of vertices (vertex ids in 0..n-1)
@@ -75,7 +73,7 @@ func (r *Result) String() string {
 //   - maxIterations: maximum fitting iterations
 //   - epsilon: convergence threshold
 //   - precomputeIntercepts: precompute neighbourhood intercepts (faster, more memory)
-func Fit(n int, sources, targets []int32, weights []float64,
+func DressFit(n int, sources, targets []int32, weights []float64,
 	variant Variant, maxIterations int, epsilon float64,
 	precomputeIntercepts bool) (*Result, error) {
 
@@ -124,7 +122,7 @@ func Fit(n int, sources, targets []int32, weights []float64,
 
 	var iterations C.int
 	var delta C.double
-	C.fit(g, C.int(maxIterations), C.double(epsilon), &iterations, &delta)
+	C.dress_fit(g, C.int(maxIterations), C.double(epsilon), &iterations, &delta)
 
 	// Read C struct by offset (LP64 layout — see dress.h):
 	//   offset 56: *W             (double*)  raw input weights
@@ -181,7 +179,7 @@ func (r *DeltaResult) String() string {
 		r.HistSize, total)
 }
 
-// DeltaFit runs Δ^k-DRESS: enumerates all C(N,k) node-deletion subsets,
+// DeltaDressFit runs Δ^k-DRESS: enumerates all C(N,k) node-deletion subsets,
 // runs DRESS on each subgraph, and returns the pooled histogram.
 //
 // Parameters:
@@ -194,7 +192,7 @@ func (r *DeltaResult) String() string {
 //   - epsilon: convergence tolerance and bin width
 //   - precompute: precompute intercepts in each subgraph
 //   - keepMultisets: if true, return per-subgraph edge values
-func DeltaFit(n int, sources, targets []int32, weights []float64,
+func DeltaDressFit(n int, sources, targets []int32, weights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	precompute bool, keepMultisets bool) (*DeltaResult, error) {
 
@@ -246,7 +244,7 @@ func DeltaFit(n int, sources, targets []int32, weights []float64,
 		keepMS = C.int(1)
 	}
 
-	hPtr := C.delta_fit(g, C.int(k), C.int(maxIterations),
+	hPtr := C.delta_dress_fit(g, C.int(k), C.int(maxIterations),
 		C.double(epsilon), &histSize,
 		keepMS,
 		func() **C.double {
@@ -283,4 +281,156 @@ func DeltaFit(n int, sources, targets []int32, weights []float64,
 
 	C.free_dress_graph(g)
 	return result, nil
+}
+
+// Fit is a deprecated alias for DressFit. Use DressFit instead.
+//
+// Deprecated: will be removed in v1.0.
+func Fit(n int, sources, targets []int32, weights []float64,
+	variant Variant, maxIterations int, epsilon float64,
+	precomputeIntercepts bool) (*Result, error) {
+	return DressFit(n, sources, targets, weights, variant, maxIterations, epsilon, precomputeIntercepts)
+}
+
+// DeltaFit is a deprecated alias for DeltaDressFit. Use DeltaDressFit instead.
+//
+// Deprecated: will be removed in v1.0.
+func DeltaFit(n int, sources, targets []int32, weights []float64,
+	k int, variant Variant, maxIterations int, epsilon float64,
+	precompute bool, keepMultisets bool) (*DeltaResult, error) {
+	return DeltaDressFit(n, sources, targets, weights, k, variant, maxIterations, epsilon, precompute, keepMultisets)
+}
+
+// ── Persistent graph object ─────────────────────────────────────────
+
+// DRESS holds a persistent, fitted DRESS graph that supports
+// repeated .Get() queries without rebuilding.
+type DRESS struct {
+	g unsafe.Pointer // *C.struct_dress_graph (owned)
+	n int
+	e int
+}
+
+// NewDRESS constructs a DRESS graph from an edge list.
+// The returned graph is NOT fitted yet — call .Fit() before .Get().
+// When done, call .Close() to release memory.
+func NewDRESS(n int, sources, targets []int32, weights []float64,
+	variant Variant, precomputeIntercepts bool) (*DRESS, error) {
+
+	e := len(sources)
+	if len(targets) != e {
+		return nil, fmt.Errorf("dress: sources and targets must have equal length (%d vs %d)", e, len(targets))
+	}
+	if weights != nil && len(weights) != e {
+		return nil, fmt.Errorf("dress: weights length (%d) != edge count (%d)", len(weights), e)
+	}
+
+	uPtr := (*C.int)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.int(0)))))
+	vPtr := (*C.int)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.int(0)))))
+	uSlice := unsafe.Slice(uPtr, e)
+	vSlice := unsafe.Slice(vPtr, e)
+	for i := 0; i < e; i++ {
+		uSlice[i] = C.int(sources[i])
+		vSlice[i] = C.int(targets[i])
+	}
+
+	var wPtr *C.double
+	if weights != nil {
+		wPtr = (*C.double)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.double(0)))))
+		wSlice := unsafe.Slice(wPtr, e)
+		for i := 0; i < e; i++ {
+			wSlice[i] = C.double(weights[i])
+		}
+	}
+
+	precomp := C.int(0)
+	if precomputeIntercepts {
+		precomp = C.int(1)
+	}
+
+	g := C.init_dress_graph(
+		C.int(n), C.int(e),
+		uPtr, vPtr, wPtr,
+		C.dress_variant_t(variant), precomp,
+	)
+	if g == nil {
+		return nil, fmt.Errorf("dress: init_dress_graph returned NULL")
+	}
+
+	return &DRESS{g: unsafe.Pointer(g), n: n, e: e}, nil
+}
+
+// Fit runs the DRESS iterative fitting algorithm on this graph.
+func (dg *DRESS) Fit(maxIterations int, epsilon float64) (iterations int, delta float64, err error) {
+	if dg.g == nil {
+		return 0, 0, fmt.Errorf("dress: graph has been closed")
+	}
+	var iters C.int
+	var d C.double
+	C.dress_fit((C.p_dress_graph_t)(dg.g), C.int(maxIterations), C.double(epsilon), &iters, &d)
+	return int(iters), float64(d), nil
+}
+
+// Get queries the DRESS value for any vertex pair (u, v) on a fitted graph.
+//
+// If edge (u,v) exists, returns its converged value.
+// If the edge does not exist (virtual edge), estimates it via local
+// fixed-point iteration. edgeWeight is the hypothetical weight for a
+// virtual edge (use 1.0 for unweighted graphs).
+func (dg *DRESS) Get(u, v int, maxIterations int, epsilon float64, edgeWeight float64) (float64, error) {
+	if dg.g == nil {
+		return 0, fmt.Errorf("dress: graph has been closed")
+	}
+	val := float64(C.dress_get(
+		(C.p_dress_graph_t)(dg.g),
+		C.int(u), C.int(v),
+		C.int(maxIterations), C.double(epsilon), C.double(edgeWeight)))
+	return val, nil
+}
+
+// Result extracts a snapshot of the fitted graph into a Result struct.
+func (dg *DRESS) Result() (*Result, error) {
+	if dg.g == nil {
+		return nil, fmt.Errorf("dress: graph has been closed")
+	}
+	base := uintptr(dg.g)
+
+	// Struct field offsets (LP64): U=16, V=24, edge_weight=64, edge_dress=72, node_dress=88
+	uwPtr := *(*(*C.int))(unsafe.Pointer(base + 16))
+	uvPtr := *(*(*C.int))(unsafe.Pointer(base + 24))
+	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
+	edPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
+	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 88))
+
+	uSlice := unsafe.Slice(uwPtr, dg.e)
+	vSlice := unsafe.Slice(uvPtr, dg.e)
+	ewSlice := unsafe.Slice(ewPtr, dg.e)
+	edSlice := unsafe.Slice(edPtr, dg.e)
+	ndSlice := unsafe.Slice(ndPtr, dg.n)
+
+	result := &Result{
+		Sources:    make([]int32, dg.e),
+		Targets:    make([]int32, dg.e),
+		EdgeWeight: make([]float64, dg.e),
+		EdgeDress:  make([]float64, dg.e),
+		NodeDress:  make([]float64, dg.n),
+	}
+	for i := 0; i < dg.e; i++ {
+		result.Sources[i] = int32(uSlice[i])
+		result.Targets[i] = int32(vSlice[i])
+		result.EdgeWeight[i] = float64(ewSlice[i])
+		result.EdgeDress[i] = float64(edSlice[i])
+	}
+	for i := 0; i < dg.n; i++ {
+		result.NodeDress[i] = float64(ndSlice[i])
+	}
+	return result, nil
+}
+
+// Close frees the underlying C graph. Safe to call multiple times.
+func (dg *DRESS) Close() {
+	if dg.g != nil {
+		C.free_dress_graph((C.p_dress_graph_t)(dg.g))
+		dg.g = nil
+	}
 }

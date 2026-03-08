@@ -95,3 +95,54 @@ func TestLengthMismatch(t *testing.T) {
 		t.Fatal("expected error for mismatched lengths")
 	}
 }
+
+func TestDRESS(t *testing.T) {
+	// Triangle: 0-1, 1-2, 0-2
+	g, err := dress.NewDRESS(3,
+		[]int32{0, 1, 0},
+		[]int32{1, 2, 2},
+		nil, dress.Undirected, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer g.Close()
+
+	iters, delta, err := g.Fit(100, 1e-8)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if iters < 1 {
+		t.Fatal("expected at least 1 iteration")
+	}
+	if delta > 1e-6 {
+		t.Errorf("expected convergence, got delta=%.6e", delta)
+	}
+
+	// All edges in a triangle should have equal dress via Result()
+	r, err := g.Result()
+	if err != nil {
+		t.Fatal(err)
+	}
+	d0 := r.EdgeDress[0]
+	for i, d := range r.EdgeDress {
+		if math.Abs(d-d0) > 1e-6 {
+			t.Errorf("edge %d dress %.6f != edge 0 dress %.6f", i, d, d0)
+		}
+	}
+
+	// Query an existing edge — should return same as Result()
+	d01, err := g.Get(0, 1, 100, 1e-8, 1.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if math.Abs(d01-d0) > 1e-4 {
+		t.Errorf("Get(0,1)=%.6f differs from Result edge dress %.6f", d01, d0)
+	}
+
+	// Query a virtual edge (not in graph) — 0-based, e.g. node 0 to itself
+	// doesn't cause a crash
+	_, err = g.Get(0, 0, 100, 1e-6, 1.0)
+	if err != nil {
+		t.Fatal(err)
+	}
+}

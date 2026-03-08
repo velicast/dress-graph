@@ -162,7 +162,7 @@ static void test_triangle_convergence(void)
 
     int    iters = 0;
     double delta = 0.0;
-    fit(g, 100, 1e-8, &iters, &delta);
+    dress_fit(g, 100, 1e-8, &iters, &delta);
 
     ASSERT_GT(iters, 0, "iterations > 0");
     ASSERT_GT(delta, -1.0, "delta is non-negative (or nearly zero)");
@@ -181,7 +181,7 @@ static void test_triangle_equal_dress(void)
         3, 3, dup_int(src, 3), dup_int(dst, 3),
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
-    fit(g, 100, 1e-8, NULL, NULL);
+    dress_fit(g, 100, 1e-8, NULL, NULL);
 
     /* All edges in K3 are symmetric — dress values should be equal. */
     double d0 = g->edge_dress[0];
@@ -205,7 +205,7 @@ static void test_path_positive_dress(void)
         4, 3, dup_int(src, 3), dup_int(dst, 3),
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
-    fit(g, 100, 1e-6, NULL, NULL);
+    dress_fit(g, 100, 1e-6, NULL, NULL);
 
     for (int e = 0; e < 3; e++) {
         ASSERT_GT(g->edge_dress[e], 0.0, "path edge dress > 0 (self-loop term)");
@@ -226,7 +226,7 @@ static void test_path_symmetry(void)
         4, 3, dup_int(src, 3), dup_int(dst, 3),
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
-    fit(g, 100, 1e-6, NULL, NULL);
+    dress_fit(g, 100, 1e-6, NULL, NULL);
 
     /* Endpoint edges (0-1 and 2-3) should match by symmetry. */
     ASSERT_NEAR(g->edge_dress[0], g->edge_dress[2], 1e-10,
@@ -251,8 +251,8 @@ static void test_fit_with_intercepts(void)
         3, 3, dup_int(src, 3), dup_int(dst, 3),
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
-    fit(g1, 100, 1e-10, NULL, NULL);
-    fit(g2, 100, 1e-10, NULL, NULL);
+    dress_fit(g1, 100, 1e-10, NULL, NULL);
+    dress_fit(g2, 100, 1e-10, NULL, NULL);
 
     /* Results with and without intercepts should match. */
     for (int e = 0; e < 3; e++) {
@@ -275,7 +275,7 @@ static void test_node_dress(void)
         3, 3, dup_int(src, 3), dup_int(dst, 3),
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
-    fit(g, 100, 1e-8, NULL, NULL);
+    dress_fit(g, 100, 1e-8, NULL, NULL);
 
     /* All nodes in K3 have the same degree and structure → same node_dress. */
     ASSERT_GT(g->node_dress[0], 0.0, "node_dress[0] > 0");
@@ -300,7 +300,7 @@ static void test_weighted_fit(void)
         dup_double(wts, 3), DRESS_VARIANT_UNDIRECTED, 0);
 
     int iters = 0;
-    fit(g, 100, 1e-6, &iters, NULL);
+    dress_fit(g, 100, 1e-6, &iters, NULL);
     ASSERT_GT(iters, 0, "weighted fit iterations > 0");
 
     /* With asymmetric weights edges should differ. */
@@ -331,7 +331,7 @@ static void test_single_edge(void)
     ASSERT_EQ_INT(g->N, 2, "N == 2");
     ASSERT_EQ_INT(g->E, 1, "E == 1");
 
-    fit(g, 100, 1e-8, NULL, NULL);
+    dress_fit(g, 100, 1e-8, NULL, NULL);
 
     /* Single edge with no common neighbors — dress comes only from the
        self-loop constant and should be small and positive. */
@@ -352,7 +352,7 @@ static void test_complete_graph_k4(void)
         4, 6, dup_int(src, 6), dup_int(dst, 6),
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
-    fit(g, 200, 1e-10, NULL, NULL);
+    dress_fit(g, 200, 1e-10, NULL, NULL);
 
     /* K4 is vertex-transitive: all edges should have the same dress. */
     double d0 = g->edge_dress[0];
@@ -382,7 +382,7 @@ static void test_star_graph(void)
         5, 4, dup_int(src, 4), dup_int(dst, 4),
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
-    fit(g, 100, 1e-8, NULL, NULL);
+    dress_fit(g, 100, 1e-8, NULL, NULL);
 
     /* All edges should have equal dress by symmetry. */
     double d0 = g->edge_dress[0];
@@ -406,7 +406,7 @@ static void test_fit_null_out_params(void)
         NULL, DRESS_VARIANT_UNDIRECTED, 0);
 
     /* Should not crash when iters and delta are NULL. */
-    fit(g, 10, 1e-6, NULL, NULL);
+    dress_fit(g, 10, 1e-6, NULL, NULL);
 
     ASSERT_GT(g->edge_dress[0], 0.0, "dress computed even with NULL out params");
 

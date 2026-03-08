@@ -163,7 +163,7 @@ vcpkg install dress-graph --overlay-ports=/path/to/dress-graph/vcpkg
 ### From Remote (Octave)
 
 ```octave
-pkg install "https://github.com/velicast/dress-graph/releases/download/v0.3.1/dress-graph-0.3.1.tar.gz"
+pkg install "https://github.com/velicast/dress-graph/releases/download/v0.4.0/dress-graph-0.4.0.tar.gz"
 ```
 
 ### From Source

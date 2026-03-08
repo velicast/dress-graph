@@ -24,6 +24,9 @@
 use std::ffi::c_void;
 use std::fmt;
 
+#[cfg(feature = "cuda")]
+pub mod cuda;
+
 // ── FFI declarations ────────────────────────────────────────────────
 
 #[allow(non_camel_case_types)]
@@ -42,7 +45,7 @@ extern "C" {
         precompute_intercepts: c_int,
     ) -> *mut c_void;
 
-    fn fit(
+    fn dress_fit(
         g: *mut c_void,
         max_iterations: c_int,
         epsilon: c_double,
@@ -52,7 +55,16 @@ extern "C" {
 
     fn free_dress_graph(g: *mut c_void);
 
-    fn delta_fit(
+    fn dress_get(
+        g: *mut c_void,
+        u: c_int,
+        v: c_int,
+        max_iterations: c_int,
+        epsilon: c_double,
+        edge_weight: c_double,
+    ) -> c_double;
+
+    fn delta_dress_fit(
         g: *mut c_void,
         k: c_int,
         iterations: c_int,
@@ -97,6 +109,205 @@ impl fmt::Display for DressResult {
             self.iterations,
             self.delta,
         )
+    }
+}
+
+// ── Persistent graph object ─────────────────────────────────────────
+
+/// A persistent DRESS graph that supports repeated `fit` and `get` calls.
+///
+/// The underlying C graph is freed automatically when dropped.
+///
+/// ```no_run
+/// use dress_graph::{DRESS, Variant};
+///
+/// let mut g = DRESS::builder(4, vec![0,1,2,0], vec![1,2,3,3])
+///     .variant(Variant::Undirected)
+///     .build()
+///     .unwrap();
+///
+/// g.fit(100, 1e-6);
+/// let d = g.get(0, 2, 100, 1e-6, 1.0);  // virtual edge query
+/// println!("dress(0,2) = {d:.6}");
+/// ```
+pub struct DRESS {
+    g: *mut c_void,
+    n: i32,
+    e: usize,
+    sources: Vec<i32>,
+    targets: Vec<i32>,
+}
+
+impl DRESS {
+    /// Create a builder.
+    ///
+    /// * `n` – number of vertices (vertex ids in `0..n`)
+    /// * `sources` / `targets` – edge list (0-based)
+    pub fn builder(n: i32, sources: Vec<i32>, targets: Vec<i32>) -> DRESSBuilder {
+        DRESSBuilder {
+            n,
+            sources,
+            targets,
+            weights: None,
+            variant: Variant::Undirected,
+            max_iterations: 100,
+            epsilon: 1e-6,
+            precompute_intercepts: false,
+        }
+    }
+
+    /// Fit the DRESS model.  Returns `(iterations, delta)`.
+    pub fn fit(&mut self, max_iterations: i32, epsilon: f64) -> (i32, f64) {
+        assert!(!self.g.is_null(), "DRESS already closed");
+        let mut iterations: c_int = 0;
+        let mut delta: c_double = 0.0;
+        unsafe {
+            dress_fit(self.g, max_iterations, epsilon, &mut iterations, &mut delta);
+        }
+        (iterations, delta)
+    }
+
+    /// Query the DRESS value for an edge (existing or virtual).
+    pub fn get(&self, u: i32, v: i32, max_iterations: i32, epsilon: f64, edge_weight: f64) -> f64 {
+        assert!(!self.g.is_null(), "DRESS already closed");
+        unsafe { dress_get(self.g, u, v, max_iterations, epsilon, edge_weight) }
+    }
+
+    /// Extract a snapshot of the current results without freeing.
+    pub fn result(&self) -> DressResult {
+        assert!(!self.g.is_null(), "DRESS already closed");
+        let e = self.e;
+        let n = self.n as usize;
+        unsafe {
+            let base = self.g as *const u8;
+            let ew_ptr = *(base.add(64) as *const *const f64);
+            let ed_ptr = *(base.add(72) as *const *const f64);
+            let nd_ptr = *(base.add(88) as *const *const f64);
+            DressResult {
+                sources:     self.sources.clone(),
+                targets:     self.targets.clone(),
+                edge_weight: std::slice::from_raw_parts(ew_ptr, e).to_vec(),
+                edge_dress:  std::slice::from_raw_parts(ed_ptr, e).to_vec(),
+                node_dress:  std::slice::from_raw_parts(nd_ptr, n).to_vec(),
+                iterations:  0,
+                delta:       0.0,
+            }
+        }
+    }
+
+    /// Run Δ^k-DRESS on a graph: enumerate all C(N,k) node-deletion
+    /// subsets, fit DRESS on each subgraph, and return the pooled histogram.
+    ///
+    /// * `n` – number of vertices
+    /// * `sources` / `targets` – edge list (0-based)
+    /// * `k` – deletion depth (0 = original graph)
+    /// * `max_iterations` – max DRESS iterations per subgraph
+    /// * `epsilon` – convergence tolerance and bin width
+    /// * `variant` – graph variant
+    /// * `precompute` – precompute intercepts in subgraphs
+    /// * `keep_multisets` – if true, return per-subgraph edge values
+    pub fn delta_fit(
+        n: i32,
+        sources: Vec<i32>,
+        targets: Vec<i32>,
+        weights: Option<Vec<f64>>,
+        k: i32,
+        max_iterations: i32,
+        epsilon: f64,
+        variant: Variant,
+        precompute: bool,
+        keep_multisets: bool,
+    ) -> Result<DeltaDressResult, DressError> {
+        let e = sources.len();
+        if targets.len() != e {
+            return Err(DressError::LengthMismatch(
+                "sources and targets must have equal length".into(),
+            ));
+        }
+
+        unsafe {
+            let u_ptr = libc_malloc_copy_i32(&sources);
+            let v_ptr = libc_malloc_copy_i32(&targets);
+            let w_ptr = match &weights {
+                Some(w) => libc_malloc_copy_f64(w),
+                None => std::ptr::null_mut(),
+            };
+
+            let g = init_dress_graph(
+                n,
+                e as c_int,
+                u_ptr,
+                v_ptr,
+                w_ptr,
+                variant as c_int,
+                precompute as c_int,
+            );
+            if g.is_null() {
+                return Err(DressError::InitFailed);
+            }
+
+            let mut hsize: c_int = 0;
+            let mut ms_ptr: *mut c_double = std::ptr::null_mut();
+            let mut num_sub: i64 = 0;
+            let h = delta_dress_fit(
+                g,
+                k,
+                max_iterations,
+                epsilon,
+                &mut hsize,
+                if keep_multisets { 1 } else { 0 },
+                if keep_multisets { &mut ms_ptr } else { std::ptr::null_mut() },
+                &mut num_sub,
+            );
+
+            let histogram = if !h.is_null() && hsize > 0 {
+                std::slice::from_raw_parts(h, hsize as usize).to_vec()
+            } else {
+                vec![]
+            };
+
+            extern "C" { fn free(ptr: *mut std::ffi::c_void); }
+
+            let multisets = if keep_multisets && !ms_ptr.is_null() && num_sub > 0 {
+                let len = (num_sub as usize) * (e as usize);
+                let ms = std::slice::from_raw_parts(ms_ptr, len).to_vec();
+                free(ms_ptr as *mut std::ffi::c_void);
+                Some(ms)
+            } else {
+                if keep_multisets && !ms_ptr.is_null() {
+                    free(ms_ptr as *mut std::ffi::c_void);
+                }
+                None
+            };
+
+            // Free the C-allocated histogram
+            if !h.is_null() {
+                free(h as *mut std::ffi::c_void);
+            }
+
+            free_dress_graph(g);
+
+            Ok(DeltaDressResult {
+                histogram,
+                hist_size: hsize,
+                multisets,
+                num_subgraphs: num_sub,
+            })
+        }
+    }
+
+    /// Explicitly free the underlying C graph.
+    pub fn close(&mut self) {
+        if !self.g.is_null() {
+            unsafe { free_dress_graph(self.g); }
+            self.g = std::ptr::null_mut();
+        }
+    }
+}
+
+impl Drop for DRESS {
+    fn drop(&mut self) {
+        self.close();
     }
 }
 
@@ -195,6 +406,54 @@ impl DRESSBuilder {
         self
     }
 
+    /// Build the internal C graph without fitting.  Returns a persistent
+    /// `DRESS` that supports repeated `fit` and `get` calls.
+    pub fn build(self) -> Result<DRESS, DressError> {
+        let e = self.sources.len();
+        if self.targets.len() != e {
+            return Err(DressError::LengthMismatch(
+                "sources and targets must have equal length".into(),
+            ));
+        }
+        if let Some(ref w) = self.weights {
+            if w.len() != e {
+                return Err(DressError::LengthMismatch(
+                    "weights must have the same length as sources".into(),
+                ));
+            }
+        }
+
+        unsafe {
+            let u_ptr = libc_malloc_copy_i32(&self.sources);
+            let v_ptr = libc_malloc_copy_i32(&self.targets);
+            let w_ptr = match &self.weights {
+                Some(w) => libc_malloc_copy_f64(w),
+                None => std::ptr::null_mut(),
+            };
+
+            let g = init_dress_graph(
+                self.n,
+                e as c_int,
+                u_ptr,
+                v_ptr,
+                w_ptr,
+                self.variant as c_int,
+                self.precompute_intercepts as c_int,
+            );
+            if g.is_null() {
+                return Err(DressError::InitFailed);
+            }
+
+            Ok(DRESS {
+                g,
+                n: self.n,
+                e,
+                sources: self.sources,
+                targets: self.targets,
+            })
+        }
+    }
+
     /// Build the internal C graph, run the fitting algorithm, and return
     /// an owned `DressResult`.  The C graph is freed before returning.
     pub fn build_and_fit(self) -> Result<DressResult, DressError> {
@@ -240,7 +499,7 @@ impl DRESSBuilder {
 
             let mut iterations: c_int = 0;
             let mut delta: c_double = 0.0;
-            fit(
+            dress_fit(
                 g,
                 self.max_iterations,
                 self.epsilon,
@@ -294,135 +553,10 @@ impl DRESSBuilder {
     }
 }
 
-// ── Main entry point ────────────────────────────────────────────────
-
-/// Namespace for static constructors.
-pub struct DRESS;
-
-impl DRESS {
-    /// Create a builder.
-    ///
-    /// * `n` – number of vertices (vertex ids in `0..n`)
-    /// * `sources` / `targets` – edge list (0-based)
-    pub fn builder(n: i32, sources: Vec<i32>, targets: Vec<i32>) -> DRESSBuilder {
-        DRESSBuilder {
-            n,
-            sources,
-            targets,
-            weights: None,
-            variant: Variant::Undirected,
-            max_iterations: 100,
-            epsilon: 1e-6,
-            precompute_intercepts: true,
-        }
-    }
-
-    /// Run Δ^k-DRESS on a graph: enumerate all C(N,k) node-deletion
-    /// subsets, fit DRESS on each subgraph, and return the pooled histogram.
-    ///
-    /// * `n` – number of vertices
-    /// * `sources` / `targets` – edge list (0-based)
-    /// * `k` – deletion depth (0 = original graph)
-    /// * `max_iterations` – max DRESS iterations per subgraph
-    /// * `epsilon` – convergence tolerance and bin width
-    /// * `variant` – graph variant
-    /// * `precompute` – precompute intercepts in subgraphs
-    /// * `keep_multisets` – if true, return per-subgraph edge values
-    pub fn delta_fit(
-        n: i32,
-        sources: Vec<i32>,
-        targets: Vec<i32>,
-        weights: Option<Vec<f64>>,
-        k: i32,
-        max_iterations: i32,
-        epsilon: f64,
-        variant: Variant,
-        precompute: bool,
-        keep_multisets: bool,
-    ) -> Result<DeltaDressResult, DressError> {
-        let e = sources.len();
-        if targets.len() != e {
-            return Err(DressError::LengthMismatch(
-                "sources and targets must have equal length".into(),
-            ));
-        }
-
-        unsafe {
-            let u_ptr = libc_malloc_copy_i32(&sources);
-            let v_ptr = libc_malloc_copy_i32(&targets);
-            let w_ptr = match &weights {
-                Some(w) => libc_malloc_copy_f64(w),
-                None => std::ptr::null_mut(),
-            };
-
-            let g = init_dress_graph(
-                n,
-                e as c_int,
-                u_ptr,
-                v_ptr,
-                w_ptr,
-                variant as c_int,
-                precompute as c_int,
-            );
-            if g.is_null() {
-                return Err(DressError::InitFailed);
-            }
-
-            let mut hsize: c_int = 0;
-            let mut ms_ptr: *mut c_double = std::ptr::null_mut();
-            let mut num_sub: i64 = 0;
-            let h = delta_fit(
-                g,
-                k,
-                max_iterations,
-                epsilon,
-                &mut hsize,
-                if keep_multisets { 1 } else { 0 },
-                if keep_multisets { &mut ms_ptr } else { std::ptr::null_mut() },
-                &mut num_sub,
-            );
-
-            let histogram = if !h.is_null() && hsize > 0 {
-                std::slice::from_raw_parts(h, hsize as usize).to_vec()
-            } else {
-                vec![]
-            };
-
-            extern "C" { fn free(ptr: *mut std::ffi::c_void); }
-
-            let multisets = if keep_multisets && !ms_ptr.is_null() && num_sub > 0 {
-                let len = (num_sub as usize) * (e as usize);
-                let ms = std::slice::from_raw_parts(ms_ptr, len).to_vec();
-                free(ms_ptr as *mut std::ffi::c_void);
-                Some(ms)
-            } else {
-                if keep_multisets && !ms_ptr.is_null() {
-                    free(ms_ptr as *mut std::ffi::c_void);
-                }
-                None
-            };
-
-            // Free the C-allocated histogram
-            if !h.is_null() {
-                free(h as *mut std::ffi::c_void);
-            }
-
-            free_dress_graph(g);
-
-            Ok(DeltaDressResult {
-                histogram,
-                hist_size: hsize,
-                multisets,
-                num_subgraphs: num_sub,
-            })
-        }
-    }
-}
-
 // ── Internal helpers ────────────────────────────────────────────────
 
 /// Allocate a C-compatible (malloc'd) copy of an i32 slice.
-unsafe fn libc_malloc_copy_i32(data: &[i32]) -> *mut c_int {
+pub(crate) unsafe fn libc_malloc_copy_i32(data: &[i32]) -> *mut c_int {
     let bytes = data.len() * std::mem::size_of::<c_int>();
     let ptr = libc::malloc(bytes) as *mut c_int;
     assert!(!ptr.is_null(), "malloc failed");
@@ -431,7 +565,7 @@ unsafe fn libc_malloc_copy_i32(data: &[i32]) -> *mut c_int {
 }
 
 /// Allocate a C-compatible (malloc'd) copy of an f64 slice.
-unsafe fn libc_malloc_copy_f64(data: &[f64]) -> *mut c_double {
+pub(crate) unsafe fn libc_malloc_copy_f64(data: &[f64]) -> *mut c_double {
     let bytes = data.len() * std::mem::size_of::<c_double>();
     let ptr = libc::malloc(bytes) as *mut c_double;
     assert!(!ptr.is_null(), "malloc failed");
@@ -440,7 +574,7 @@ unsafe fn libc_malloc_copy_f64(data: &[f64]) -> *mut c_double {
 }
 
 // We use libc::malloc — pull in the libc crate minimally via extern.
-mod libc {
+pub(crate) mod libc {
     extern "C" {
         pub fn malloc(size: usize) -> *mut u8;
     }

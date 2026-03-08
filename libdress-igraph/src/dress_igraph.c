@@ -14,7 +14,6 @@
 
 #include "dress_igraph.h"
 #include "dress/dress.h"
-#include "dress/delta_dress.h"
 
 #include <igraph/igraph.h>
 #include <stdint.h>
@@ -22,16 +21,16 @@
 #include <string.h>
 
 /* ------------------------------------------------------------------ */
-/*  dress_igraph_compute                                               */
+/*  dress_fit_igraph                                               */
 /* ------------------------------------------------------------------ */
 
-int dress_igraph_compute(const igraph_t *graph,
+int dress_fit_igraph(const igraph_t *graph,
                          const char *weight_attr,
                          dress_variant_t variant,
                          int max_iters,
                          double epsilon,
                          int precompute,
-                         dress_igraph_result_t *result)
+                         dress_result_igraph_t *result)
 {
     if (!graph || !result)
         return -1;
@@ -92,13 +91,13 @@ int dress_igraph_compute(const igraph_t *graph,
     int    iterations = 0;
     double delta      = 0.0;
 
-    fit(dg, max_iters, epsilon, &iterations, &delta);
+    dress_fit(dg, max_iters, epsilon, &iterations, &delta);
 
     /* ----- Point directly into DRESS arrays (zero-copy) ----- */
     /*
      * The dress_graph_t owns all the arrays.  We keep it alive inside
      * the result struct and just expose const pointers.  No memcpy.
-     * dress_igraph_free() will call free_dress_graph() later.
+     * dress_free_igraph() will call free_dress_graph() later.
      */
 
     result->N          = N;
@@ -116,10 +115,10 @@ int dress_igraph_compute(const igraph_t *graph,
 }
 
 /* ------------------------------------------------------------------ */
-/*  dress_igraph_free                                                  */
+/*  dress_free_igraph                                                  */
 /* ------------------------------------------------------------------ */
 
-void dress_igraph_free(dress_igraph_result_t *result)
+void dress_free_igraph(dress_result_igraph_t *result)
 {
     if (!result) return;
 
@@ -130,10 +129,10 @@ void dress_igraph_free(dress_igraph_result_t *result)
 }
 
 /* ------------------------------------------------------------------ */
-/*  dress_igraph_to_vector                                             */
+/*  dress_to_vector_igraph                                             */
 /* ------------------------------------------------------------------ */
 
-int dress_igraph_to_vector(const dress_igraph_result_t *result,
+int dress_to_vector_igraph(const dress_result_igraph_t *result,
                            igraph_vector_t *out)
 {
     if (!result || !out)
@@ -152,17 +151,17 @@ int dress_igraph_to_vector(const dress_igraph_result_t *result,
 /* ================================================================== */
 
 /* ------------------------------------------------------------------ */
-/*  dress_igraph_delta_compute                                         */
+/*  delta_dress_fit_igraph                                         */
 /* ------------------------------------------------------------------ */
 
-int dress_igraph_delta_compute(const igraph_t *graph,
+int delta_dress_fit_igraph(const igraph_t *graph,
                                const char *weight_attr,
                                dress_variant_t variant,
                                int k,
                                int max_iters,
                                double epsilon,
                                int precompute,
-                               dress_igraph_delta_result_t *result)
+                               delta_dress_result_igraph_t *result)
 {
     if (!graph || !result)
         return -1;
@@ -223,9 +222,9 @@ int dress_igraph_delta_compute(const igraph_t *graph,
         return -1;
 
     int hist_size = 0;
-    int64_t *histogram = delta_fit(dg, k, max_iters, epsilon,
-                                   &hist_size,
-                                   0, NULL, NULL);
+    int64_t *histogram = delta_dress_fit(dg, k, max_iters, epsilon,
+                                        &hist_size,
+                                        0, NULL, NULL);
 
     free_dress_graph(dg);
 
@@ -239,10 +238,10 @@ int dress_igraph_delta_compute(const igraph_t *graph,
 }
 
 /* ------------------------------------------------------------------ */
-/*  dress_igraph_delta_free                                            */
+/*  delta_dress_free_igraph                                            */
 /* ------------------------------------------------------------------ */
 
-void dress_igraph_delta_free(dress_igraph_delta_result_t *result)
+void delta_dress_free_igraph(delta_dress_result_igraph_t *result)
 {
     if (!result) return;
 
@@ -251,10 +250,10 @@ void dress_igraph_delta_free(dress_igraph_delta_result_t *result)
 }
 
 /* ------------------------------------------------------------------ */
-/*  dress_igraph_delta_to_vector                                       */
+/*  delta_dress_to_vector_igraph                                       */
 /* ------------------------------------------------------------------ */
 
-int dress_igraph_delta_to_vector(const dress_igraph_delta_result_t *result,
+int delta_dress_to_vector_igraph(const delta_dress_result_igraph_t *result,
                                  igraph_vector_t *out)
 {
     if (!result || !out || !result->histogram)

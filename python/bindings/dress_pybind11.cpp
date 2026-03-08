@@ -194,6 +194,40 @@ DeltaFitResult
     Result with `histogram`, `hist_size`, and optionally `multisets`.
 )doc")
 
+        .def("get", &DRESS::get,
+             py::arg("u"),
+             py::arg("v"),
+             py::arg("max_iterations") = 100,
+             py::arg("epsilon")        = 1e-6,
+             py::arg("edge_weight")    = 1.0,
+             R"doc(
+Query the DRESS value for any vertex pair (u, v).
+
+If edge (u,v) exists in the graph, returns its converged dress value.
+If the edge does not exist (virtual edge), estimates the value using
+a local fixed-point iteration against the frozen steady state.
+Useful for link prediction.
+
+The graph must have been fitted (call `fit()` first).
+
+Parameters
+----------
+u, v : int
+    Vertex ids (0-based).
+max_iterations : int
+    Max local iterations for virtual edges (default 100).
+epsilon : float
+    Convergence threshold for local iteration (default 1e-6).
+edge_weight : float
+    Hypothetical weight of the virtual edge (ignored when the edge
+    already exists).  Pass 1.0 for unweighted graphs (default 1.0).
+
+Returns
+-------
+float
+    DRESS similarity value for the (u, v) pair.
+)doc")
+
         // --- scalar accessors ---
 
         .def_property_readonly("n_vertices", &DRESS::numVertices,

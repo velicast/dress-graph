@@ -68,12 +68,12 @@ static void test_hist_size(void)
     int hsize;
 
     /* eps = 1e-3 → floor(2/1e-3) + 1 = 2001 */
-    int64_t *h = delta_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
     ASSERT_EQ(hsize, 2001, "hist_size == 2001 for eps=1e-3");
     free(h);
 
     /* eps = 1e-6 → floor(2/1e-6) + 1 = 2000001 */
-    h = delta_fit(g, 0, 100, 1e-6, &hsize, 0, NULL, NULL);
+    h = delta_dress_fit(g, 0, 100, 1e-6, &hsize, 0, NULL, NULL);
     ASSERT_EQ(hsize, 2000001, "hist_size == 2000001 for eps=1e-6");
     free(h);
 
@@ -104,7 +104,7 @@ static void test_weighted_hist_size(void)
 
     /* Weighted K3 with non-uniform weights → adaptive dmax > 2.0
        → hist_size must exceed the unweighted 2001 at eps=1e-3. */
-    int64_t *h = delta_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
     ASSERT_GT(hsize, 2001, "weighted hist_size > 2001 for eps=1e-3");
 
     /* Histogram length matches reported hist_size, total = 3 edges */
@@ -125,7 +125,7 @@ static void test_delta0_k3(void)
     p_dress_graph_t g = init_dress_graph(3, 3, dup_int(U, 3), dup_int(V, 3),
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
-    int64_t *h = delta_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
 
     /* K3 is vertex-transitive → all edges equal → single non-zero bin */
     int nonzero = 0;
@@ -151,7 +151,7 @@ static void test_delta1_k3(void)
     p_dress_graph_t g = init_dress_graph(3, 3, dup_int(U, 3), dup_int(V, 3),
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
-    int64_t *h = delta_fit(g, 1, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 1, 100, 1e-3, &hsize, 0, NULL, NULL);
 
     /* C(3,1) = 3 subgraphs, each has 1 edge */
     ASSERT_EQ(hist_total(h, hsize), 3,
@@ -172,7 +172,7 @@ static void test_delta2_k3(void)
     p_dress_graph_t g = init_dress_graph(3, 3, dup_int(U, 3), dup_int(V, 3),
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
-    int64_t *h = delta_fit(g, 2, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 2, 100, 1e-3, &hsize, 0, NULL, NULL);
 
     /* Removing 2 of 3 vertices leaves 1 vertex, 0 edges */
     ASSERT_EQ(hist_total(h, hsize), 0, "delta2 K3: 0 edge values");
@@ -192,7 +192,7 @@ static void test_delta0_k4(void)
     p_dress_graph_t g = init_dress_graph(4, 6, dup_int(U, 6), dup_int(V, 6),
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
-    int64_t *h = delta_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
 
     ASSERT_EQ(hist_total(h, hsize), 6, "delta0 K4: 6 edge values");
 
@@ -214,7 +214,7 @@ static void test_delta1_k4(void)
     p_dress_graph_t g = init_dress_graph(4, 6, dup_int(U, 6), dup_int(V, 6),
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
-    int64_t *h = delta_fit(g, 1, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 1, 100, 1e-3, &hsize, 0, NULL, NULL);
 
     /* C(4,1) = 4 subgraphs, each K3 with 3 edges */
     ASSERT_EQ(hist_total(h, hsize), 12,
@@ -239,7 +239,7 @@ static void test_delta2_k4(void)
     p_dress_graph_t g = init_dress_graph(4, 6, dup_int(U, 6), dup_int(V, 6),
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
-    int64_t *h = delta_fit(g, 2, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 2, 100, 1e-3, &hsize, 0, NULL, NULL);
 
     /* C(4,2) = 6 subgraphs, each has 1 edge */
     ASSERT_EQ(hist_total(h, hsize), 6,
@@ -261,11 +261,11 @@ static void test_k_ge_N(void)
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
 
-    int64_t *h = delta_fit(g, 3, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 3, 100, 1e-3, &hsize, 0, NULL, NULL);
     ASSERT_EQ(hist_total(h, hsize), 0, "k == N: empty histogram");
     free(h);
 
-    h = delta_fit(g, 10, 100, 1e-3, &hsize, 0, NULL, NULL);
+    h = delta_dress_fit(g, 10, 100, 1e-3, &hsize, 0, NULL, NULL);
     ASSERT_EQ(hist_total(h, hsize), 0, "k > N: empty histogram");
     free(h);
 
@@ -289,8 +289,8 @@ static void test_precompute(void)
                                           NULL, DRESS_VARIANT_UNDIRECTED, 1);
     int hsize1, hsize2;
 
-    int64_t *h1 = delta_fit(g1, 1, 100, 1e-3, &hsize1, 0, NULL, NULL);
-    int64_t *h2 = delta_fit(g2, 1, 100, 1e-3, &hsize2, 0, NULL, NULL);
+    int64_t *h1 = delta_dress_fit(g1, 1, 100, 1e-3, &hsize1, 0, NULL, NULL);
+    int64_t *h2 = delta_dress_fit(g2, 1, 100, 1e-3, &hsize2, 0, NULL, NULL);
 
     ASSERT_EQ(hsize1, hsize2, "precompute: same hist size");
     int match = 1;
@@ -317,7 +317,7 @@ static void test_delta0_path(void)
     p_dress_graph_t g = init_dress_graph(4, 3, dup_int(U, 3), dup_int(V, 3),
                                          NULL, DRESS_VARIANT_UNDIRECTED, 0);
     int hsize;
-    int64_t *h = delta_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
+    int64_t *h = delta_dress_fit(g, 0, 100, 1e-3, &hsize, 0, NULL, NULL);
 
     ASSERT_EQ(hist_total(h, hsize), 3, "delta0 P4: 3 edge values");
 
@@ -349,7 +349,7 @@ static void test_multisets_k1_k4(void)
     double *ms = NULL;
     int64_t nsub = 0;
     int hsize;
-    int64_t *h = delta_fit(g, k, 100, 1e-3, &hsize, 1, &ms, &nsub);
+    int64_t *h = delta_dress_fit(g, k, 100, 1e-3, &hsize, 1, &ms, &nsub);
 
     /* C(4,1) = 4 subgraphs */
     ASSERT_EQ(nsub, 4, "multisets k1 K4: num_subgraphs == 4");
@@ -405,7 +405,7 @@ static void test_multisets_k0(void)
     double *ms = NULL;
     int64_t nsub = 0;
     int hsize;
-    int64_t *h = delta_fit(g, 0, 100, 1e-3, &hsize, 1, &ms, &nsub);
+    int64_t *h = delta_dress_fit(g, 0, 100, 1e-3, &hsize, 1, &ms, &nsub);
 
     ASSERT_EQ(nsub, 1, "multisets k0 K3: num_subgraphs == 1");
     ASSERT(ms != NULL, "multisets k0 K3: ms allocated");

@@ -542,6 +542,103 @@ class DRESS:
             delta=final_delta,
         )
 
+    # -- virtual-edge query -------------------------------------------------
+
+    def get(
+        self,
+        u: int,
+        v: int,
+        max_iterations: int = 100,
+        epsilon: float = 1e-6,
+        edge_weight: float = 1.0,
+    ) -> float:
+        """Query the DRESS value for any vertex pair (u, v).
+
+        If edge (u,v) exists, returns its converged dress value.
+        If not (virtual edge), estimates it via local fixed-point
+        iteration against the frozen steady state.
+
+        The graph must have been fitted (:meth:`fit`) before calling this.
+
+        Parameters
+        ----------
+        u, v : int
+            Vertex ids (0-based).
+        max_iterations : int
+            Max local iterations for virtual edges (default 100).
+        epsilon : float
+            Convergence threshold (default 1e-6).
+        edge_weight : float
+            Hypothetical weight of the virtual edge (default 1.0).
+
+        Returns
+        -------
+        float
+            DRESS similarity value.
+        """
+        adj_offset = self._adj_offset
+        adj_target = self._adj_target
+        adj_eidx = self._adj_eidx
+        ew = self._edge_weight
+        ed = self._edge_dress
+        nd = self._node_dress
+
+        # Binary search for existing edge
+        lo, hi = adj_offset[u], adj_offset[u + 1]
+        while lo < hi:
+            mid = (lo + hi) >> 1
+            nb = adj_target[mid]
+            if nb == v:
+                return ed[adj_eidx[mid]]
+            elif nb < v:
+                lo = mid + 1
+            else:
+                hi = mid
+
+        # Virtual edge: merge-join neighbour lists
+        intercept = 0.0
+        iu, iu_end = adj_offset[u], adj_offset[u + 1]
+        iv, iv_end = adj_offset[v], adj_offset[v + 1]
+        i, j = iu, iv
+        while i < iu_end and j < iv_end:
+            x, y = adj_target[i], adj_target[j]
+            if x == y:
+                eu = adj_eidx[i]
+                ev = adj_eidx[j]
+                intercept += ew[eu] * ed[eu] + ew[ev] * ed[ev]
+                i += 1
+                j += 1
+            elif x < y:
+                i += 1
+            else:
+                j += 1
+
+        self_loop = 4.0 if self._variant in (Variant.FORWARD, Variant.BACKWARD) else 8.0
+        cross_factor = 1.0 if self._variant in (Variant.FORWARD, Variant.BACKWARD) else 2.0
+
+        cw = 2.0 * edge_weight if self._variant == Variant.UNDIRECTED else edge_weight
+
+        A = intercept + self_loop
+        Du2 = nd[u] * nd[u]
+        Dv2 = nd[v] * nd[v]
+
+        if Du2 <= 0.0 or Dv2 <= 0.0:
+            return 0.0
+
+        d_uv = 1.0
+        for _ in range(max_iterations):
+            wd = cw * d_uv
+            denom = math.sqrt(Du2 + wd) * math.sqrt(Dv2 + wd)
+            if denom <= 0.0:
+                return 0.0
+            next_val = (A + cross_factor * wd) / denom
+            if abs(next_val - d_uv) <= epsilon:
+                d_uv = next_val
+                break
+            d_uv = next_val
+
+        return d_uv
+
 
 # -- top-level convenience function -----------------------------------------
 
@@ -595,6 +692,7 @@ def dress_fit(
         iterations=fr.iterations,
         delta=fr.delta,
     )
+
 
 
 def _compute_dmax_bound(g: 'DRESS') -> float:

@@ -52,6 +52,7 @@ and edge-importance ranking.
 | Supports directed graphs (four variants: undirected, directed, forward, backward) |
 | Provably numerically stable (no overflows, no error amplification, no undefined behaviors) |
 | Provably at least as powerful as 2-WL (>= 2-WL) |
+| [Locally invertible](theory/properties.md#local-invertibility-incremental-edge-query) — any single edge value recoverable from its neighborhood in O(deg) after one global fit |
 
 ## The equation at a glance
 

@@ -13,6 +13,7 @@ nx = pytest.importorskip("networkx", reason="networkx not installed")
 np = pytest.importorskip("numpy", reason="numpy not installed")
 
 from dress.networkx import dress_graph       # noqa: E402
+from dress.networkx import NxDRESS            # noqa: E402
 from dress.core import DRESSResult           # noqa: E402
 
 
@@ -254,3 +255,84 @@ class TestIsomorphism:
         fp1 = sorted(round(v, 6) for v in r1.edge_dress)
         fp2 = sorted(round(v, 6) for v in r2.edge_dress)
         assert fp1 == fp2
+
+
+# ── NxDRESS persistent object ────────────────────────────────────────
+
+class TestNxDRESS:
+    def test_basic_lifecycle(self, triangle):
+        dg = NxDRESS(triangle)
+        fr = dg.fit()
+        assert fr.iterations < 100
+        assert fr.delta < 1e-6
+        r = dg.result()
+        assert isinstance(r, DRESSResult)
+        assert len(r.edge_dress) == 3
+        dg.close()
+
+    def test_get_existing_edge(self, triangle):
+        dg = NxDRESS(triangle)
+        dg.fit()
+        # All edges in a triangle converge to ~2.0
+        val = dg.get(0, 1)
+        assert abs(val - 2.0) < 1e-4
+        dg.close()
+
+    def test_get_virtual_edge(self):
+        """Query a non-existent edge on a path graph."""
+        G = nx.path_graph(4)  # 0-1-2-3
+        dg = NxDRESS(G)
+        dg.fit()
+        # 0-3 is a virtual edge (not in graph)
+        val = dg.get(0, 3)
+        assert val > 0.0
+        assert val < 2.0
+        dg.close()
+
+    def test_get_string_labels(self):
+        G = nx.Graph()
+        G.add_edges_from([("a", "b"), ("b", "c"), ("a", "c")])
+        dg = NxDRESS(G)
+        dg.fit()
+        val = dg.get("a", "b")
+        assert abs(val - 2.0) < 1e-4
+        dg.close()
+
+    def test_context_manager(self, triangle):
+        with NxDRESS(triangle) as dg:
+            dg.fit()
+            val = dg.get(0, 1)
+            assert abs(val - 2.0) < 1e-4
+
+    def test_result_iterations_and_delta(self, triangle):
+        dg = NxDRESS(triangle)
+        fr = dg.fit()
+        r = dg.result()
+        assert r.iterations == fr.iterations
+        assert r.delta == fr.delta
+        dg.close()
+
+    def test_repr(self, triangle):
+        dg = NxDRESS(triangle)
+        s = repr(dg)
+        assert "NxDRESS" in s
+        assert "n_vertices=3" in s
+        dg.close()
+
+    def test_nodes_property(self):
+        G = nx.Graph()
+        G.add_edges_from([("x", "y"), ("y", "z")])
+        dg = NxDRESS(G)
+        assert set(dg.nodes) == {"x", "y", "z"}
+        dg.close()
+
+    def test_repeated_fit(self, triangle):
+        """Fitting twice should work and re-converge."""
+        dg = NxDRESS(triangle)
+        dg.fit()
+        r1 = dg.result()
+        dg.fit()
+        r2 = dg.result()
+        for a, b in zip(r1.edge_dress, r2.edge_dress):
+            assert abs(a - b) < 1e-6
+        dg.close()
