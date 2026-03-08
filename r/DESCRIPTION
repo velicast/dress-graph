@@ -14,6 +14,8 @@ Description: DRESS is a deterministic, parameter-free framework that
     DRESS total runtime is O(I * m * d_max) for I iterations to convergence,
     and convergence is guaranteed by Birkhoff contraction.
 License: MIT + file LICENSE
+URL: https://github.com/velicast/dress-graph, https://velicast.github.io/dress-graph/
+BugReports: https://github.com/velicast/dress-graph/issues
 Encoding: UTF-8
 NeedsCompilation: yes
 SystemRequirements: OpenMP, CUDA Toolkit (optional, for GPU acceleration)
