@@ -2,26 +2,20 @@
 
 **A Continuous Framework for Structural Graph Refinement**
 
-DRESS is a provably continuous relaxation of the Weisfeiler–Leman algorithm.
-At depth k, higher-order DRESS is **provably at least as powerful as (k+2)-WL**
-in expressiveness — the base algorithm (k=0) already matches 2-WL, and each
-level adds one WL dimension.
-Yet it is dramatically cheaper to compute: a single DRESS run costs
-O(I · m · d_max) where I is the number of iterations, and depth-k requires
-C(n,k) independent runs — a total of O(C(n,k) · I · m · d_max), compared to
-O(n^(k+3)) for (k+2)-WL.  Space complexity is O(n + m), compared to
-O(n^(k+2)) for (k+2)-WL.
-The algorithm is embarrassingly parallel in two orthogonal ways — across the
-C(n,k) subproblems and across edge updates within each iteration — enabling
-distributed/cloud and multi-core/GPU/SIMD implementations.
+DRESS is a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a canonical fingerprint: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is isomorphism-invariant by construction, numerically stable (no overflow, no error amplification, no undefined behavior), fast and embarrassingly parallel to compute: DRESS total runtime is O(I * m * d_max) for I iterations to convergence, and convergence is guaranteed by Birkhoff contraction.
 
 ## Quick start
 
 ```rust
-use dress_graph::{DressGraph, Variant};
+use dress_graph::{DRESS, Variant};
 
-let result = DressGraph::new(4, &[0,1,2,0], &[1,2,3,3], None, Variant::Undirected, false)
-    .fit(100, 1e-6);
+let sources = vec![0, 1, 2, 0];
+let targets = vec![1, 2, 3, 3];
+
+let result = DRESS::builder(4, sources, targets)
+    .variant(Variant::Undirected)
+    .build_and_fit()
+    .unwrap();
 println!("{:?}", result.edge_dress);
 ```
 

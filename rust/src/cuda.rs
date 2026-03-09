@@ -54,7 +54,7 @@ extern "C" {
         edge_weight: c_double,
     ) -> c_double;
 
-    fn delta_dress_fit_cuda(
+    fn delta_dress_fit_cuda_strided(
         g: *mut c_void,
         k: c_int,
         iterations: c_int,
@@ -63,6 +63,8 @@ extern "C" {
         keep_multisets: c_int,
         multisets: *mut *mut c_double,
         num_subgraphs: *mut i64,
+        offset: c_int,
+        stride: c_int,
     ) -> *mut i64;
 }
 
@@ -317,6 +319,8 @@ impl DRESS {
         variant: Variant,
         precompute: bool,
         keep_multisets: bool,
+        offset: i32,
+        stride: i32,
     ) -> Result<DeltaDressResult, DressError> {
         let e = sources.len();
         if targets.len() != e {
@@ -349,7 +353,7 @@ impl DRESS {
             let mut hsize: c_int = 0;
             let mut ms_ptr: *mut c_double = std::ptr::null_mut();
             let mut num_sub: i64 = 0;
-            let h = delta_dress_fit_cuda(
+            let h = delta_dress_fit_cuda_strided(
                 g,
                 k,
                 max_iterations,
@@ -358,6 +362,8 @@ impl DRESS {
                 if keep_multisets { 1 } else { 0 },
                 if keep_multisets { &mut ms_ptr } else { std::ptr::null_mut() },
                 &mut num_sub,
+                offset,
+                stride,
             );
 
             let histogram = if !h.is_null() && hsize > 0 {

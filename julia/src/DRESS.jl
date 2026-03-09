@@ -64,16 +64,24 @@ const _FN_FIT     = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_FREE    = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_GET     = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_DELTA   = Ref{Ptr{Cvoid}}(C_NULL)
+const _FN_DELTA_STRIDED = Ref{Ptr{Cvoid}}(C_NULL)
+
+function _try_dlopen(name::String, local_path::String)
+    h = dlopen(name; throw_error=false)
+    h !== nothing && return h
+    isfile(local_path) || dress_build()
+    return dlopen(local_path)
+end
 
 function _ensure_lib()
     _LIB_HANDLE[] != C_NULL && return
-    isfile(_SO_PATH) || dress_build()
-    _LIB_HANDLE[] = dlopen(_SO_PATH)
+    _LIB_HANDLE[] = _try_dlopen(_SO_NAME, _SO_PATH)
     _FN_INIT[]    = dlsym(_LIB_HANDLE[], :init_dress_graph)
     _FN_FIT[]     = dlsym(_LIB_HANDLE[], :dress_fit)
     _FN_FREE[]    = dlsym(_LIB_HANDLE[], :free_dress_graph)
     _FN_GET[]     = dlsym(_LIB_HANDLE[], :dress_get)
     _FN_DELTA[]   = dlsym(_LIB_HANDLE[], :delta_dress_fit)
+    _FN_DELTA_STRIDED[] = dlsym(_LIB_HANDLE[], :delta_dress_fit_strided)
 end
 
 # ── result type ──────────────────────────────────────────────────────
@@ -381,7 +389,8 @@ end
                     k=0, variant=UNDIRECTED,
                     max_iterations=100, epsilon=1e-6,
                     precompute=false,
-                    keep_multisets=false) → DeltaDRESSResult
+                    keep_multisets=false,
+                    offset=0, stride=1) → DeltaDRESSResult
 
 Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS on
 each subgraph, and return the pooled histogram.
@@ -399,6 +408,8 @@ each subgraph, and return the pooled histogram.
 - `precompute::Bool`     – precompute intercepts in subgraphs (default false)
 - `keep_multisets::Bool` – if true, return per-subgraph edge values in a
                            C(N,k) × E matrix (NaN = removed edge; default false)
+- `offset::Int`          – process only subgraphs where index % stride == offset (default 0)
+- `stride::Int`          – total number of strides (default 1 = process all)
 """
 function delta_dress_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
@@ -409,7 +420,9 @@ function delta_dress_fit(N::Integer,
                          max_iterations::Integer = 100,
                          epsilon::Real      = 1e-6,
                          precompute::Bool   = false,
-                         keep_multisets::Bool = false)
+                         keep_multisets::Bool = false,
+                         offset::Integer    = 0,
+                         stride::Integer    = 1)
 
     E = length(sources)
     length(targets) == E || throw(ArgumentError("sources and targets must have equal length"))
@@ -443,17 +456,18 @@ function delta_dress_fit(N::Integer,
 
     g == C_NULL && error("init_dress_graph returned NULL")
 
-    # delta_dress_fit(g, k, iterations, epsilon, &hist_size, keep_multisets, &multisets, &num_subgraphs) → *int64
+    # delta_dress_fit_strided(g, k, iterations, epsilon, &hist_size, keep_multisets, &multisets, &num_subgraphs, offset, stride) → *int64
     hsize_ref = Ref{Cint}(0)
     ms_ref    = Ref{Ptr{Cdouble}}(Ptr{Cdouble}(C_NULL))
     nsub_ref  = Ref{Int64}(0)
-    h_ptr = ccall(_FN_DELTA[], Ptr{Int64},
-                  (Ptr{Cvoid}, Cint, Cint, Cdouble, Ptr{Cint}, Cint, Ptr{Ptr{Cdouble}}, Ptr{Int64}),
+    h_ptr = ccall(_FN_DELTA_STRIDED[], Ptr{Int64},
+                  (Ptr{Cvoid}, Cint, Cint, Cdouble, Ptr{Cint}, Cint, Ptr{Ptr{Cdouble}}, Ptr{Int64}, Cint, Cint),
                   g, Cint(k), Cint(max_iterations), Cdouble(epsilon),
                   hsize_ref,
                   Cint(keep_multisets),
                   keep_multisets ? ms_ref : Ptr{Ptr{Cdouble}}(C_NULL),
-                  nsub_ref)
+                  nsub_ref,
+                  Cint(offset), Cint(stride))
 
     hsize = Int(hsize_ref[])
     histogram = if h_ptr != C_NULL && hsize > 0
@@ -490,5 +504,11 @@ end
 # ── CUDA submodule ───────────────────────────────────────────────────
 
 include("CUDA.jl")
+
+# ── MPI submodule ────────────────────────────────────────────────────
+
+include("MPI.jl")
+const MPI = MPI_DRESS
+export MPI
 
 end # module DRESS

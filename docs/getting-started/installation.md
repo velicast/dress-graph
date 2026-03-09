@@ -2,12 +2,79 @@
 
 This guide covers installation for all supported languages.
 
+---
+
+## Prerequisites
+
+### Core (CPU)
+
+| Requirement | Version |
+|---|---|
+| C compiler | GCC or Clang with C11 support |
+| CMake | ≥ 3.14 |
+| OpenMP | Optional — auto-detected by CMake |
+
+A C++17 compiler is additionally required for the `libdress++` (C++) wrapper.
+
+### CUDA (GPU acceleration)
+
+| Requirement | Details |
+|---|---|
+| NVIDIA GPU | Compute-capable device |
+| CUDA Toolkit | Provides `nvcc` and `libcudart` |
+
+CUDA is built separately from the core library, producing `libdress_cuda.so`.
+Build it with:
+
+```bash
+./build.sh cuda
+# or manually:
+make -C libdress/src/cuda
+```
+
+### MPI (distributed computing)
+
+| Requirement | Details |
+|---|---|
+| MPI implementation | OpenMPI or MPICH |
+| `mpicc` | Must be on `PATH` |
+
+For C / C++ via CMake, pass `-DDRESS_MPI=ON`:
+
+```bash
+cmake -S . -B build -DDRESS_MPI=ON
+cmake --build build
+```
+
+The CUDA Makefile auto-detects `mpicc` and includes MPI+CUDA support when available.
+
+### Per-language extras
+
+| Language | CUDA requirement | MPI requirement |
+|---|---|---|
+| **C / C++** | Link against `libdress_cuda.so` + `-lcudart` | CMake flag `-DDRESS_MPI=ON` |
+| **Python** | `libdress_cuda.so` on `LD_LIBRARY_PATH` | `pip install mpi4py`; run with `mpirun` |
+| **Rust** | `libdress_cuda.so` on `LD_LIBRARY_PATH` | Cargo feature `mpi`; `mpicc` on PATH |
+| **Go** | CGO: `libdress_cuda.so` + `-lcudart` | CGO: `-lmpi`; MPI headers on include path |
+| **Julia** | `libdress_cuda.so` in `julia/` dir (or on path) | `MPI.jl` package; `libdress.so` with MPI symbols |
+| **R** | `configure` auto-detects `libdress_cuda.so` | `configure` auto-detects `mpicc` |
+| **Octave** | `libdress_cuda.so` on `LD_LIBRARY_PATH`; `nvcc` at build time | Not supported (CPU only) |
+| **WASM** | Not supported (CPU only) | Not supported (CPU only) |
+
+---
+
 ## Python
 
 ### From PyPI (Remote)
 
 ```bash
 pip install dress-graph
+```
+
+### From conda-forge
+
+```bash
+conda install -c conda-forge dress-graph
 ```
 
 ### From Source
@@ -133,6 +200,21 @@ go mod edit -replace github.com/velicast/dress-graph/go=../path/to/dress-graph/g
 
 ## C / C++
 
+### Homebrew (macOS / Linux)
+
+```bash
+brew tap velicast/dress-graph
+brew install dress-graph
+```
+
+### vcpkg (Overlay Port)
+
+If you use `vcpkg`, you can use the `vcpkg/` directory in this repository as an overlay port.
+
+```bash
+vcpkg install dress-graph --overlay-ports=/path/to/dress-graph/vcpkg
+```
+
 ### From Source (CMake)
 
 You can build the library using CMake directly:
@@ -150,34 +232,32 @@ The provided build script handles `libdress` (C), `libdress++` (C++), and `libdr
 ./build.sh c cpp igraph
 ```
 
-### vcpkg (Overlay Port)
-
-If you use `vcpkg`, you can use the `vcpkg/` directory in this repository as an overlay port.
-
-```bash
-vcpkg install dress-graph --overlay-ports=/path/to/dress-graph/vcpkg
-```
-
 ## MATLAB / Octave
 
 ### From Remote (Octave)
 
 ```octave
-pkg install "https://github.com/velicast/dress-graph/releases/download/v0.4.0/dress-graph-0.4.0.tar.gz"
+pkg install "https://github.com/velicast/dress-graph/releases/download/v0.5.0/dress-graph-0.5.0.tar.gz"
 ```
 
-### From Source
+### From Source (Octave)
 
-Add the `matlab` directory to your MATLAB/Octave path.
+Build the tarball and install locally:
 
-**MATLAB:**
-```matlab
-addpath('path/to/dress-graph/matlab');
-savepath;
+```bash
+./build.sh octave
 ```
 
-**Octave:**
 ```octave
+pkg install dress-graph-0.4.0.tar.gz
+pkg load dress-graph
+```
+
+### From Source (MATLAB)
+
+Add the `matlab` directory to your MATLAB path:
+
+```matlab
 addpath('path/to/dress-graph/matlab');
 savepath;
 ```

@@ -135,18 +135,20 @@ public:
     //
     // Returns a DeltaFitResult with the histogram (and optionally multisets).
     DeltaFitResult deltaFit(int k, int maxIterations, double epsilon,
-                            bool keepMultisets = false) {
+                            bool keepMultisets = false,
+                            int offset = 0, int stride = 1) {
         ensureValid();
         int hsize = 0;
         int E = g_->E;
 
         double *ms_ptr = nullptr;
         int64_t cnk = 0;
-        int64_t *h = ::delta_dress_fit(g_, k, maxIterations, epsilon,
+        int64_t *h = ::delta_dress_fit_strided(g_, k, maxIterations, epsilon,
                                  &hsize,
                                  keepMultisets ? 1 : 0,
                                  keepMultisets ? &ms_ptr : nullptr,
-                                 &cnk);
+                                 &cnk,
+                                 offset, stride);
         if (!h) throw std::runtime_error("DRESS: delta_fit returned NULL");
 
         DeltaFitResult result;
@@ -216,16 +218,17 @@ public:
     p_dress_graph_t       raw()       { return g_; }
     const dress_graph_t*  raw() const { return g_; }
 
+protected:
+    void ensureValid() const {
+        if (!g_)
+            throw std::logic_error("DRESS: accessing a moved-from or null graph");
+    }
+
 private:
     p_dress_graph_t g_;
 
     void destroy() noexcept {
         if (g_) { free_dress_graph(g_); g_ = nullptr; }
-    }
-
-    void ensureValid() const {
-        if (!g_)
-            throw std::logic_error("DRESS: accessing a moved-from or null graph");
     }
 
     // Allocate a malloc'd copy of a std::vector for handoff to the C API.

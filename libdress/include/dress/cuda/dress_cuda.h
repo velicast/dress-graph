@@ -49,6 +49,19 @@ int64_t *delta_dress_fit_cuda(p_dress_graph_t g, int k, int iterations,
                               int keep_multisets, double **multisets,
                               int64_t *num_subgraphs);
 
+/**
+ * GPU-accelerated strided Δ^k-DRESS for distributed computation.
+ *
+ * Same as delta_dress_fit_cuda but processes only subgraphs where
+ * index % stride == offset.  With offset=0, stride=1 processes all.
+ */
+int64_t *delta_dress_fit_cuda_strided(p_dress_graph_t g, int k,
+                                      int iterations, double epsilon,
+                                      int *hist_size,
+                                      int keep_multisets, double **multisets,
+                                      int64_t *num_subgraphs,
+                                      int offset, int stride);
+
 #ifdef __cplusplus
 }
 #endif

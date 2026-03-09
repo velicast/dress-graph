@@ -21,6 +21,8 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
 %     'Epsilon'          — Convergence threshold / bin width (default 1e-6).
 %     'Precompute'       — Logical; precompute intercepts (default false).
 %     'KeepMultisets'    — Logical; return per-subgraph edge values (default false).
+%     'Offset'           — Process only subgraphs where index mod stride == offset (default 0).
+%     'Stride'           — Total number of strides (default 1 = process all).
 %
 %   Output:
 %     result — struct with fields:
@@ -46,6 +48,8 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
     addParameter(p, 'Epsilon',       1e-6,  @(x) isscalar(x) && isnumeric(x) && x > 0);
     addParameter(p, 'Precompute',    false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
     addParameter(p, 'KeepMultisets', false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
+    addParameter(p, 'Offset',        0,     @(x) isscalar(x) && isnumeric(x) && x >= 0);
+    addParameter(p, 'Stride',        1,     @(x) isscalar(x) && isnumeric(x) && x >= 1);
     parse(p, varargin{:});
 
     weights        = double(p.Results.Weights(:));
@@ -55,6 +59,8 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
     epsilon        = double(p.Results.Epsilon);
     precompute     = int32(logical(p.Results.Precompute));
     keep_multisets = int32(logical(p.Results.KeepMultisets));
+    offset         = int32(p.Results.Offset);
+    stride         = int32(p.Results.Stride);
 
     assert(isscalar(n_vertices) && n_vertices >= 1, ...
            'delta_dress:invalidInput', 'n_vertices must be a positive scalar.');
@@ -73,5 +79,5 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
 
     result = delta_dress_mex(n_vertices, sources, targets, weights, k, ...
                              variant, max_iterations, epsilon, precompute, ...
-                             keep_multisets);
+                             keep_multisets, offset, stride);
 end

@@ -8,5 +8,16 @@ int64_t *delta_dress_fit(p_dress_graph_t g, int k, int iterations,
 {
     return delta_dress_fit_impl(g, k, iterations, epsilon, hist_size,
                                 keep_multisets, multisets, num_subgraphs,
-                                dress_fit);
+                                dress_fit, 0, 1);
+}
+
+int64_t *delta_dress_fit_strided(p_dress_graph_t g, int k, int iterations,
+                                 double epsilon, int *hist_size,
+                                 int keep_multisets, double **multisets,
+                                 int64_t *num_subgraphs,
+                                 int offset, int stride)
+{
+    return delta_dress_fit_impl(g, k, iterations, epsilon, hist_size,
+                                keep_multisets, multisets, num_subgraphs,
+                                dress_fit, offset, stride);
 }

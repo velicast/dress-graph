@@ -96,5 +96,10 @@ update vcpkg/vcpkg.json \
     '"version": ".*"' \
     "\"version\": \"$NEW\""
 
+# run_examples.sh — Octave tarball version
+update run_examples.sh \
+    'dress-graph-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz' \
+    "dress-graph-${NEW}.tar.gz"
+
 echo
 echo "Updated $CHANGED file(s)."

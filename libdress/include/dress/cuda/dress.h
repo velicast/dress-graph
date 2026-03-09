@@ -26,5 +26,6 @@
 /* Redirect CPU symbols to CUDA implementations. */
 #define dress_fit       dress_fit_cuda
 #define delta_dress_fit delta_dress_fit_cuda
+#define delta_dress_fit_strided delta_dress_fit_cuda_strided
 
 #endif /* DRESS_CUDA_REDIRECT_H */

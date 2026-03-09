@@ -402,6 +402,8 @@ export async function deltaDressFit(opts) {
     const epsilon     = opts.epsilon ?? 1e-6;
     const precompute  = (opts.precompute ?? false) ? 1 : 0;
     const keepMS      = (opts.keepMultisets ?? false) ? 1 : 0;
+    const offset      = opts.offset ?? 0;
+    const stride      = opts.stride ?? 1;
 
     // Allocate C arrays (ownership transfers to init_dress_graph)
     const uPtr = M._malloc(E * 4);
@@ -444,9 +446,9 @@ export async function deltaDressFit(opts) {
         M.setValue(numSubPtr + 4, 0, 'i32');
     }
 
-    // Call delta_dress_fit  (returns int64_t* — pointer to histogram on heap)
-    const histPtr = M._delta_dress_fit(g, k, maxIter, epsilon, histSizePtr,
-                                 keepMS, msPtrPtr, numSubPtr);
+    // Call delta_dress_fit_strided  (returns int64_t* — pointer to histogram on heap)
+    const histPtr = M._delta_dress_fit_strided(g, k, maxIter, epsilon, histSizePtr,
+                                 keepMS, msPtrPtr, numSubPtr, offset, stride);
 
     const histSize = M.getValue(histSizePtr, 'i32');
 

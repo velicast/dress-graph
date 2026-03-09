@@ -14,14 +14,13 @@
 //
 // # Build requirements
 //
-// Requires CGo, a C compiler, and the CUDA toolkit (nvcc / libcudart).
-// The dress CUDA shared library (libdress_cuda.so) must be built first
-// from libdress/src/cuda/.
+// Requires CGo, a C compiler, and the CUDA toolkit.
+// The CUDA kernel object must be built first (make -C libdress/src/cuda).
 package dress
 
 /*
-#cgo CFLAGS:  -O3 -I../../libdress/include
-#cgo LDFLAGS: -L../../libdress/src/cuda -ldress_cuda -lcudart -lm -fopenmp
+#cgo CFLAGS:  -O3 -DDRESS_CUDA -I../../libdress/include -I../../libdress/src
+#cgo LDFLAGS: -L../../libdress/src/cuda -l:libdress_cuda.a -lcudart_static -lm -fopenmp -ldl -lrt -lpthread
 #include <stdlib.h>
 #include "dress/dress.h"
 #include "dress/delta_dress.h"
@@ -168,7 +167,7 @@ func (r *DeltaResult) String() string {
 // fitting runs on the GPU via CUDA.
 func DeltaDressFit(n int, sources, targets []int32, weights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
-	precompute bool, keepMultisets bool) (*DeltaResult, error) {
+	precompute bool, keepMultisets bool, offset int, stride int) (*DeltaResult, error) {
 
 	e := len(sources)
 	if len(targets) != e {
@@ -217,7 +216,7 @@ func DeltaDressFit(n int, sources, targets []int32, weights []float64,
 		keepMS = C.int(1)
 	}
 
-	hPtr := C.delta_dress_fit_cuda(g, C.int(k), C.int(maxIterations),
+	hPtr := C.delta_dress_fit_cuda_strided(g, C.int(k), C.int(maxIterations),
 		C.double(epsilon), &histSize,
 		keepMS,
 		func() **C.double {
@@ -226,7 +225,7 @@ func DeltaDressFit(n int, sources, targets []int32, weights []float64,
 			}
 			return (**C.double)(nil)
 		}(),
-		&numSub)
+		&numSub, C.int(offset), C.int(stride))
 
 	result := &DeltaResult{
 		HistSize:     int(histSize),
@@ -271,7 +270,7 @@ func Fit(n int, sources, targets []int32, weights []float64,
 func DeltaFit(n int, sources, targets []int32, weights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	precompute bool, keepMultisets bool) (*DeltaResult, error) {
-	return DeltaDressFit(n, sources, targets, weights, k, variant, maxIterations, epsilon, precompute, keepMultisets)
+	return DeltaDressFit(n, sources, targets, weights, k, variant, maxIterations, epsilon, precompute, keepMultisets, 0, 1)
 }
 
 // ── Persistent graph object ─────────────────────────────────────────

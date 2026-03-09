@@ -105,8 +105,9 @@ def _delta_dress_graph_impl(
     epsilon=1e-6,
     precompute=False,
     keep_multisets=False,
+    **kwargs,
 ):
-    """Core implementation shared by CPU and CUDA wrappers."""
+    """Core implementation shared by CPU, CUDA, and MPI wrappers."""
     n_vertices, sources, targets, weights, _nodes = _extract_edges(G, weight)
 
     return delta_fn(
@@ -115,6 +116,7 @@ def _delta_dress_graph_impl(
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
         keep_multisets=keep_multisets,
+        **kwargs,
     )
 
 

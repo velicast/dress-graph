@@ -1,22 +1,16 @@
 /**
- * delta_dress_impl.h — shared implementation for Δ^k-DRESS.
+ * delta_dress_impl.c — shared Δ^k-DRESS implementation.
  *
- * Internal header included by delta_dress.c and cuda/delta_dress_cuda.c.
- * Parameterised by a function pointer so the same combination-enumeration
- * and histogram logic drives both the CPU and CUDA backends.
+ * Parameterised by a fit-function pointer so the same combination-
+ * enumeration and histogram logic drives both the CPU and CUDA backends.
  */
 
-#ifndef DELTA_DRESS_IMPL_H
-#define DELTA_DRESS_IMPL_H
-
+#include "delta_dress_impl.h"
 #include "dress/dress.h"
 
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
-
-/* Fit-function signature: same as dress_fit / dress_fit_cuda. */
-typedef void (*dress_fit_fn)(p_dress_graph_t, int, double, int *, double *);
 
 /* ------------------------------------------------------------------ */
 /*  Internal helpers                                                   */
@@ -184,17 +178,14 @@ static double delta_compute_dmax_bound(p_dress_graph_t g)
 /*  Shared Δ^k-DRESS implementation                                    */
 /* ------------------------------------------------------------------ */
 
-/**
- * Core Δ^k-DRESS: enumerate C(N,k) deletion subsets, fit each subgraph
- * using `fit_fn`, and accumulate the pooled histogram.
- */
-static int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
-                                     int iterations, double epsilon,
-                                     int *hist_size,
-                                     int keep_multisets,
-                                     double **multisets,
-                                     int64_t *num_subgraphs,
-                                     dress_fit_fn fit_fn)
+int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
+                              int iterations, double epsilon,
+                              int *hist_size,
+                              int keep_multisets,
+                              double **multisets,
+                              int64_t *num_subgraphs,
+                              dress_fit_fn fit_fn,
+                              int offset, int stride)
 {
     int N = g->N;
     int E = g->E;
@@ -213,13 +204,14 @@ static int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
     int wants_ms = keep_multisets && multisets;
     double *ms = NULL;
     if (wants_ms) {
-        ms = (double *)malloc((size_t)cnk * E * sizeof(double));
+        ms = (double *)calloc((size_t)cnk * E, sizeof(double));
         *multisets = ms;
         if (!ms) wants_ms = 0;
     }
 
     /* ── k = 0: Δ^0 — run DRESS on the full graph ──────────────── */
     if (k == 0) {
+        if (offset != 0) return hist;
         int *cp_U = (int *)malloc(E * sizeof(int));
         int *cp_V = (int *)malloc(E * sizeof(int));
         double *cp_W = NULL;
@@ -268,17 +260,19 @@ static int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
         }
 
         if (depth == k - 1) {
-            p_dress_graph_t sub = delta_build_subgraph(g, combo, k, edge_map);
-            if (sub) {
-                fit_fn(sub, iterations, epsilon, NULL, NULL);
-                delta_accumulate_histogram(sub, hist, nbins, epsilon);
-                if (wants_ms)
-                    delta_fill_multiset_row(sub, edge_map, E,
-                                            ms + s * E);
-                free_dress_graph(sub);
-            } else if (wants_ms) {
-                double *row = ms + s * E;
-                for (int e = 0; e < E; e++) row[e] = NAN;
+            if (s % stride == offset) {
+                p_dress_graph_t sub = delta_build_subgraph(g, combo, k, edge_map);
+                if (sub) {
+                    fit_fn(sub, iterations, epsilon, NULL, NULL);
+                    delta_accumulate_histogram(sub, hist, nbins, epsilon);
+                    if (wants_ms)
+                        delta_fill_multiset_row(sub, edge_map, E,
+                                                ms + s * E);
+                    free_dress_graph(sub);
+                } else if (wants_ms) {
+                    double *row = ms + s * E;
+                    for (int e = 0; e < E; e++) row[e] = NAN;
+                }
             }
             s++;
         } else {
@@ -291,5 +285,3 @@ static int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
     free(edge_map);
     return hist;
 }
-
-#endif /* DELTA_DRESS_IMPL_H */

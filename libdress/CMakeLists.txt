@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 
 # ── libdress (static + shared) ──────────────────────────────────────
 
-add_library(dress_static STATIC src/dress.c src/delta_dress.c)
+add_library(dress_static STATIC src/dress.c src/delta_dress.c src/delta_dress_impl.c)
 target_include_directories(dress_static
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -13,7 +13,7 @@ target_include_directories(dress_static
 )
 set_target_properties(dress_static PROPERTIES OUTPUT_NAME dress)
 
-add_library(dress_shared SHARED src/dress.c src/delta_dress.c)
+add_library(dress_shared SHARED src/dress.c src/delta_dress.c src/delta_dress_impl.c)
 target_include_directories(dress_shared
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -29,13 +29,21 @@ if(OpenMP_C_FOUND)
     target_link_libraries(dress_shared PUBLIC OpenMP::OpenMP_C)
 endif()
 
-# CUDA (optional)
+# CUDA (optional — detection only, for downstream targets.
+# libdress itself does NOT link CUDA; GPU code lives in libdress_cuda.)
 find_package(CUDAToolkit QUIET)
-if(CUDAToolkit_FOUND)
-    target_compile_definitions(dress_static PRIVATE DRESS_CUDA)
-    target_compile_definitions(dress_shared PRIVATE DRESS_CUDA)
-    target_link_libraries(dress_static PRIVATE CUDA::cudart)
-    target_link_libraries(dress_shared PRIVATE CUDA::cudart)
+
+# MPI (optional — only enabled when -DDRESS_MPI=ON is passed.
+# The MPI headers in include/dress/mpi/ are usable without linking MPI
+# to libdress itself, but we expose MPI::MPI_C so downstream targets
+# that #include dress/mpi/dress_mpi.h get the MPI include path.)
+option(DRESS_MPI "Enable MPI support" OFF)
+if(DRESS_MPI)
+    find_package(MPI REQUIRED COMPONENTS C)
+    target_sources(dress_static PRIVATE src/mpi/dress_mpi.c)
+    target_sources(dress_shared PRIVATE src/mpi/dress_mpi.c)
+    target_link_libraries(dress_static PUBLIC MPI::MPI_C)
+    target_link_libraries(dress_shared PUBLIC MPI::MPI_C)
 endif()
 
 target_compile_options(dress_static PRIVATE -O3)

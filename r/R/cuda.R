@@ -86,7 +86,9 @@ cuda <- local({
                                   max_iterations   = 100L,
                                   epsilon          = 1e-6,
                                   precompute       = FALSE,
-                                  keep_multisets   = FALSE) {
+                                  keep_multisets   = FALSE,
+                                  offset           = 0L,
+                                  stride           = 1L) {
 
     .check_cuda()
 
@@ -100,6 +102,8 @@ cuda <- local({
     epsilon        <- as.double(epsilon)
     precompute     <- as.integer(precompute)
     keep_multisets <- as.integer(keep_multisets)
+    offset         <- as.integer(offset)
+    stride         <- as.integer(stride)
 
     stopifnot(length(sources) == length(targets))
     if (!is.null(weights)) stopifnot(length(weights) == length(sources))
@@ -108,11 +112,14 @@ cuda <- local({
     stopifnot(variant >= 0L && variant <= 3L)
     stopifnot(max_iterations >= 1L)
     stopifnot(epsilon > 0)
+    stopifnot(stride >= 1L)
+    stopifnot(offset >= 0L && offset < stride)
 
     .Call("C_delta_dress_fit_cuda",
           n_vertices, sources, targets, weights,
           k, variant, max_iterations, epsilon,
           precompute, keep_multisets,
+          offset, stride,
           PACKAGE = "dress.graph")
   }
 

@@ -192,9 +192,11 @@ func (r *DeltaResult) String() string {
 //   - epsilon: convergence tolerance and bin width
 //   - precompute: precompute intercepts in each subgraph
 //   - keepMultisets: if true, return per-subgraph edge values
+//   - offset: process only subgraphs where index % stride == offset (0)
+//   - stride: total number of strides (1 = process all)
 func DeltaDressFit(n int, sources, targets []int32, weights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
-	precompute bool, keepMultisets bool) (*DeltaResult, error) {
+	precompute bool, keepMultisets bool, offset int, stride int) (*DeltaResult, error) {
 
 	e := len(sources)
 	if len(targets) != e {
@@ -244,7 +246,7 @@ func DeltaDressFit(n int, sources, targets []int32, weights []float64,
 		keepMS = C.int(1)
 	}
 
-	hPtr := C.delta_dress_fit(g, C.int(k), C.int(maxIterations),
+	hPtr := C.delta_dress_fit_strided(g, C.int(k), C.int(maxIterations),
 		C.double(epsilon), &histSize,
 		keepMS,
 		func() **C.double {
@@ -253,7 +255,7 @@ func DeltaDressFit(n int, sources, targets []int32, weights []float64,
 			}
 			return (**C.double)(nil)
 		}(),
-		&numSub)
+		&numSub, C.int(offset), C.int(stride))
 
 	result := &DeltaResult{
 		HistSize:     int(histSize),
@@ -298,7 +300,7 @@ func Fit(n int, sources, targets []int32, weights []float64,
 func DeltaFit(n int, sources, targets []int32, weights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	precompute bool, keepMultisets bool) (*DeltaResult, error) {
-	return DeltaDressFit(n, sources, targets, weights, k, variant, maxIterations, epsilon, precompute, keepMultisets)
+	return DeltaDressFit(n, sources, targets, weights, k, variant, maxIterations, epsilon, precompute, keepMultisets, 0, 1)
 }
 
 // ── Persistent graph object ─────────────────────────────────────────

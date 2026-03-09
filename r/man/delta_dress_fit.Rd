@@ -11,7 +11,7 @@ The result is a fixed-size histogram of edge DRESS values pooled across all
 delta_dress_fit(n_vertices, sources, targets, weights = NULL, k = 0L,
                 variant = DRESS_UNDIRECTED, max_iterations = 100L,
                 epsilon = 1e-6, precompute = FALSE,
-                keep_multisets = FALSE)
+                keep_multisets = FALSE, offset = 0L, stride = 1L)
 }
 \arguments{
   \item{n_vertices}{Integer. Number of vertices (vertex ids must be in
@@ -33,6 +33,12 @@ delta_dress_fit(n_vertices, sources, targets, weights = NULL, k = 0L,
   \item{keep_multisets}{Logical. If \code{TRUE}, return per-subgraph edge
     DRESS values in a C(N,k) x E matrix (\code{NaN} for removed edges).
     Default \code{FALSE}.}
+  \item{offset}{Integer. Start index for stride-based subgraph selection
+    (0-based). Used for distributing work across MPI ranks.
+    Default \code{0L}.}
+  \item{stride}{Integer. Step size for stride-based subgraph selection
+    (must be >= 1). Only subgraphs where \code{index \%\% stride == offset}
+    are processed. Default \code{1L} (process all subgraphs).}
 }
 \value{
 A list with components:

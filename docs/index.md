@@ -101,7 +101,11 @@ DRESS is implemented in C with bindings for:
 - **Julia**: native FFI module
 - **R**: `.Call` interface
 - **MATLAB / Octave**: MEX gateway
-- **JavaScript / WASM**: browser and Node.js
+- **JavaScript / WASM**: browser and Node.js (CPU only)
+
+All backends — **CPU**, **CUDA** (GPU), **MPI** (distributed), and **MPI+CUDA** — are supported across all native language bindings.
+An **igraph** C wrapper (`libdress-igraph`) is also available with the same CPU / CUDA / MPI / MPI+CUDA backend matrix.
+JavaScript / WASM is CPU-only (browser).
 
 See [Installation](getting-started/installation.md) to get started.
 

@@ -205,7 +205,399 @@ DRESS is implemented in C with bindings for:
 - **Julia**: native FFI module
 - **R**: `.Call` interface
 - **MATLAB / Octave**: MEX gateway
-- **JavaScript / WASM**: browser and Node.js
+- **JavaScript / WASM**: browser and Node.js (CPU only)
+
+All backends — **CPU**, **CUDA** (GPU), **MPI** (distributed), and **MPI+CUDA** — are supported across all native language bindings.
+An **igraph** C wrapper (`libdress-igraph`) is also available with the same CPU / CUDA / MPI / MPI+CUDA backend matrix.
+JavaScript / WASM is CPU-only (browser).
+
+Every binding exposes the same `delta_dress_fit` function — switching between CPU, CUDA,
+MPI, and MPI+CUDA is done purely by changing the import / include:
+
+<details>
+<summary><b>C</b></summary>
+
+```c
+#include "dress/dress.h"            // CPU
+#include "dress/cuda/dress.h"       // CUDA  (replaces CPU header)
+#include "dress/mpi/dress.h"        // MPI   (replaces CPU header)
+#include "dress/mpi/cuda/dress.h"   // MPI + CUDA (single include)
+
+p_dress_graph_t g = init_dress_graph(N, E, U, V, W, DRESS_VARIANT_UNDIRECTED, 0);
+int hs; int64_t ns;
+int64_t *hist = delta_dress_fit(g, /*k=*/1, /*iter=*/100, /*eps=*/1e-6,
+                                &hs, /*keep_multisets=*/0, NULL, &ns);
+free_dress_graph(g);
+```
+
+</details>
+
+<details>
+<summary><b>C++</b></summary>
+
+```cpp
+#include "dress/dress.hpp"              // CPU           → ::DRESS
+#include "dress/cuda/dress.hpp"         // CUDA          → cuda::DRESS
+#include "dress/mpi/dress.hpp"          // MPI           → mpi::DRESS
+#include "dress/mpi/cuda/dress.hpp"     // MPI + CUDA    → mpi::cuda::DRESS
+
+DRESS g(N, U, V);                       // (or cuda::DRESS, mpi::DRESS, …)
+auto r = g.deltaFit(/*k=*/1, /*maxIter=*/100, /*eps=*/1e-6);
+// r.histogram, r.hist_size, r.num_subgraphs
+```
+
+</details>
+
+<details>
+<summary><b>Python</b></summary>
+
+```python
+from dress import delta_dress_fit            # CPU
+from dress.cuda import delta_dress_fit       # CUDA
+from dress.mpi import delta_dress_fit        # MPI
+from dress.mpi.cuda import delta_dress_fit   # MPI + CUDA
+
+result = delta_dress_fit(
+    n_vertices=6, sources=[0,1,2,0,1,2,3,4,5],
+    targets=[1,2,0,3,4,5,4,5,3], k=1,
+)
+print(result.histogram, result.hist_size)
+```
+
+</details>
+
+<details>
+<summary><b>Rust</b></summary>
+
+```rust
+use dress_graph::DRESS;                     // CPU
+use dress_graph::cuda::DRESS;               // CUDA
+
+// MPI / MPI + CUDA
+use dress_graph::mpi;
+use dress_graph::mpi::cuda;
+
+let r = DRESS::delta_fit(
+    6, sources, targets, None,
+    /*k=*/1, /*max_iter=*/100, /*eps=*/1e-6,
+    Variant::Undirected, false, false, 0, 1,
+)?;
+// MPI variant:
+let r = mpi::delta_fit(6, sources, targets, None,
+    1, 100, 1e-6, Variant::Undirected, false, false, &comm)?;
+```
+
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+import dress "github.com/velicast/dress-graph/go"            // CPU
+import dress "github.com/velicast/dress-graph/go/cuda"        // CUDA
+import dress "github.com/velicast/dress-graph/go/mpi"         // MPI
+import dress "github.com/velicast/dress-graph/go/mpi/cuda"    // MPI + CUDA
+
+r, err := dress.DeltaDressFit(6, sources, targets, nil,
+    1, dress.Undirected, 100, 1e-6, false, false, 0, 1)
+// r.Histogram, r.HistSize, r.NumSubgraphs
+```
+
+</details>
+
+<details>
+<summary><b>Julia</b></summary>
+
+```julia
+using DRESS                      # CPU
+using DRESS.CUDA                 # CUDA
+using DRESS; using DRESS.MPI     # MPI
+using DRESS; using DRESS.MPI.CUDA  # MPI + CUDA
+
+r = delta_dress_fit(6, sources, targets; k=1)
+# r.histogram, r.hist_size, r.num_subgraphs
+```
+
+</details>
+
+<details>
+<summary><b>R</b></summary>
+
+```r
+library(dress.graph)
+
+delta_dress_fit(6, sources, targets, k = 1L)         # CPU
+cuda$delta_dress_fit(6, sources, targets, k = 1L)     # CUDA
+mpi$delta_dress_fit(6, sources, targets, k = 1L)      # MPI
+mpi$cuda$delta_dress_fit(6, sources, targets, k = 1L) # MPI + CUDA
+```
+
+</details>
+
+<details>
+<summary><b>MATLAB / Octave</b></summary>
+
+```matlab
+result = delta_dress_fit(6, sources, targets, 'K', 1);
+% result.histogram, result.hist_size, result.num_subgraphs
+```
+
+</details>
+
+<details>
+<summary><b>JavaScript / WASM</b></summary>
+
+```javascript
+import { deltaDressFit } from './dress.js';
+
+const r = await deltaDressFit({
+    numVertices: 6, sources, targets, k: 1,
+});
+// r.histogram, r.histSize, r.numSubgraphs
+```
+
+</details>
+
+## API Reference
+
+End-to-end examples for every language × backend live in [`examples/`](examples/).
+Each example compares **Prism vs K₃,₃** (Δ⁰-DRESS, CPU/CUDA) or
+**Rook L₂(4) vs Shrikhande** (Δ¹-DRESS, MPI/MPI+CUDA, Octave, WASM).
+
+### C
+
+| Backend | Header | Link function | Example |
+|---------|--------|---------------|---------|
+| CPU | `dress/dress.h` | `-ldress -lm` | [`examples/c/cpu.c`](examples/c/cpu.c) |
+| CUDA | `dress/cuda/dress.h` | `-ldress_cuda -lcudart -lm` | [`examples/c/cuda.c`](examples/c/cuda.c) |
+| MPI | `dress/mpi/dress.h` | `mpicc -ldress -lm` | [`examples/c/mpi.c`](examples/c/mpi.c) |
+| MPI+CUDA | `dress/mpi/cuda/dress.h` | `mpicc -ldress_cuda -lcudart -lm` | [`examples/c/mpi_cuda.c`](examples/c/mpi_cuda.c) |
+| igraph CPU | `dress_igraph.h` | `-ldress_igraph -ldress -ligraph -lm` | [`examples/c/cpu_igraph.c`](examples/c/cpu_igraph.c) |
+| igraph CUDA | `cuda/dress_igraph.h` | `-ldress_igraph -ldress_cuda -ligraph -lcudart -lm` | [`examples/c/cuda_igraph.c`](examples/c/cuda_igraph.c) |
+| igraph MPI | `mpi/dress_igraph.h` | `mpicc -ldress_igraph_mpi -ldress -ligraph -lm` | [`examples/c/mpi_igraph.c`](examples/c/mpi_igraph.c) |
+| igraph MPI+CUDA | `mpi/cuda/dress_igraph.h` | `mpicc -ldress_igraph_mpi -ldress_cuda -ligraph -lcudart -lm` | [`examples/c/mpi_cuda_igraph.c`](examples/c/mpi_cuda_igraph.c) |
+
+```c
+// Δ⁰ — edge fingerprint
+p_dress_graph_t g = init_dress_graph(N, E, U, V, NULL, DRESS_VARIANT_UNDIRECTED, 0);
+int iters; double delta;
+dress_fit(g, 100, 1e-6, &iters, &delta);        // CPU
+dress_fit_cuda(g, 100, 1e-6, &iters, &delta);   // CUDA
+
+// Δ¹ — histogram fingerprint
+int hs; int64_t ns;
+int64_t *hist = delta_dress_fit(g, /*k=*/1, 100, 1e-6, &hs, 0, NULL, &ns);
+int64_t *hist = delta_dress_fit_mpi(g, 1, 100, 1e-6, &hs, 0, NULL, &ns, MPI_COMM_WORLD);
+int64_t *hist = delta_dress_fit_mpi_cuda(g, 1, 100, 1e-6, &hs, 0, NULL, &ns, MPI_COMM_WORLD);
+
+free(hist);
+free_dress_graph(g);
+
+// igraph wrapper — Δ¹ histogram fingerprint
+delta_dress_result_igraph_t result;
+delta_dress_fit_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+                       /*k=*/1, 100, 1e-6, 1, &result);      // CPU
+delta_dress_fit_mpi_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+                           1, 100, 1e-6, 1, &result,
+                           MPI_COMM_WORLD);                    // MPI
+delta_dress_free_igraph(&result);
+```
+
+### C++
+
+| Backend | Header | Namespace | Example |
+|---------|--------|-----------|---------|
+| CPU | `dress/dress.hpp` | `::DRESS` | [`examples/cpp/cpu.cpp`](examples/cpp/cpu.cpp) |
+| CUDA | `dress/cuda/dress.hpp` | `cuda::DRESS` | [`examples/cpp/cuda.cpp`](examples/cpp/cuda.cpp) |
+| MPI | `dress/mpi/dress.hpp` | `mpi::DRESS` | [`examples/cpp/mpi.cpp`](examples/cpp/mpi.cpp) |
+| MPI+CUDA | `dress/mpi/cuda/dress.hpp` | `mpi::cuda::DRESS` | [`examples/cpp/mpi_cuda.cpp`](examples/cpp/mpi_cuda.cpp) |
+
+```cpp
+DRESS g(N, sources, targets);              // or cuda::DRESS, mpi::DRESS, mpi::cuda::DRESS
+auto r = g.fit(100, 1e-6);                 // → {iterations, delta}
+auto d = g.deltaFit(/*k=*/1);             // → {histogram, hist_size, num_subgraphs}
+double val = g.edgeDress(e);               // per-edge value after fit
+```
+
+### Python
+
+| Backend | Import | Example |
+|---------|--------|---------|
+| CPU | `from dress import dress_fit, delta_dress_fit` | [`cpu.py`](examples/python/cpu.py) |
+| CUDA | `from dress.cuda import dress_fit, delta_dress_fit` | [`cuda.py`](examples/python/cuda.py) |
+| MPI | `from dress.mpi import delta_dress_fit` | [`mpi.py`](examples/python/mpi.py) |
+| MPI+CUDA | `from dress.mpi.cuda import delta_dress_fit` | [`mpi_cuda.py`](examples/python/mpi_cuda.py) |
+| NetworkX (CPU) | `from dress.networkx import dress_graph, delta_dress_graph` | [`cpu_nx.py`](examples/python/cpu_nx.py) |
+| NetworkX (CUDA) | `from dress.cuda.networkx import dress_graph, delta_dress_graph` | [`cuda_nx.py`](examples/python/cuda_nx.py) |
+| NetworkX (MPI) | `from dress.mpi.networkx import delta_dress_graph` | [`mpi_nx.py`](examples/python/mpi_nx.py) |
+| NetworkX (MPI+CUDA) | `from dress.mpi.cuda.networkx import delta_dress_graph` | [`mpi_cuda_nx.py`](examples/python/mpi_cuda_nx.py) |
+
+```python
+# Δ⁰ — edge fingerprint
+result = dress_fit(n_vertices, sources, targets)
+result.edge_dress    # per-edge values
+result.node_dress    # per-node norms
+result.iterations    # convergence iterations
+
+# Δ¹ — histogram fingerprint
+result = delta_dress_fit(n_vertices, sources, targets, k=1)
+result.histogram     # bin counts
+result.hist_size     # number of bins
+
+# NetworkX — pass a graph directly
+import networkx as nx
+from dress.networkx import dress_graph, delta_dress_graph
+
+G = nx.karate_club_graph()
+result = dress_graph(G, set_attributes=True)
+G.edges[0, 1]["dress"]      # per-edge similarity
+
+delta = delta_dress_graph(G, k=1, keep_multisets=True)
+delta.histogram              # bin counts
+
+# MPI NetworkX — same API, distributed
+from dress.mpi.networkx import delta_dress_graph
+delta = delta_dress_graph(G, k=1)  # uses MPI.COMM_WORLD
+```
+
+### Rust
+
+| Backend | Import | Example |
+|---------|--------|---------|
+| CPU | `use dress_graph::DRESS` | [`examples/rust/cpu.rs`](examples/rust/cpu.rs) |
+| CUDA | `use dress_graph::cuda::DRESS` | [`examples/rust/cuda.rs`](examples/rust/cuda.rs) |
+| MPI | `use dress_graph::mpi` | [`examples/rust/mpi.rs`](examples/rust/mpi.rs) |
+| MPI+CUDA | `use dress_graph::mpi::cuda` | [`examples/rust/mpi_cuda.rs`](examples/rust/mpi_cuda.rs) |
+
+```rust
+// Builder pattern (CPU / CUDA)
+let result = DRESS::builder(n, sources, targets)
+    .variant(Variant::Undirected)
+    .build_and_fit()?;
+// result.edge_dress, result.iterations, result.delta
+
+// MPI delta fit
+let r = mpi::delta_fit(n, sources, targets, None,
+    /*k=*/1, 100, 1e-6, Variant::Undirected, false, false, &world)?;
+// r.histogram, r.hist_size, r.num_subgraphs
+```
+
+### Go
+
+| Backend | Import path | Example |
+|---------|-------------|---------|
+| CPU | `github.com/velicast/dress-graph/go` | [`examples/go/cpu.go`](examples/go/cpu.go) |
+| CUDA | `github.com/velicast/dress-graph/go/cuda` | [`examples/go/cuda.go`](examples/go/cuda.go) |
+| MPI | `github.com/velicast/dress-graph/go/mpi` | [`examples/go/mpi.go`](examples/go/mpi.go) |
+| MPI+CUDA | `github.com/velicast/dress-graph/go/mpi/cuda` | [`examples/go/mpi_cuda.go`](examples/go/mpi_cuda.go) |
+
+```go
+// CPU / CUDA — same function, different import
+result, _ := dress.DressFit(n, sources, targets, nil,
+    dress.Undirected, 100, 1e-6, false)
+// result.EdgeDress, result.Iterations, result.Delta
+
+// MPI / MPI+CUDA — delta only
+dress.Init()
+defer dress.Finalize()
+r, _ := dress.DeltaDressFit(n, sources, targets, nil,
+    /*k=*/1, dress.Undirected, 100, 1e-6, false, false)
+// r.Histogram, r.HistSize, r.NumSubgraphs
+```
+
+### Julia
+
+| Backend | Import | Example |
+|---------|--------|---------|
+| CPU | `using DRESS` | [`examples/julia/cpu.jl`](examples/julia/cpu.jl) |
+| CUDA | `using DRESS.CUDA` | [`examples/julia/cuda.jl`](examples/julia/cuda.jl) |
+| MPI | `using DRESS.MPI` | [`examples/julia/mpi.jl`](examples/julia/mpi.jl) |
+| MPI+CUDA | `using DRESS.MPI.CUDA` | [`examples/julia/mpi_cuda.jl`](examples/julia/mpi_cuda.jl) |
+
+```julia
+# Δ⁰ — edge fingerprint
+r = dress_fit(N, sources, targets)
+# r.edge_dress, r.node_dress, r.iterations, r.delta
+
+# Δ¹ — histogram fingerprint
+r = delta_dress_fit(N, sources, targets; k=1)
+# r.histogram, r.hist_size, r.num_subgraphs
+```
+
+### R
+
+| Backend | Call | Example |
+|---------|------|---------|
+| CPU | `dress_fit()` / `delta_dress_fit()` | [`examples/r/cpu.R`](examples/r/cpu.R) |
+| CUDA | `cuda$dress_fit()` / `cuda$delta_dress_fit()` | [`examples/r/cuda.R`](examples/r/cuda.R) |
+| MPI | `mpi$delta_dress_fit()` | [`examples/r/mpi.R`](examples/r/mpi.R) |
+| MPI+CUDA | `mpi$cuda$delta_dress_fit()` | [`examples/r/mpi_cuda.R`](examples/r/mpi_cuda.R) |
+
+```r
+library(dress.graph)
+
+# Δ⁰ — edge fingerprint
+r <- dress_fit(6L, sources, targets)
+# r$edge_dress, r$node_dress, r$iterations, r$delta
+
+# Δ¹ — histogram fingerprint
+r <- delta_dress_fit(6L, sources, targets, k = 1L)       # CPU
+r <- cuda$delta_dress_fit(6L, sources, targets, k = 1L)   # CUDA
+r <- mpi$delta_dress_fit(6L, sources, targets, k = 1L)    # MPI
+r <- mpi$cuda$delta_dress_fit(6L, sources, targets, k = 1L) # MPI+CUDA
+```
+
+### MATLAB / Octave
+
+| Backend | Function | Example |
+|---------|----------|---------|
+| CPU | `dress_fit()` / `delta_dress_fit()` | [`examples/octave/cpu.m`](examples/octave/cpu.m) |
+| Δ¹-DRESS | `delta_dress_fit(..., 'K', 1)` | [`examples/octave/rook_vs_shrikhande.m`](examples/octave/rook_vs_shrikhande.m) |
+
+```matlab
+% Δ⁰ — edge fingerprint
+result = dress_fit(6, int32(sources), int32(targets));
+% result.edge_dress, result.node_dress, result.iterations, result.delta
+
+% Δ¹ — histogram fingerprint
+result = delta_dress_fit(6, int32(sources), int32(targets), ...
+    'K', 1, 'KeepMultisets', true);
+% result.histogram, result.hist_size, result.multisets, result.num_subgraphs
+
+% Persistent graph with get()
+g = DRESS(6, int32(sources), int32(targets));
+g.fit('MaxIterations', 100, 'Epsilon', 1e-6);
+d = g.get(u, v);     % query edge similarity
+g.close();
+```
+
+### JavaScript / WASM
+
+| Backend | Import | Example |
+|---------|--------|---------|
+| CPU | `import { dressFit } from './dress.js'` | [`examples/wasm/cpu.mjs`](examples/wasm/cpu.mjs) |
+| Δ¹-DRESS | `import { deltaDressFit } from './dress.js'` | [`examples/wasm/rook_vs_shrikhande.mjs`](examples/wasm/rook_vs_shrikhande.mjs) |
+
+```javascript
+// Δ⁰ — edge fingerprint
+const result = await dressFit({
+    numVertices: 6, sources, targets,
+});
+// result.edgeDress, result.nodeDress, result.iterations, result.delta
+
+// Δ¹ — histogram fingerprint
+const r = await deltaDressFit({
+    numVertices: 6, sources, targets,
+    k: 1, keepMultisets: true,
+});
+// r.histogram, r.histSize, r.multisets, r.numSubgraphs
+
+// Persistent graph with get()
+const g = await DressGraph.create({ numVertices: 6, sources, targets });
+g.fit(100, 1e-6);
+const d = g.get(u, v);   // query edge similarity
+g.free();
+```
 
 ## Building from source
 

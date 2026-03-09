@@ -114,6 +114,8 @@ def delta_dress_fit(
     epsilon=1e-6,
     precompute=False,
     keep_multisets=False,
+    offset=0,
+    stride=1,
 ):
     """Compute the Δ^k-DRESS histogram.
 
@@ -145,6 +147,10 @@ def delta_dress_fit(
     keep_multisets : bool
         If True, return per-subgraph DRESS values in a 2D array of shape
         (C(N,k), E).  NaN marks removed edges (default ``False``).
+    offset : int
+        Process only subgraphs where index % stride == offset (default 0).
+    stride : int
+        Total number of strides (default 1 = process all).
 
     Returns
     -------
@@ -161,7 +167,8 @@ def delta_dress_fit(
         else:
             g = _DRESS_cls(n_vertices, list(sources), list(targets), _cv,
                            precompute)
-        dr = g.delta_fit(k, max_iterations, epsilon, keep_multisets)
+        dr = g.delta_fit(k, max_iterations, epsilon, keep_multisets,
+                         offset, stride)
         ms = None
         ns = 0
         if keep_multisets and dr.multisets is not None:

@@ -26,33 +26,7 @@ import os
 import numpy as np
 from numpy.ctypeslib import ndpointer
 
-# ---------------------------------------------------------------------------
-#  Type definitions matching dress.h
-# ---------------------------------------------------------------------------
-
-class _DressGraph(ctypes.Structure):
-    """Mirrors dress_graph_t — only needed so ctypes knows it's a struct."""
-    _fields_ = [
-        ("variant",                ctypes.c_int),
-        ("N",                      ctypes.c_int),
-        ("E",                      ctypes.c_int),
-        ("U",                      ctypes.POINTER(ctypes.c_int)),
-        ("V",                      ctypes.POINTER(ctypes.c_int)),
-        ("adj_offset",             ctypes.POINTER(ctypes.c_int)),
-        ("adj_target",             ctypes.POINTER(ctypes.c_int)),
-        ("adj_edge_idx",           ctypes.POINTER(ctypes.c_int)),
-        ("W",                      ctypes.POINTER(ctypes.c_double)),
-        ("edge_weight",            ctypes.POINTER(ctypes.c_double)),
-        ("edge_dress",             ctypes.POINTER(ctypes.c_double)),
-        ("edge_dress_next",        ctypes.POINTER(ctypes.c_double)),
-        ("node_dress",             ctypes.POINTER(ctypes.c_double)),
-        ("precompute_intercepts",  ctypes.c_int),
-        ("intercept_offset",       ctypes.POINTER(ctypes.c_int)),
-        ("intercept_edge_ux",      ctypes.POINTER(ctypes.c_int)),
-        ("intercept_edge_vx",      ctypes.POINTER(ctypes.c_int)),
-    ]
-
-_p_dress_graph_t = ctypes.POINTER(_DressGraph)
+from dress._ctypes_helpers import _DressGraph, _p_dress_graph_t, _malloc_array
 
 # ---------------------------------------------------------------------------
 #  Lazy-load shared library (so importing dress.cuda never crashes)
@@ -60,27 +34,71 @@ _p_dress_graph_t = ctypes.POINTER(_DressGraph)
 
 _lib = None
 
+# Path constants for auto-build
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.normpath(os.path.join(_HERE, '..', '..', '..', '..'))
+_LIB_DIR = os.path.join(_ROOT, 'libdress')
+_LOCAL_SO = os.path.join(_ROOT, 'libdress', 'src', 'cuda', 'libdress_cuda.so')
+
+
+def _build_cuda_so():
+    """Build a self-contained libdress_cuda.so from source (cudart_static baked in)."""
+    import shutil
+    import subprocess
+
+    nvcc = shutil.which('nvcc')
+    if nvcc is None:
+        raise RuntimeError("nvcc not found — cannot auto-build CUDA library.")
+
+    inc = os.path.join(_LIB_DIR, 'include')
+    src = os.path.join(_LIB_DIR, 'src')
+    cuda_dir = os.path.join(src, 'cuda')
+
+    cuda_cu = os.path.join(cuda_dir, 'dress_cuda.cu')
+    cuda_obj = os.path.join(cuda_dir, 'dress_cuda.o')
+
+    # Compile CUDA kernel with nvcc
+    if not os.path.isfile(cuda_obj):
+        subprocess.check_call([
+            nvcc, '-O2', '-Xcompiler', '-fPIC', f'-I{inc}',
+            '-c', cuda_cu, '-o', cuda_obj,
+        ])
+
+    cc = os.environ.get('CC', 'gcc')
+    c_srcs = [
+        os.path.join(src, 'dress.c'),
+        os.path.join(src, 'delta_dress.c'),
+        os.path.join(src, 'delta_dress_impl.c'),
+        os.path.join(cuda_dir, 'delta_dress_cuda.c'),
+    ]
+    subprocess.check_call([
+        cc, '-shared', '-fPIC', '-O3', '-fopenmp', '-DDRESS_CUDA',
+        f'-I{inc}', f'-I{src}',
+        '-o', _LOCAL_SO,
+        *c_srcs, cuda_obj,
+        '-lcudart_static', '-lm', '-ldl', '-lrt', '-lpthread',
+    ])
+
 
 def _get_lib():
-    """Load libdress_cuda.so on first use. Raises RuntimeError if unavailable."""
+    """Load libdress_cuda.so on first use, auto-building if needed."""
     global _lib
     if _lib is not None:
         return _lib
 
-    _here = os.path.dirname(os.path.abspath(__file__))
-    _cuda_lib_path = os.path.join(
-        _here, '..', '..', '..', '..', 'libdress', 'src', 'cuda', 'libdress_cuda.so')
-    if not os.path.isfile(_cuda_lib_path):
-        _cuda_lib_path = 'libdress_cuda.so'
+    # Try pre-built .so first, then system path
+    lib = None
+    for path in [_LOCAL_SO, 'libdress_cuda.so']:
+        try:
+            lib = ctypes.CDLL(path)
+            break
+        except OSError:
+            continue
 
-    try:
-        lib = ctypes.CDLL(_cuda_lib_path)
-    except OSError as e:
-        raise RuntimeError(
-            "CUDA shared library (libdress_cuda.so) not found. "
-            "Build it with `make` in libdress/src/cuda/, or ensure "
-            "it is on LD_LIBRARY_PATH."
-        ) from e
+    # Auto-build from source if nvcc is available
+    if lib is None:
+        _build_cuda_so()
+        lib = ctypes.CDLL(_LOCAL_SO)
 
     # Bind C function signatures
     lib.init_dress_graph.restype  = _p_dress_graph_t
@@ -111,6 +129,15 @@ def _get_lib():
         ctypes.POINTER(ctypes.c_int64),
     ]
 
+    lib.delta_dress_fit_cuda_strided.restype  = ctypes.POINTER(ctypes.c_int64)
+    lib.delta_dress_fit_cuda_strided.argtypes = [
+        _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
+        ctypes.POINTER(ctypes.c_int64),
+        ctypes.c_int, ctypes.c_int,
+    ]
+
     lib.free_dress_graph.restype  = None
     lib.free_dress_graph.argtypes = [_p_dress_graph_t]
 
@@ -137,19 +164,7 @@ FORWARD    = 2
 BACKWARD   = 3
 
 
-def _make_c_array(arr, ctype):
-    """Convert a Python list/numpy array to a heap-allocated ctypes array.
-    
-    The C library takes ownership, so we use malloc-compatible allocation
-    via (ctype * n).from_buffer_copy(), which ctypes manages.
-    NOTE: init_dress_graph takes ownership of U, V, W — they are freed by
-    free_dress_graph. We must allocate with ctypes so the C free() works.
-    """
-    n = len(arr)
-    c_arr = (ctype * n)(*arr)
-    # Convert to a pointer that the C library can free() — use ctypes malloc
-    ptr = ctypes.cast(ctypes.pointer(c_arr), ctypes.POINTER(ctype))
-    return ptr, c_arr  # keep c_arr alive
+
 
 
 def dress_cuda(N, E, U, V, W=None, variant=UNDIRECTED,
@@ -176,16 +191,13 @@ def dress_cuda(N, E, U, V, W=None, variant=UNDIRECTED,
     iterations : int
     delta : float
     """
-    # Allocate C arrays that init_dress_graph will take ownership of.
-    # We use ctypes's malloc so free() in C works correctly.
-    c_U = (ctypes.c_int * E)(*[int(x) for x in U])
-    c_V = (ctypes.c_int * E)(*[int(x) for x in V])
-    p_U = ctypes.cast(c_U, ctypes.POINTER(ctypes.c_int))
-    p_V = ctypes.cast(c_V, ctypes.POINTER(ctypes.c_int))
+    # Allocate C arrays with malloc — init_dress_graph takes ownership
+    # and free_dress_graph calls free() on them.
+    p_U = _malloc_array([int(x) for x in U], ctypes.c_int)
+    p_V = _malloc_array([int(x) for x in V], ctypes.c_int)
 
     if W is not None:
-        c_W = (ctypes.c_double * E)(*[float(x) for x in W])
-        p_W = ctypes.cast(c_W, ctypes.POINTER(ctypes.c_double))
+        p_W = _malloc_array([float(x) for x in W], ctypes.c_double)
     else:
         p_W = ctypes.POINTER(ctypes.c_double)()  # NULL
 
@@ -338,11 +350,16 @@ def delta_dress_fit(
     epsilon=1e-6,
     precompute=False,
     keep_multisets=False,
+    offset=0,
+    stride=1,
 ):
     """GPU-accelerated Δ^k-DRESS — drop-in replacement for ``dress.delta_dress_fit``.
 
     Same parameters and return type as :func:`dress.delta_dress_fit`, but
     each subgraph fitting runs on the GPU.
+
+    Parameters *offset* and *stride* select a subset of the C(N,k) subgraphs
+    (process only those where ``index % stride == offset``).
     """
     from dress.core import DeltaDRESSResult
 
@@ -351,15 +368,12 @@ def delta_dress_fit(
     targets = list(targets)
     E = len(sources)
 
-    # Build the graph via ctypes
-    c_U = (ctypes.c_int * E)(*[int(x) for x in sources])
-    c_V = (ctypes.c_int * E)(*[int(x) for x in targets])
-    p_U = ctypes.cast(c_U, ctypes.POINTER(ctypes.c_int))
-    p_V = ctypes.cast(c_V, ctypes.POINTER(ctypes.c_int))
+    # Build the graph via ctypes — use malloc so free_dress_graph works
+    p_U = _malloc_array([int(x) for x in sources], ctypes.c_int)
+    p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
 
     if weights is not None:
-        c_W = (ctypes.c_double * E)(*[float(x) for x in weights])
-        p_W = ctypes.cast(c_W, ctypes.POINTER(ctypes.c_double))
+        p_W = _malloc_array([float(x) for x in weights], ctypes.c_double)
     else:
         p_W = ctypes.POINTER(ctypes.c_double)()
 
@@ -371,12 +385,13 @@ def delta_dress_fit(
     num_subgraphs = ctypes.c_int64(0)
     multisets_ptr = ctypes.POINTER(ctypes.c_double)()
 
-    hist_ptr = lib.delta_dress_fit_cuda(
+    hist_ptr = lib.delta_dress_fit_cuda_strided(
         g, k, max_iterations, ctypes.c_double(epsilon),
         ctypes.byref(hist_size),
         1 if keep_multisets else 0,
         ctypes.byref(multisets_ptr),
-        ctypes.byref(num_subgraphs))
+        ctypes.byref(num_subgraphs),
+        offset, stride)
 
     size = hist_size.value
     ns = num_subgraphs.value

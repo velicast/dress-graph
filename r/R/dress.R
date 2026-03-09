@@ -127,6 +127,9 @@ dress_fit <- function(n_vertices,
 #' @param precompute Logical. Pre-compute intercept index (default FALSE).
 #' @param keep_multisets Logical. If TRUE, return per-subgraph edge DRESS
 #'   values in a C(N,k) x E matrix (NaN for removed edges). Default FALSE.
+#' @param offset Integer. Process only subgraphs where index %% stride == offset
+#'   (default 0L).
+#' @param stride Integer. Total number of strides (default 1L = process all).
 #'
 #' @return A list with components:
 #' \describe{
@@ -153,7 +156,9 @@ delta_dress_fit <- function(n_vertices,
                             max_iterations   = 100L,
                             epsilon          = 1e-6,
                             precompute       = FALSE,
-                            keep_multisets   = FALSE) {
+                            keep_multisets   = FALSE,
+                            offset           = 0L,
+                            stride           = 1L) {
 
   n_vertices     <- as.integer(n_vertices)
   sources        <- as.integer(sources)
@@ -165,6 +170,8 @@ delta_dress_fit <- function(n_vertices,
   epsilon        <- as.double(epsilon)
   precompute     <- as.integer(precompute)
   keep_multisets <- as.integer(keep_multisets)
+  offset         <- as.integer(offset)
+  stride         <- as.integer(stride)
 
   stopifnot(length(sources) == length(targets))
   if (!is.null(weights)) stopifnot(length(weights) == length(sources))
@@ -173,6 +180,8 @@ delta_dress_fit <- function(n_vertices,
   stopifnot(variant >= 0L && variant <= 3L)
   stopifnot(max_iterations >= 1L)
   stopifnot(epsilon > 0)
+  stopifnot(stride >= 1L)
+  stopifnot(offset >= 0L && offset < stride)
 
   .Call(C_delta_dress_fit,
         n_vertices,
@@ -184,7 +193,9 @@ delta_dress_fit <- function(n_vertices,
         max_iterations,
         epsilon,
         precompute,
-        keep_multisets)
+        keep_multisets,
+        offset,
+        stride)
 }
 
 # ---- Library version -------------------------------------------------

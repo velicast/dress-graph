@@ -20,7 +20,7 @@
 #ifndef DRESS_IGRAPH_CUDA_REDIRECT_H
 #define DRESS_IGRAPH_CUDA_REDIRECT_H
 
-#include "dress_igraph.h"
+#include "../dress_igraph.h"
 #include "dress/cuda/dress.h"
 
 /* Redirect CPU igraph symbols to CUDA implementations.

@@ -131,11 +131,12 @@ void mexFunction(int nlhs, mxArray *plhs[],
     mxArray *m_hist, *m_hsize;
 
     /* ---- argument count check ---- */
-    if (nrhs < 8 || nrhs > 10)
+    if (nrhs < 8 || nrhs > 12)
         mexErrMsgIdAndTxt("delta_dress:nrhs",
-            "8 to 10 inputs required:\n"
+            "8 to 12 inputs required:\n"
             "  delta_dress_mex(n_vertices, sources, targets, weights, k, "
-            "variant, max_iterations, epsilon, precompute, keep_multisets)\n"
+            "variant, max_iterations, epsilon, precompute, keep_multisets, "
+            "offset, stride)\n"
             "  weights may be [] for unweighted.");
     if (nlhs > 1)
         mexErrMsgIdAndTxt("delta_dress:nlhs", "At most one output.");
@@ -162,6 +163,8 @@ void mexFunction(int nlhs, mxArray *plhs[],
     epsilon        = get_scalar_double(prhs[7], "epsilon");
     precompute     = (nrhs > 8) ? get_scalar_int(prhs[8], "precompute") : 0;
     keep_ms        = (nrhs > 9) ? get_scalar_int(prhs[9], "keep_multisets") : 0;
+    int offset     = (nrhs > 10) ? get_scalar_int(prhs[10], "offset") : 0;
+    int stride     = (nrhs > 11) ? get_scalar_int(prhs[11], "stride") : 1;
 
     /* ---- validate ---- */
     if (variant_val < 0 || variant_val > 3) {
@@ -182,10 +185,11 @@ void mexFunction(int nlhs, mxArray *plhs[],
                           "init_dress_graph returned NULL.");
 
     /* ---- compute delta-k-dress ---- */
-    hist = delta_dress_fit(g, k, max_iterations, epsilon, &hist_size,
+    hist = delta_dress_fit_strided(g, k, max_iterations, epsilon, &hist_size,
                     keep_ms,
                     keep_ms ? &ms_ptr : NULL,
-                    keep_ms ? &num_sub : NULL);
+                    keep_ms ? &num_sub : NULL,
+                    offset, stride);
 
     /* ---- pack output struct ---- */
     int n_fields = keep_ms ? 4 : 2;

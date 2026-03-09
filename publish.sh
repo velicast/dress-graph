@@ -1,76 +1,193 @@
 #!/usr/bin/env bash
 # Publish all dress-graph packages to their respective registries.
-# Usage: ./publish.sh [pypi|npm|cargo|cran|julia|octave|brew|vcpkg|all]
+#
+# Usage:
+#   ./publish.sh [FLAGS] [TARGET...]
+#
+# Targets: pypi npm cargo cran julia octave brew vcpkg all (default: all)
+#
+# Flags:
+#   --build-only       Build packages but do not upload to registries.
+#   --install-local    Build and install packages locally (for testing).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-TARGET="${1:-all}"
 
 # GitHub repo for the main project, the Homebrew tap, and the Julia package
 GH_REPO="velicast/dress-graph"
 GH_TAP_REPO="velicast/homebrew-dress-graph"
 GH_JULIA_REPO="velicast/DRESS.jl"
 
+# ── Parse flags ─────────────────────────────────────────────────────
+BUILD_ONLY=0
+INSTALL_LOCAL=0
+TARGETS=()
+for arg in "$@"; do
+    case "$arg" in
+        --build-only)     BUILD_ONLY=1 ;;
+        --install-local)  BUILD_ONLY=1; INSTALL_LOCAL=1 ;;
+        *)                TARGETS+=("$arg") ;;
+    esac
+done
+if [[ ${#TARGETS[@]} -eq 0 ]]; then
+    TARGETS=(all)
+fi
+
 publish_pypi() {
-    echo "=== Publishing to PyPI ==="
+    echo "=== PyPI ==="
     cd "$ROOT/python"
+
+    # Use venv if available, otherwise system python3
+    local PY="python3"
+    if [[ -f "$ROOT/.venv/bin/activate" ]]; then
+        # shellcheck disable=SC1091
+        source "$ROOT/.venv/bin/activate"
+        PY=python
+    fi
+
     rm -rf dist build *.egg-info src/*.egg-info
-    python -m build
-    twine upload dist/*
-    echo "=== PyPI done ==="
+    $PY -m build
+    echo "  ✓ wheel built: $(ls dist/*.whl)"
+
+    if [[ $INSTALL_LOCAL -eq 1 ]]; then
+        $PY -m pip install --force-reinstall dist/*.whl
+        echo "  ✓ installed locally"
+    fi
+
+    if [[ $BUILD_ONLY -eq 0 ]]; then
+        twine upload dist/*
+        echo "=== PyPI uploaded ==="
+    fi
 }
 
 publish_npm() {
-    echo "=== Publishing to npm ==="
+    echo "=== npm ==="
     cd "$ROOT/wasm"
-    npm publish
-    echo "=== npm done ==="
+    npm pack
+    echo "  ✓ tarball built: $(ls *.tgz)"
+
+    if [[ $INSTALL_LOCAL -eq 1 ]]; then
+        npm install -g *.tgz
+        echo "  ✓ installed locally"
+    fi
+
+    if [[ $BUILD_ONLY -eq 0 ]]; then
+        npm publish
+        echo "=== npm uploaded ==="
+    fi
 }
 
 publish_cargo() {
-    echo "=== Publishing to crates.io ==="
+    echo "=== crates.io ==="
     # Vendor C sources into the crate (not committed to git)
-    mkdir -p "$ROOT/rust/vendor/include/dress"
+    mkdir -p "$ROOT/rust/vendor/include/dress/cuda" "$ROOT/rust/vendor/include/dress/mpi" "$ROOT/rust/vendor/mpi"
     cp "$ROOT/libdress/src/dress.c"                "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/src/delta_dress.c"          "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/delta_dress_impl.c"     "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/src/delta_dress_impl.h"     "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/include/dress/dress.h"       "$ROOT/rust/vendor/include/dress/"
     cp "$ROOT/libdress/include/dress/delta_dress.h" "$ROOT/rust/vendor/include/dress/"
+    # CUDA headers
+    cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$ROOT/rust/vendor/include/dress/cuda/"
+    cp "$ROOT/libdress/include/dress/cuda/dress.h"      "$ROOT/rust/vendor/include/dress/cuda/"
+    # CUDA C source + pre-compiled kernel object
+    cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"     "$ROOT/rust/vendor/delta_dress_cuda.c"
+    if command -v nvcc &>/dev/null; then
+        local cuda_o="$ROOT/libdress/src/cuda/dress_cuda.o"
+        if [[ ! -f "$cuda_o" ]]; then
+            nvcc -O2 -Xcompiler -fPIC -I"$ROOT/libdress/include" \
+                -c "$ROOT/libdress/src/cuda/dress_cuda.cu" -o "$cuda_o"
+        fi
+        cp "$cuda_o" "$ROOT/rust/vendor/dress_cuda.o"
+    fi
+    # MPI sources + headers
+    cp "$ROOT/libdress/src/mpi/dress_mpi.c"             "$ROOT/rust/vendor/mpi/"
+    cp "$ROOT/libdress/include/dress/mpi/dress_mpi.h"   "$ROOT/rust/vendor/include/dress/mpi/"
+    cp "$ROOT/libdress/include/dress/mpi/dress.h"       "$ROOT/rust/vendor/include/dress/mpi/" 2>/dev/null || true
     cp "$ROOT/LICENSE"                              "$ROOT/rust/LICENSE"
 
-    # Publish from /tmp to avoid WSL/NTFS metadata issues
-    TMPDIR=$(mktemp -d)
-    cp -r "$ROOT/rust/." "$TMPDIR/"
-    cd "$TMPDIR"
-    cargo publish
+    (cd "$ROOT/rust" && cargo build --release 2>&1)
+    echo "  ✓ crate built"
 
-    # Cleanup
-    rm -rf "$TMPDIR"
-    rm -rf "$ROOT/rust/vendor" "$ROOT/rust/LICENSE"
-    echo "=== crates.io done ==="
+    if [[ $BUILD_ONLY -eq 0 ]]; then
+        # Publish from /tmp to avoid WSL/NTFS metadata issues
+        TMPDIR=$(mktemp -d)
+        cp -r "$ROOT/rust/." "$TMPDIR/"
+        cd "$TMPDIR"
+        cargo publish
+        rm -rf "$TMPDIR"
+        echo "=== crates.io uploaded ==="
+    fi
+
+    # Keep vendor/ when --install-local; cleanup otherwise
+    if [[ $INSTALL_LOCAL -eq 0 && $BUILD_ONLY -eq 0 ]]; then
+        rm -rf "$ROOT/rust/vendor" "$ROOT/rust/LICENSE"
+    fi
 }
 
 publish_cran() {
-    echo "=== Building R/CRAN package ==="
+    echo "=== R/CRAN ==="
     # Vendor C sources into r/src/ (not committed to git)
     cp "$ROOT/libdress/src/dress.c"                "$ROOT/r/src/"
     cp "$ROOT/libdress/src/delta_dress.c"          "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/delta_dress_impl.c"     "$ROOT/r/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.h"     "$ROOT/r/src/"
     mkdir -p "$ROOT/r/src/dress"
     cp "$ROOT/libdress/include/dress/dress.h"       "$ROOT/r/src/dress/"
     cp "$ROOT/libdress/include/dress/delta_dress.h" "$ROOT/r/src/dress/"
 
+    # CUDA headers (if available)
+    if [ -d "$ROOT/libdress/include/dress/cuda" ]; then
+        mkdir -p "$ROOT/r/src/dress/cuda"
+        cp "$ROOT/libdress/include/dress/cuda/"*.h "$ROOT/r/src/dress/cuda/"
+    fi
+    # CUDA sources (for compile-from-source at install time)
+    if [ -f "$ROOT/libdress/src/cuda/delta_dress_cuda.c" ]; then
+        cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c" "$ROOT/r/src/"
+    fi
+    if [ -f "$ROOT/libdress/src/cuda/dress_cuda.cu" ]; then
+        cp "$ROOT/libdress/src/cuda/dress_cuda.cu" "$ROOT/r/src/"
+    fi
+
+    # MPI headers + source (if available)
+    if [ -d "$ROOT/libdress/include/dress/mpi" ]; then
+        mkdir -p "$ROOT/r/src/dress/mpi"
+        cp "$ROOT/libdress/include/dress/mpi/"*.h "$ROOT/r/src/dress/mpi/"
+    fi
+    if [ -f "$ROOT/libdress/src/mpi/dress_mpi.c" ]; then
+        cp "$ROOT/libdress/src/mpi/dress_mpi.c" "$ROOT/r/src/"
+    fi
+
     cd "$ROOT"
     R CMD build r/
-    echo "=== R tarball built. Submit dress.graph_*.tar.gz at https://cran.r-project.org/submit.html ==="
+    local tarball
+    tarball=$(ls -t dress.graph_*.tar.gz 2>/dev/null | head -1)
+    echo "  ✓ R tarball built: $tarball"
+
+    if [[ $INSTALL_LOCAL -eq 1 ]]; then
+        local R_USER_LIB="${R_LIBS_USER:-$HOME/R/library}"
+        mkdir -p "$R_USER_LIB"
+        R CMD INSTALL --library="$R_USER_LIB" "$tarball"
+        echo "  ✓ installed locally to $R_USER_LIB"
+    fi
+
+    if [[ $BUILD_ONLY -eq 0 ]]; then
+        echo "  Submit $tarball at https://cran.r-project.org/submit.html"
+    fi
 
     # Cleanup vendored sources
-    rm -f  "$ROOT/r/src/dress.c" "$ROOT/r/src/delta_dress.c" "$ROOT/r/src/delta_dress_impl.h"
+    rm -f  "$ROOT/r/src/dress.c" "$ROOT/r/src/delta_dress.c" "$ROOT/r/src/delta_dress_impl.c" "$ROOT/r/src/delta_dress_impl.h"
+    rm -f  "$ROOT/r/src/dress_mpi.c" "$ROOT/r/src/delta_dress_cuda.c" "$ROOT/r/src/dress_cuda.cu" "$ROOT/r/src/dress_cuda.o"
     rm -rf "$ROOT/r/src/dress"
 }
 
 publish_brew() {
-    echo "=== Publishing Homebrew tap ==="
+    echo "=== Homebrew ==="
+
+    if [[ $BUILD_ONLY -eq 1 ]]; then
+        echo "  (skipped — brew tap requires a GitHub release)"
+        return
+    fi
 
     # Detect version from python/pyproject.toml (single source of truth)
     VERSION=$(grep -oP '^version = "\K[^"]+' "$ROOT/python/pyproject.toml")
@@ -181,13 +298,24 @@ RUBY
 }
 
 publish_julia() {
-    echo "=== Publishing Julia package to DRESS.jl ==="
+    echo "=== Julia ==="
 
     # Detect version from Project.toml
     VERSION=$(grep -oP '^version = "\K[^"]+' "$ROOT/julia/Project.toml")
     if [[ -z "$VERSION" ]]; then
         echo "ERROR: could not detect version from julia/Project.toml"
         exit 1
+    fi
+    echo "  Version: $VERSION"
+
+    if [[ $INSTALL_LOCAL -eq 1 ]]; then
+        julia -e "using Pkg; Pkg.develop(path=\"$ROOT/julia\")"
+        echo "  ✓ installed locally via Pkg.develop"
+    fi
+
+    if [[ $BUILD_ONLY -eq 1 ]]; then
+        echo "  ✓ Julia package ready at $ROOT/julia"
+        return
     fi
     echo "  Version: $VERSION"
 
@@ -239,7 +367,12 @@ publish_julia() {
 }
 
 publish_octave() {
-    echo "=== Publishing Octave package (GitHub Release attachment) ==="
+    echo "=== Octave ==="
+
+    if [[ $BUILD_ONLY -eq 1 ]]; then
+        echo "  (skipped — octave tarball built by build.sh)"
+        return
+    fi
 
     # Detect version from DESCRIPTION
     VERSION=$(grep -oP '^Version: \K.*' "$ROOT/octave/DESCRIPTION")
@@ -282,7 +415,12 @@ publish_octave() {
 }
 
 publish_vcpkg() {
-    echo "=== Publishing vcpkg port ==="
+    echo "=== vcpkg ==="
+
+    if [[ $BUILD_ONLY -eq 1 ]]; then
+        echo "  (skipped — vcpkg port does not need building)"
+        return
+    fi
 
     # Detect version
     VERSION=$(grep -oP '^version = "\K[^"]+' "$ROOT/python/pyproject.toml")
@@ -322,28 +460,36 @@ publish_vcpkg() {
     echo "=== vcpkg done ==="
 }
 
-case "$TARGET" in
-    pypi)  publish_pypi  ;;
-    npm)   publish_npm   ;;
-    cargo) publish_cargo ;;
-    cran)  publish_cran  ;;
-    julia)  publish_julia  ;;
-    octave) publish_octave ;;
-    brew)   publish_brew   ;;
-    vcpkg)  publish_vcpkg  ;;
-    all)
-        publish_pypi
-        publish_npm
-        publish_cargo
-        publish_cran
-        publish_julia
-        publish_octave
-        publish_brew
-        publish_vcpkg
-        echo "=== All packages published ==="
-        ;;
-    *)
-        echo "Usage: $0 [pypi|npm|cargo|cran|julia|octave|brew|vcpkg|all]"
-        exit 1
-        ;;
-esac
+dispatch() {
+    case "$1" in
+        pypi)  publish_pypi  ;;
+        npm)   publish_npm   ;;
+        cargo) publish_cargo ;;
+        cran)  publish_cran  ;;
+        julia)  publish_julia  ;;
+        octave) publish_octave ;;
+        brew)   publish_brew   ;;
+        vcpkg)  publish_vcpkg  ;;
+        all)
+            publish_pypi
+            publish_npm
+            publish_cargo
+            publish_cran
+            publish_julia
+            publish_octave
+            publish_brew
+            publish_vcpkg
+            ;;
+        *)
+            echo "Unknown target: $1"
+            echo "Usage: $0 [--build-only|--install-local] [pypi|npm|cargo|cran|julia|octave|brew|vcpkg|all]"
+            exit 1
+            ;;
+    esac
+}
+
+for t in "${TARGETS[@]}"; do
+    dispatch "$t"
+done
+
+echo "=== Done ==="

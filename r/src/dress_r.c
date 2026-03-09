@@ -105,7 +105,7 @@ SEXP C_dress_fit(SEXP n_vertices_,
 /*  dress_version                                                      */
 /* ------------------------------------------------------------------ */
 SEXP C_dress_version(void) {
-    return ScalarString(mkChar("0.4.0"));
+    return ScalarString(mkChar("0.5.0"));
 }
 
 /* ------------------------------------------------------------------ */
@@ -120,7 +120,9 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
                        SEXP max_iterations_,
                        SEXP epsilon_,
                        SEXP precompute_,
-                       SEXP keep_multisets_) {
+                       SEXP keep_multisets_,
+                       SEXP offset_,
+                       SEXP stride_) {
 
     int N  = INTEGER(n_vertices_)[0];
     int E  = LENGTH(sources_);
@@ -130,6 +132,8 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     double epsilon     = REAL(epsilon_)[0];
     int precompute     = INTEGER(precompute_)[0];
     int keep_ms        = INTEGER(keep_multisets_)[0];
+    int offset         = INTEGER(offset_)[0];
+    int stride         = INTEGER(stride_)[0];
 
     /* Allocate copies (init_dress_graph takes ownership). */
     int *U = (int *)malloc(E * sizeof(int));
@@ -157,11 +161,12 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     int hist_size = 0;
     double *ms_ptr = NULL;
     int64_t num_sub = 0;
-    int64_t *hist = delta_dress_fit(g, k, max_iterations, epsilon,
+    int64_t *hist = delta_dress_fit_strided(g, k, max_iterations, epsilon,
                               &hist_size,
                               keep_ms,
                               keep_ms ? &ms_ptr : NULL,
-                              keep_ms ? &num_sub : NULL);
+                              keep_ms ? &num_sub : NULL,
+                              offset, stride);
 
     /* Build result list: histogram + hist_size [+ multisets + num_subgraphs] */
     int n_fields = keep_ms ? 4 : 2;
@@ -215,7 +220,15 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
 #ifdef DRESS_CUDA
 /* CUDA bridge (defined in dress_cuda_r.c) */
 extern SEXP C_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
-extern SEXP C_delta_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_delta_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+#endif
+
+#ifdef DRESS_MPI
+/* MPI bridge (defined in dress_mpi_r.c) */
+extern SEXP C_delta_dress_fit_mpi(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+#ifdef DRESS_CUDA
+extern SEXP C_delta_dress_fit_mpi_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+#endif
 #endif
 
 /* ------------------------------------------------------------------ */
@@ -372,7 +385,7 @@ SEXP C_dress_close(SEXP ptr_) {
 /* ------------------------------------------------------------------ */
 static const R_CallMethodDef callMethods[] = {
     {"C_dress_fit",            (DL_FUNC) &C_dress_fit,            8},
-    {"C_delta_dress_fit",      (DL_FUNC) &C_delta_dress_fit,      10},
+    {"C_delta_dress_fit",      (DL_FUNC) &C_delta_dress_fit,      12},
     {"C_dress_version",        (DL_FUNC) &C_dress_version,        0},
     {"C_dress_init",           (DL_FUNC) &C_dress_init,           6},
     {"C_dress_fit_obj",        (DL_FUNC) &C_dress_fit_obj,        3},
@@ -381,7 +394,13 @@ static const R_CallMethodDef callMethods[] = {
     {"C_dress_close",          (DL_FUNC) &C_dress_close,          1},
 #ifdef DRESS_CUDA
     {"C_dress_fit_cuda",       (DL_FUNC) &C_dress_fit_cuda,       8},
-    {"C_delta_dress_fit_cuda", (DL_FUNC) &C_delta_dress_fit_cuda, 10},
+    {"C_delta_dress_fit_cuda", (DL_FUNC) &C_delta_dress_fit_cuda, 12},
+#endif
+#ifdef DRESS_MPI
+    {"C_delta_dress_fit_mpi",  (DL_FUNC) &C_delta_dress_fit_mpi,  11},
+#ifdef DRESS_CUDA
+    {"C_delta_dress_fit_mpi_cuda", (DL_FUNC) &C_delta_dress_fit_mpi_cuda, 11},
+#endif
 #endif
     {NULL, NULL, 0}
 };

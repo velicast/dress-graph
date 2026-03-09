@@ -120,7 +120,9 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
                             SEXP max_iterations_,
                             SEXP epsilon_,
                             SEXP precompute_,
-                            SEXP keep_multisets_) {
+                            SEXP keep_multisets_,
+                            SEXP offset_,
+                            SEXP stride_) {
 
     int N  = INTEGER(n_vertices_)[0];
     int E  = LENGTH(sources_);
@@ -130,6 +132,8 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
     double epsilon     = REAL(epsilon_)[0];
     int precompute     = INTEGER(precompute_)[0];
     int keep_ms        = INTEGER(keep_multisets_)[0];
+    int offset         = INTEGER(offset_)[0];
+    int stride         = INTEGER(stride_)[0];
 
     int *U = (int *)malloc(E * sizeof(int));
     int *V = (int *)malloc(E * sizeof(int));
@@ -156,11 +160,12 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
     int hist_size = 0;
     double *ms_ptr = NULL;
     int64_t num_sub = 0;
-    int64_t *hist = delta_dress_fit_cuda(g, k, max_iterations, epsilon,
+    int64_t *hist = delta_dress_fit_cuda_strided(g, k, max_iterations, epsilon,
                                          &hist_size,
                                          keep_ms,
                                          keep_ms ? &ms_ptr : NULL,
-                                         keep_ms ? &num_sub : NULL);
+                                         keep_ms ? &num_sub : NULL,
+                                         offset, stride);
 
     int n_fields = keep_ms ? 4 : 2;
     SEXP result = PROTECT(allocVector(VECSXP, n_fields));

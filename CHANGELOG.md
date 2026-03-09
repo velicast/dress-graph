@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-03-09
+
+### Added
+- **MPI support** — distributed Δᵏ-DRESS across all language bindings via import/include-based switching:
+  - C: `#include "dress/mpi/dress.h"` redirects `delta_dress_fit()` → `delta_dress_fit_mpi(..., MPI_COMM_WORLD)`; explicit `delta_dress_fit_mpi()` / `delta_dress_fit_mpi_fcomm()` available for custom communicators
+  - C: `#include "dress/mpi/cuda/dress.h"` — single convenience header for MPI + CUDA (GPU-distributed)
+  - C++: `mpi::DRESS`, `mpi::cuda::DRESS` namespaces
+  - Python: `from dress.mpi import delta_dress_fit` (CPU), `from dress.mpi.cuda import delta_dress_fit` (GPU)
+  - Python NetworkX: `from dress.mpi.networkx import delta_dress_graph` / `from dress.mpi.cuda.networkx import delta_dress_graph`
+  - R: `mpi$delta_dress_fit()`, `mpi$cuda$delta_dress_fit()`
+  - Rust: `dress_graph::mpi::delta_fit()`, `dress_graph::mpi::cuda::delta_fit()`
+  - Go: `go/mpi`, `go/mpi/cuda` import paths
+  - Julia: `DRESS.MPI`, `DRESS.MPI.CUDA` modules
+- **MPI support for igraph wrapper** (`libdress-igraph`):
+  - `mpi/dress_igraph.h` — MPI-distributed Δᵏ-DRESS on `igraph_t` graphs via include-based macro redirect
+  - `mpi/cuda/dress_igraph.h` — single header for MPI + CUDA igraph
+  - `delta_dress_fit_mpi_igraph()` / `delta_dress_fit_mpi_cuda_igraph()` functions (+ `_fcomm` FFI variants)
+  - `dress_igraph_mpi.c` implementation using shared `delta_dress_impl.h`
+  - CMake targets: `dress_igraph_mpi_static`, `dress_igraph_mpi_shared`
+- Octave CUDA support: `cuda.dress_fit()`, `cuda.delta_dress_fit()` via `+cuda` namespace
+
+### Fixed
+- Static CUDA linking across all 9 language bindings (37/37 examples pass)
+- R build for CRAN compatibility
+- `set_version.sh` now updates the Octave tarball version in `run_examples.sh`
+
+### Changed
+- `clean.sh` updated to clean all new igraph example binaries
+- README and docs updated: igraph sections in API reference, `mpi/cuda/dress.h` convenience header documented, backend support matrix noted in language bindings section
+- **API reference rewritten** — README and `docs/getting-started/api.md` now document the full C backend matrix (CPU, CUDA, MPI, MPI+CUDA) with correct header names and link flags, plus igraph wrapper rows for all four backends
+- **Examples collection** — 44 end-to-end examples across 9 languages (C, C++, Python, Rust, Go, Julia, R, Octave, WASM), covering CPU, CUDA, MPI, and MPI+CUDA backends; verified via `run_examples.sh`
+
 ## [0.4.0] — 2026-03-08
 
 ### Added

@@ -148,6 +148,21 @@ int64_t *delta_dress_fit(p_dress_graph_t g, int k, int iterations,
                         int keep_multisets, double **multisets,
                         int64_t *num_subgraphs);
 
+// Strided variant of delta_dress_fit for distributed computation.
+//
+// Processes only the subgraphs whose sequential index satisfies
+// index % stride == offset.  With offset=0, stride=1 this is
+// identical to delta_dress_fit (all subgraphs).
+//
+// Intended for MPI distribution: each rank calls with
+// offset=rank, stride=nprocs, then the per-rank histograms are
+// summed via MPI_Allreduce.
+int64_t *delta_dress_fit_strided(p_dress_graph_t g, int k, int iterations,
+                                 double epsilon, int *hist_size,
+                                 int keep_multisets, double **multisets,
+                                 int64_t *num_subgraphs,
+                                 int offset, int stride);
+
 // Backward compatibility alias (C only).
 #ifndef __cplusplus
 #define delta_fit(g, k, iterations, epsilon, hist_size, keep_multisets, multisets, num_subgraphs) \

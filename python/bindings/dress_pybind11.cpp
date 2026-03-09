@@ -172,6 +172,8 @@ FitResult
              py::arg("max_iterations"),
              py::arg("epsilon"),
              py::arg("keep_multisets") = false,
+             py::arg("offset") = 0,
+             py::arg("stride") = 1,
              R"doc(
 Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS
 on each subgraph, and accumulate edge values into a histogram.
@@ -187,6 +189,10 @@ epsilon : float
 keep_multisets : bool
     If True, also return per-subgraph edge DRESS values in a
     2D array of shape (C(N,k), E).  NaN marks removed edges.
+offset : int
+    Process only subgraphs where index % stride == offset (default 0).
+stride : int
+    Total number of strides (default 1 = process all).
 
 Returns
 -------

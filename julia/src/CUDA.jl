@@ -21,6 +21,7 @@ using Libdl
 
 # Re-export types and constants from the parent module.
 using ..DRESS: DRESSResult, DeltaDRESSResult, UNDIRECTED, DIRECTED, FORWARD, BACKWARD
+import ..DRESS: dress_build as _cpu_build
 export dress_fit, delta_dress_fit, DRESSResult, DeltaDRESSResult,
        UNDIRECTED, DIRECTED, FORWARD, BACKWARD
 
@@ -37,6 +38,49 @@ const _CPU_SO   = "libdress" * (Sys.iswindows() ? ".dll" :
                                  Sys.isapple()   ? ".dylib" : ".so")
 const _CPU_PATH = joinpath(_PKG_DIR, _CPU_SO)
 
+# Pre-compiled CUDA kernel object (built from dress_cuda.cu by nvcc on first use)
+const _CUDA_OBJ = joinpath(_PKG_DIR, "dress_cuda.o")
+const _CUDA_CU  = joinpath(_LIB_DIR, "src", "cuda", "dress_cuda.cu")
+
+"""
+    dress_cuda_build()
+
+Compile `libdress_cuda.so` from vendored C sources + the CUDA kernel.
+Called automatically on first use if the `.so` is missing and `nvcc` is
+available.  The CUDA kernel (`dress_cuda.cu`) is compiled by `nvcc` into
+an object file, then everything is linked together with `cudart_static`.
+"""
+function dress_cuda_build()
+    src       = joinpath(_LIB_DIR, "src", "dress.c")
+    src_delta = joinpath(_LIB_DIR, "src", "delta_dress.c")
+    src_impl  = joinpath(_LIB_DIR, "src", "delta_dress_impl.c")
+    src_cuda  = joinpath(_LIB_DIR, "src", "cuda", "delta_dress_cuda.c")
+    inc       = joinpath(_LIB_DIR, "include")
+    src_dir   = joinpath(_LIB_DIR, "src")
+
+    for f in (src, src_delta, src_impl, src_cuda)
+        isfile(f) || error("Cannot find $f")
+    end
+
+    # Compile CUDA kernel with nvcc if the object doesn't exist yet
+    if !isfile(_CUDA_OBJ)
+        isfile(_CUDA_CU) || error("Cannot find CUDA kernel source at $_CUDA_CU")
+        nvcc = get(ENV, "NVCC", "nvcc")
+        nvcc_cmd = `$nvcc -O2 -Xcompiler -fPIC -I$inc -c $_CUDA_CU -o $_CUDA_OBJ`
+        @info "Compiling CUDA kernel…" nvcc_cmd
+        run(nvcc_cmd)
+    end
+
+    cc = get(ENV, "CC", "gcc")
+    cmd = `$cc -shared -fPIC -O3 -fopenmp -DDRESS_CUDA -I$inc -I$src_dir
+           -o $_CUDA_PATH
+           $src $src_delta $src_impl $src_cuda $_CUDA_OBJ
+           -lcudart_static -lm -ldl -lrt -lpthread`
+    @info "Building DRESS CUDA shared library…" cmd
+    run(cmd)
+    @info "Built $_CUDA_PATH"
+end
+
 # ── library handles and function pointers ────────────────────────────
 
 const _LIB_CPU    = Ref{Ptr{Cvoid}}(C_NULL)
@@ -45,23 +89,36 @@ const _FN_INIT    = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_FIT     = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_FREE    = Ref{Ptr{Cvoid}}(C_NULL)
 const _FN_DELTA   = Ref{Ptr{Cvoid}}(C_NULL)
+const _FN_DELTA_STRIDED = Ref{Ptr{Cvoid}}(C_NULL)
+
+function _try_dlopen(name::String, local_path::String; build_fn::Union{Nothing,Function}=nothing)
+    h = dlopen(name; throw_error=false)
+    h !== nothing && return h
+    if build_fn !== nothing && !isfile(local_path)
+        build_fn()
+    end
+    isfile(local_path) || error("Library $name not found.")
+    return dlopen(local_path)
+end
 
 function _ensure_lib()
     _LIB_CUDA[] != C_NULL && return
 
     # Load CPU library (init/free live there)
     if _LIB_CPU[] == C_NULL
-        isfile(_CPU_PATH) || DRESS.dress_build()
-        _LIB_CPU[] = dlopen(_CPU_PATH)
+        _LIB_CPU[] = _try_dlopen(_CPU_SO, _CPU_PATH; build_fn=_cpu_build)
     end
     _FN_INIT[] = dlsym(_LIB_CPU[], :init_dress_graph)
     _FN_FREE[] = dlsym(_LIB_CPU[], :free_dress_graph)
 
-    # Load CUDA library
-    isfile(_CUDA_PATH) || error("CUDA library not found at $_CUDA_PATH. Build it first.")
-    _LIB_CUDA[] = dlopen(_CUDA_PATH)
+    # Load CUDA library — auto-build from sources if nvcc is available
+    has_nvcc = Sys.which("nvcc") !== nothing
+    _LIB_CUDA[] = _try_dlopen(_CUDA_SO, _CUDA_PATH;
+                              build_fn = has_nvcc ? dress_cuda_build : nothing)
+
     _FN_FIT[]   = dlsym(_LIB_CUDA[], :dress_fit_cuda)
     _FN_DELTA[] = dlsym(_LIB_CUDA[], :delta_dress_fit_cuda)
+    _FN_DELTA_STRIDED[] = dlsym(_LIB_CUDA[], :delta_dress_fit_cuda_strided)
 end
 
 # ── dress_fit (CUDA) ─────────────────────────────────────────────────
@@ -151,7 +208,9 @@ function delta_dress_fit(N::Integer,
                          max_iterations::Integer = 100,
                          epsilon::Real      = 1e-6,
                          precompute::Bool   = false,
-                         keep_multisets::Bool = false)
+                         keep_multisets::Bool = false,
+                         offset::Integer    = 0,
+                         stride::Integer    = 1)
 
     E = length(sources)
     length(targets) == E || throw(ArgumentError("sources and targets must have equal length"))
@@ -186,13 +245,14 @@ function delta_dress_fit(N::Integer,
     hsize_ref = Ref{Cint}(0)
     ms_ref    = Ref{Ptr{Cdouble}}(Ptr{Cdouble}(C_NULL))
     nsub_ref  = Ref{Int64}(0)
-    h_ptr = ccall(_FN_DELTA[], Ptr{Int64},
-                  (Ptr{Cvoid}, Cint, Cint, Cdouble, Ptr{Cint}, Cint, Ptr{Ptr{Cdouble}}, Ptr{Int64}),
+    h_ptr = ccall(_FN_DELTA_STRIDED[], Ptr{Int64},
+                  (Ptr{Cvoid}, Cint, Cint, Cdouble, Ptr{Cint}, Cint, Ptr{Ptr{Cdouble}}, Ptr{Int64}, Cint, Cint),
                   g, Cint(k), Cint(max_iterations), Cdouble(epsilon),
                   hsize_ref,
                   Cint(keep_multisets),
                   keep_multisets ? ms_ref : Ptr{Ptr{Cdouble}}(C_NULL),
-                  nsub_ref)
+                  nsub_ref,
+                  Cint(offset), Cint(stride))
 
     hsize = Int(hsize_ref[])
     histogram = if h_ptr != C_NULL && hsize > 0

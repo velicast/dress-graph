@@ -1,0 +1,32 @@
+[package]
+name    = "dress-examples"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+dress-graph = { path = "../../rust" }
+mpi = { version = "0.8", optional = true }
+
+[features]
+cuda = ["dress-graph/cuda"]
+mpi  = ["dep:mpi", "dress-graph/mpi"]
+
+[[example]]
+name = "cpu"
+path = "cpu.rs"
+
+[[example]]
+name = "cuda"
+path = "cuda.rs"
+required-features = ["cuda"]
+
+[[example]]
+name = "mpi"
+path = "mpi.rs"
+required-features = ["mpi"]
+
+[[example]]
+name = "mpi_cuda"
+path = "mpi_cuda.rs"
+required-features = ["mpi", "cuda"]

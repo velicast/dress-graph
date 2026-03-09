@@ -39,7 +39,8 @@ public:
     // GPU-accelerated Δ^k-DRESS.
     // Shadows the CPU DRESS::deltaFit() — identical signature and return type.
     DeltaFitResult deltaFit(int k, int maxIterations, double epsilon,
-                            bool keepMultisets = false) {
+                            bool keepMultisets = false,
+                            int offset = 0, int stride = 1) {
         if (!raw())
             throw std::logic_error("DRESS: accessing a moved-from or null graph");
         int hsize = 0;
@@ -47,11 +48,12 @@ public:
 
         double *ms_ptr = nullptr;
         int64_t cnk = 0;
-        int64_t *h = ::delta_dress_fit_cuda(raw(), k, maxIterations, epsilon,
+        int64_t *h = ::delta_dress_fit_cuda_strided(raw(), k, maxIterations, epsilon,
                                             &hsize,
                                             keepMultisets ? 1 : 0,
                                             keepMultisets ? &ms_ptr : nullptr,
-                                            &cnk);
+                                            &cnk,
+                                            offset, stride);
         if (!h) throw std::runtime_error("DRESS: delta_dress_fit_cuda returned NULL");
 
         DeltaFitResult result;

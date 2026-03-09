@@ -27,6 +27,9 @@ use std::fmt;
 #[cfg(feature = "cuda")]
 pub mod cuda;
 
+#[cfg(feature = "mpi")]
+pub mod mpi;
+
 // ── FFI declarations ────────────────────────────────────────────────
 
 #[allow(non_camel_case_types)]
@@ -34,6 +37,7 @@ type c_int = i32;
 #[allow(non_camel_case_types)]
 type c_double = f64;
 
+#[allow(dead_code)]
 extern "C" {
     fn init_dress_graph(
         n: c_int,
@@ -73,6 +77,19 @@ extern "C" {
         keep_multisets: c_int,
         multisets: *mut *mut c_double,
         num_subgraphs: *mut i64,
+    ) -> *mut i64;
+
+    fn delta_dress_fit_strided(
+        g: *mut c_void,
+        k: c_int,
+        iterations: c_int,
+        epsilon: c_double,
+        hist_size: *mut c_int,
+        keep_multisets: c_int,
+        multisets: *mut *mut c_double,
+        num_subgraphs: *mut i64,
+        offset: c_int,
+        stride: c_int,
     ) -> *mut i64;
 }
 
@@ -206,6 +223,8 @@ impl DRESS {
     /// * `variant` – graph variant
     /// * `precompute` – precompute intercepts in subgraphs
     /// * `keep_multisets` – if true, return per-subgraph edge values
+    /// * `offset` – process only subgraphs where index % stride == offset
+    /// * `stride` – total number of strides (1 = process all)
     pub fn delta_fit(
         n: i32,
         sources: Vec<i32>,
@@ -217,6 +236,8 @@ impl DRESS {
         variant: Variant,
         precompute: bool,
         keep_multisets: bool,
+        offset: i32,
+        stride: i32,
     ) -> Result<DeltaDressResult, DressError> {
         let e = sources.len();
         if targets.len() != e {
@@ -249,7 +270,7 @@ impl DRESS {
             let mut hsize: c_int = 0;
             let mut ms_ptr: *mut c_double = std::ptr::null_mut();
             let mut num_sub: i64 = 0;
-            let h = delta_dress_fit(
+            let h = delta_dress_fit_strided(
                 g,
                 k,
                 max_iterations,
@@ -258,6 +279,8 @@ impl DRESS {
                 if keep_multisets { 1 } else { 0 },
                 if keep_multisets { &mut ms_ptr } else { std::ptr::null_mut() },
                 &mut num_sub,
+                offset,
+                stride,
             );
 
             let histogram = if !h.is_null() && hsize > 0 {

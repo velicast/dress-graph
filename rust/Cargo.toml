@@ -1,6 +1,6 @@
 [package]
 name    = "dress-graph"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["Eduar Castrillo Velilla <https://orcid.org/0009-0005-2492-0957>"]
 license = "MIT"
@@ -12,6 +12,7 @@ include     = ["src/**", "vendor/**", "build.rs", "Cargo.toml", "LICENSE"]
 
 [features]
 cuda = []
+mpi = ["dep:mpi"]
 
 [lib]
 name = "dress_graph"
@@ -19,3 +20,6 @@ path = "src/lib.rs"
 
 [build-dependencies]
 cc = "1"
+
+[dependencies]
+mpi = { version = "0.8", optional = true }
