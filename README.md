@@ -372,10 +372,10 @@ Each example compares **Prism vs K₃,₃** (Δ⁰-DRESS, CPU/CUDA) or
 | CUDA | `dress/cuda/dress.h` | `-ldress_cuda -lcudart -lm` | [`examples/c/cuda.c`](examples/c/cuda.c) |
 | MPI | `dress/mpi/dress.h` | `mpicc -ldress -lm` | [`examples/c/mpi.c`](examples/c/mpi.c) |
 | MPI+CUDA | `dress/mpi/cuda/dress.h` | `mpicc -ldress_cuda -lcudart -lm` | [`examples/c/mpi_cuda.c`](examples/c/mpi_cuda.c) |
-| igraph CPU | `dress_igraph.h` | `-ldress_igraph -ldress -ligraph -lm` | [`examples/c/cpu_igraph.c`](examples/c/cpu_igraph.c) |
-| igraph CUDA | `cuda/dress_igraph.h` | `-ldress_igraph -ldress_cuda -ligraph -lcudart -lm` | [`examples/c/cuda_igraph.c`](examples/c/cuda_igraph.c) |
-| igraph MPI | `mpi/dress_igraph.h` | `mpicc -ldress_igraph_mpi -ldress -ligraph -lm` | [`examples/c/mpi_igraph.c`](examples/c/mpi_igraph.c) |
-| igraph MPI+CUDA | `mpi/cuda/dress_igraph.h` | `mpicc -ldress_igraph_mpi -ldress_cuda -ligraph -lcudart -lm` | [`examples/c/mpi_cuda_igraph.c`](examples/c/mpi_cuda_igraph.c) |
+| igraph CPU | `dress/igraph/dress.h` | `-ldress $(pkg-config --libs igraph) -lm` | [`examples/c/cpu_igraph.c`](examples/c/cpu_igraph.c) |
+| igraph CUDA | `dress/cuda/igraph/dress.h` | `-ldress -ldress_cuda -lcudart $(pkg-config --libs igraph) -lm` | [`examples/c/cuda_igraph.c`](examples/c/cuda_igraph.c) |
+| igraph MPI | `dress/mpi/igraph/dress.h` | `mpicc -ldress $(pkg-config --libs igraph) -lm` | [`examples/c/mpi_igraph.c`](examples/c/mpi_igraph.c) |
+| igraph MPI+CUDA | `dress/mpi/cuda/igraph/dress.h` | `mpicc -ldress -ldress_cuda -lcudart $(pkg-config --libs igraph) -lm` | [`examples/c/mpi_cuda_igraph.c`](examples/c/mpi_cuda_igraph.c) |
 
 ```c
 // Δ⁰ — edge fingerprint
@@ -393,14 +393,21 @@ int64_t *hist = delta_dress_fit_mpi_cuda(g, 1, 100, 1e-6, &hs, 0, NULL, &ns, MPI
 free(hist);
 free_dress_graph(g);
 
-// igraph wrapper — Δ¹ histogram fingerprint
-delta_dress_result_igraph_t result;
-delta_dress_fit_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
-                       /*k=*/1, 100, 1e-6, 1, &result);      // CPU
-delta_dress_fit_mpi_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
-                           1, 100, 1e-6, 1, &result,
-                           MPI_COMM_WORLD);                    // MPI
-delta_dress_free_igraph(&result);
+// igraph wrapper — same API names, transparent backend switching
+#include <dress/igraph/dress.h>           // CPU
+#include <dress/cuda/igraph/dress.h>      // CUDA
+#include <dress/mpi/igraph/dress.h>       // MPI
+#include <dress/mpi/cuda/igraph/dress.h>  // MPI + CUDA
+
+dress_result_igraph_t r;
+dress_fit(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+          100, 1e-6, 1, &r);             // same call for all backends
+dress_free(&r);
+
+delta_dress_result_igraph_t dr;
+delta_dress_fit(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+                /*k=*/1, 100, 1e-6, 1, &dr);  // CPU / MPI / CUDA — per header
+delta_dress_free(&dr);
 ```
 
 ### C++

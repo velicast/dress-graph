@@ -6,6 +6,9 @@ cd "$ROOT"
 
 echo "Cleaning build artifacts..."
 
+# Top-level release tarball
+rm -f dress-graph-*.tar.gz
+
 # CMake build directory
 rm -rf build/
 
@@ -55,6 +58,7 @@ find . -name '*.pyc'       -not -path './.git/*' -delete
 # WASM (Emscripten output)
 rm -f wasm/dress_wasm.cjs
 rm -f wasm/dress_wasm.wasm
+rm -f wasm/dress-graph-*.tgz
 
 # Emscripten SDK (downloaded by build)
 rm -rf emsdk/

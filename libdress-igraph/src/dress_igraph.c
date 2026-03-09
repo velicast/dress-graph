@@ -12,8 +12,13 @@
  *   gcc main.o dress_igraph.o DRESS.o -o main $(pkg-config --libs igraph) -lm -fopenmp
  */
 
-#include "dress_igraph.h"
+#include <dress/igraph/dress.h>
 #include "dress/dress.h"
+
+/* Undo convenience macros — this file implements the igraph wrapper
+   and calls the core dress_fit() / delta_dress_fit() directly. */
+#undef dress_fit
+#undef delta_dress_fit
 
 #include <igraph/igraph.h>
 #include <stdint.h>

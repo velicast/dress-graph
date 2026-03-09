@@ -1,5 +1,5 @@
 /*
- * dress_igraph.h — igraph wrapper for the DRESS edge similarity algorithm.
+ * dress/igraph/dress.h — igraph wrapper for the DRESS edge similarity algorithm.
  *
  * Provides a simple bridge between igraph_t graphs and the DRESS C API.
  *
@@ -8,21 +8,21 @@
  *   igraph_read_graph_edgelist(&graph, fp, 0, IGRAPH_UNDIRECTED);
  *
  *   dress_result_igraph_t result;
- *   dress_fit_igraph(&graph, NULL,              // NULL = unweighted
- *                    DRESS_VARIANT_UNDIRECTED,
- *                    100, 1e-6, 1,              // maxIters, eps, precompute
- *                    &result);
+ *   dress_fit(&graph, NULL,                     // NULL = unweighted
+ *             DRESS_VARIANT_UNDIRECTED,
+ *             100, 1e-6, 1,                     // maxIters, eps, precompute
+ *             &result);
  *
  *   for (int e = 0; e < result.E; e++)
  *       printf("%d %d %.6f\n", result.src[e], result.dst[e], result.dress[e]);
  *
- *   dress_free_igraph(&result);
+ *   dress_free(&result);
  *   igraph_destroy(&graph);
  */
 #ifndef DRESS_IGRAPH_H
 #define DRESS_IGRAPH_H
 
-#include "dress/dress.h"
+#include <dress/dress.h>
 #include <igraph/igraph.h>
 #include <stdint.h>
 
@@ -155,5 +155,15 @@ int delta_dress_to_vector_igraph(const delta_dress_result_igraph_t *result,
 #ifdef __cplusplus
 }
 #endif
+
+/* ── Convenience macros — call dress_fit() / delta_dress_fit() etc.
+      as with the core API; the igraph backend is transparent. ───── */
+
+#define dress_fit             dress_fit_igraph
+#define dress_free            dress_free_igraph
+#define dress_to_vector       dress_to_vector_igraph
+#define delta_dress_fit       delta_dress_fit_igraph
+#define delta_dress_free      delta_dress_free_igraph
+#define delta_dress_to_vector delta_dress_to_vector_igraph
 
 #endif /* DRESS_IGRAPH_H */

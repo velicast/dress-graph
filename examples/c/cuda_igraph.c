@@ -1,18 +1,18 @@
 /* cuda_igraph.c — Prism vs K₃,₃ with DRESS (CUDA, igraph backend)
  *
  * Same comparison as cuda.c but using igraph_t graphs and the
- * CUDA igraph wrapper.  Including cuda/dress_igraph.h redirects
- * dress_fit_igraph() to the CUDA implementation.
+ * CUDA igraph wrapper.  Including dress/cuda/igraph/dress.h redirects
+ * dress_fit() to the CUDA implementation.
  *
  * Build:
- *   gcc -O2 -o cuda_igraph cuda_igraph.c -ldress -ldress_cuda -ldress_igraph \
- *       $(pkg-config --cflags --libs igraph) -lm
+ *   gcc -O2 -o cuda_igraph cuda_igraph.c -ldress -ldress_cuda \
+ *       $(pkg-config --cflags --libs igraph) -lcudart -lm
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <igraph/igraph.h>
-#include "cuda/dress_igraph.h"
+#include <dress/cuda/igraph/dress.h>
 
 static int cmp_dbl(const void *a, const void *b) {
     double d = *(const double *)a - *(const double *)b;
@@ -29,8 +29,8 @@ static void run(const char *name, const int *edges, int n_edges) {
     igraph_vector_int_destroy(&ev);
 
     dress_result_igraph_t result;
-    dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
-                     100, 1e-6, 0, &result);
+    dress_fit(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+             100, 1e-6, 0, &result);
 
     double *vals = malloc(result.E * sizeof(double));
     memcpy(vals, result.dress, result.E * sizeof(double));
@@ -41,7 +41,7 @@ static void run(const char *name, const int *edges, int n_edges) {
     printf("\n");
 
     free(vals);
-    dress_free_igraph(&result);
+    dress_free(&result);
     igraph_destroy(&g);
 }
 

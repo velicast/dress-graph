@@ -1,39 +1,39 @@
 /**
- * mpi/dress_igraph.h — MPI-distributed DRESS igraph wrapper via
- *                       include-based switching.
+ * dress/mpi/igraph/dress.h — MPI-distributed DRESS igraph wrapper via
+ *                             include-based switching.
  *
- * Drop-in replacement for dress_igraph.h.
- * Including this header redirects delta_dress_fit_igraph() to the
+ * Drop-in replacement for dress/igraph/dress.h.
+ * Including this header redirects delta_dress_fit() to the
  * MPI-distributed implementation — no source changes required:
  *
  *   // Single-process (CPU)
- *   #include "dress_igraph.h"
- *   delta_dress_fit_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
- *                          1, 100, 1e-6, 1, &result);
+ *   #include <dress/igraph/dress.h>
+ *   delta_dress_fit(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+ *                   1, 100, 1e-6, 1, &result);
  *
  *   // MPI-distributed (CPU) — same call, different include
- *   #include "mpi/dress_igraph.h"
- *   delta_dress_fit_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
- *                          1, 100, 1e-6, 1, &result);
+ *   #include <dress/mpi/igraph/dress.h>
+ *   delta_dress_fit(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+ *                   1, 100, 1e-6, 1, &result);
  *
  *   // MPI-distributed (GPU) — include CUDA header first
- *   #include "cuda/dress_igraph.h"
- *   #include "mpi/dress_igraph.h"
- *   delta_dress_fit_igraph(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
- *                          1, 100, 1e-6, 1, &result);
+ *   #include <dress/cuda/igraph/dress.h>
+ *   #include <dress/mpi/igraph/dress.h>
+ *   delta_dress_fit(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
+ *                   1, 100, 1e-6, 1, &result);
  *
  * The redirect macros append MPI_COMM_WORLD as the communicator.
  * For a custom communicator, call delta_dress_fit_mpi_igraph() or
  * delta_dress_fit_mpi_cuda_igraph() directly.
  *
- * Do not include both this header and dress_igraph.h in the same
+ * Do not include both this header and dress/igraph/dress.h in the same
  * translation unit — the macros will conflict.
  */
 #ifndef DRESS_IGRAPH_MPI_REDIRECT_H
 #define DRESS_IGRAPH_MPI_REDIRECT_H
 
-#include "../dress_igraph.h"
-#include "dress/mpi/dress.h"
+#include <dress/igraph/dress.h>
+#include <mpi.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,23 +91,19 @@ int delta_dress_fit_mpi_cuda_igraph_fcomm(const igraph_t *graph,
 }
 #endif
 
-/* ── Redirect delta_dress_fit_igraph to MPI implementation ──────── */
+/* ── Redirect delta_dress_fit to MPI implementation ─────────────── */
+
+#undef delta_dress_fit
 
 #ifdef DRESS_IGRAPH_CUDA_REDIRECT_H
 
-/* cuda/dress_igraph.h was included before us — redirect to GPU + MPI.
-   Undefine the simple CUDA alias so we can replace it with a
-   function-like macro that appends MPI_COMM_WORLD. */
-#undef delta_dress_fit_igraph
-
-#define delta_dress_fit_igraph(g, w, v, k, mi, eps, pc, res) \
+#define delta_dress_fit(g, w, v, k, mi, eps, pc, res) \
     delta_dress_fit_mpi_cuda_igraph((g), (w), (v), (k), (mi), (eps), (pc), \
                                     (res), MPI_COMM_WORLD)
 
 #else
 
-/* CPU + MPI. */
-#define delta_dress_fit_igraph(g, w, v, k, mi, eps, pc, res) \
+#define delta_dress_fit(g, w, v, k, mi, eps, pc, res) \
     delta_dress_fit_mpi_igraph((g), (w), (v), (k), (mi), (eps), (pc), \
                                (res), MPI_COMM_WORLD)
 

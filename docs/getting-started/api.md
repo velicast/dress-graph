@@ -76,21 +76,26 @@ MPI+CUDA: include `dress/mpi/cuda/dress.h` — single header for GPU + distribut
 
 ## C (igraph wrapper)
 
-Header: `dress_igraph.h`
+Header: `dress/igraph/dress.h`
+
+> **Convenience macros:** The igraph header defines `dress_fit`, `dress_free`, `dress_to_vector`,
+> `delta_dress_fit`, `delta_dress_free`, and `delta_dress_to_vector` as macros that expand to their
+> `_igraph` counterparts. User code calls the same names as with the core API — the igraph backend
+> is transparent.
 
 | Type / Function | Description |
 |--------|-----------|
 | `dress_result_igraph_t` | Struct: `N`, `E`, `src[E]`, `dst[E]`, `dress[E]`, `weight[E]`, `node_dress[N]`, `iterations`, `delta` (zero-copy views) |
-| `dress_fit_igraph` | `int dress_fit_igraph(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int max_iters, double epsilon, int precompute, dress_result_igraph_t *result)` |
-| `dress_free_igraph` | `void dress_free_igraph(dress_result_igraph_t *result)` |
-| `dress_to_vector_igraph` | `int dress_to_vector_igraph(const dress_result_igraph_t *result, igraph_vector_t *out)` |
+| `dress_fit` | `int dress_fit(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int max_iters, double epsilon, int precompute, dress_result_igraph_t *result)` — macro for `dress_fit_igraph` |
+| `dress_free` | `void dress_free(dress_result_igraph_t *result)` — macro for `dress_free_igraph` |
+| `dress_to_vector` | `int dress_to_vector(const dress_result_igraph_t *result, igraph_vector_t *out)` — macro for `dress_to_vector_igraph` |
 | `delta_dress_result_igraph_t` | Struct: `histogram[hist_size]`, `hist_size` |
-| `delta_dress_fit_igraph` | `int delta_dress_fit_igraph(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result)` |
-| `delta_dress_free_igraph` | `void delta_dress_free_igraph(delta_dress_result_igraph_t *result)` |
-| `delta_dress_to_vector_igraph` | `int delta_dress_to_vector_igraph(const delta_dress_result_igraph_t *result, igraph_vector_t *out)` |
+| `delta_dress_fit` | `int delta_dress_fit(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result)` — macro for `delta_dress_fit_igraph` |
+| `delta_dress_free` | `void delta_dress_free(delta_dress_result_igraph_t *result)` — macro for `delta_dress_free_igraph` |
+| `delta_dress_to_vector` | `int delta_dress_to_vector(const delta_dress_result_igraph_t *result, igraph_vector_t *out)` — macro for `delta_dress_to_vector_igraph` |
 
-CUDA: include `cuda/dress_igraph.h` instead.
-MPI: include `mpi/dress_igraph.h` instead — adds:
+CUDA: include `dress/cuda/igraph/dress.h` instead — same calls, CUDA backend.
+MPI: include `dress/mpi/igraph/dress.h` instead — redirects `delta_dress_fit()` to MPI. Adds:
 
 | Function | Signature |
 |--------|-----------|
@@ -99,9 +104,9 @@ MPI: include `mpi/dress_igraph.h` instead — adds:
 | `delta_dress_fit_mpi_cuda_igraph` | Same as above, CUDA+MPI backend (available when CUDA header is also included) |
 | `delta_dress_fit_mpi_cuda_igraph_fcomm` | Fortran-handle variant of the CUDA+MPI function |
 
-Uses the same `delta_dress_result_igraph_t`; free with `delta_dress_free_igraph()`.
+Uses the same `delta_dress_result_igraph_t`; free with `delta_dress_free()`.
 
-MPI+CUDA: include `mpi/cuda/dress_igraph.h` — single header that composes CUDA + MPI.
+MPI+CUDA: include `dress/mpi/cuda/igraph/dress.h` — single header that composes CUDA + MPI.
 
 ---
 

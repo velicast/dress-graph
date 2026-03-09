@@ -1,17 +1,19 @@
 /* cpu_igraph.c — Prism vs K₃,₃ with DRESS (CPU, igraph backend)
  *
  * Same comparison as cpu.c but using igraph_t graphs and the
- * igraph wrapper.
+ * igraph wrapper.  Including dress/igraph/dress.h provides
+ * convenience macros so that dress_fit() / dress_free() call
+ * the igraph-backed implementation transparently.
  *
  * Build:
- *   gcc -O2 -o cpu_igraph cpu_igraph.c -ldress -ldress_igraph \
+ *   gcc -O2 -o cpu_igraph cpu_igraph.c -ldress \
  *       $(pkg-config --cflags --libs igraph) -lm
  */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <igraph/igraph.h>
-#include "dress_igraph.h"
+#include <dress/igraph/dress.h>
 
 static int cmp_dbl(const void *a, const void *b) {
     double d = *(const double *)a - *(const double *)b;
@@ -28,8 +30,8 @@ static void run(const char *name, const int *edges, int n_edges) {
     igraph_vector_int_destroy(&ev);
 
     dress_result_igraph_t result;
-    dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
-                     100, 1e-6, 0, &result);
+    dress_fit(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+             100, 1e-6, 0, &result);
 
     double *vals = malloc(result.E * sizeof(double));
     memcpy(vals, result.dress, result.E * sizeof(double));
@@ -40,7 +42,7 @@ static void run(const char *name, const int *edges, int n_edges) {
     printf("\n");
 
     free(vals);
-    dress_free_igraph(&result);
+    dress_free(&result);
     igraph_destroy(&g);
 }
 

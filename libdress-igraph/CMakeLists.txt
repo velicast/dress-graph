@@ -43,7 +43,8 @@ install(TARGETS dress_igraph_static dress_igraph_shared
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-install(FILES include/dress_igraph.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES include/dress/igraph/dress.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dress/igraph)
+install(FILES include/dress/cuda/igraph/dress.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dress/cuda/igraph)
 
 # ── MPI support (optional) ──────────────────────────────────────────
 if(DRESS_MPI)
@@ -79,8 +80,8 @@ if(DRESS_MPI)
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     )
-    install(FILES include/mpi/dress_igraph.h
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mpi)
-    install(FILES include/mpi/cuda/dress_igraph.h
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mpi/cuda)
+    install(FILES include/dress/mpi/igraph/dress.h
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dress/mpi/igraph)
+    install(FILES include/dress/mpi/cuda/igraph/dress.h
+            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/dress/mpi/cuda/igraph)
 endif()

@@ -1,11 +1,11 @@
 /* mpi_igraph.c — Rook vs Shrikhande with Δ¹-DRESS (MPI, igraph backend)
  *
  * Same comparison as mpi.c but using igraph_t graphs and the
- * MPI-distributed igraph wrapper.  Including mpi/dress_igraph.h
- * redirects delta_dress_fit_igraph() to the MPI implementation.
+ * MPI-distributed igraph wrapper.  Including dress/mpi/igraph/dress.h
+ * redirects delta_dress_fit() to the MPI implementation.
  *
  * Build & run:
- *   mpicc -O2 -o mpi_igraph mpi_igraph.c -ldress -ldress_igraph \
+ *   mpicc -O2 -o mpi_igraph mpi_igraph.c -ldress \
  *       $(pkg-config --cflags --libs igraph) -lm
  *   mpirun -np 4 ./mpi_igraph
  */
@@ -14,7 +14,7 @@
 #include <string.h>
 #include <mpi.h>
 #include <igraph/igraph.h>
-#include "mpi/dress_igraph.h"
+#include <dress/mpi/igraph/dress.h>
 
 static igraph_t make_graph(const int *edges, int n_edges) {
     igraph_t g;
@@ -44,10 +44,10 @@ int main(int argc, char **argv) {
     igraph_t shri = make_graph(shri_e, 96);
 
     delta_dress_result_igraph_t dr, ds;
-    delta_dress_fit_igraph(&rook, NULL, DRESS_VARIANT_UNDIRECTED,
-                           1, 100, 1e-6, 0, &dr);
-    delta_dress_fit_igraph(&shri, NULL, DRESS_VARIANT_UNDIRECTED,
-                           1, 100, 1e-6, 0, &ds);
+    delta_dress_fit(&rook, NULL, DRESS_VARIANT_UNDIRECTED,
+                    1, 100, 1e-6, 0, &dr);
+    delta_dress_fit(&shri, NULL, DRESS_VARIANT_UNDIRECTED,
+                    1, 100, 1e-6, 0, &ds);
 
     if (rank == 0) {
         printf("Rook:       %d bins\n", dr.hist_size);
@@ -59,8 +59,8 @@ int main(int argc, char **argv) {
         printf("Histograms differ: %s\n", same ? "no" : "yes");
     }
 
-    delta_dress_free_igraph(&dr);
-    delta_dress_free_igraph(&ds);
+    delta_dress_free(&dr);
+    delta_dress_free(&ds);
     igraph_destroy(&rook);
     igraph_destroy(&shri);
 

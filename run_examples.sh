@@ -77,10 +77,22 @@ verify_mpi() {
     fi
 }
 
+# MPI igraph examples: only histograms (no multiset output)
+verify_mpi_igraph() {
+    local label="$1" output="$2"
+    if echo "$output" | grep -qiE 'Histograms differ.*([Tt]rue|[Yy]es)'; then
+        pass "$label"
+    else
+        fail "$label"
+        echo "    OUTPUT: $output"
+    fi
+}
+
 # ── Library paths for C/C++ examples ───────────────────────────────
 LIBDIR="$ROOT/build/libdress"
 INC_C="$ROOT/libdress/include"
 INC_CPP="$ROOT/libdress++/include"
+INC_IGRAPH="$ROOT/libdress-igraph/include"
 export LD_LIBRARY_PATH="${LIBDIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 CUDA_LIBS=""
@@ -138,6 +150,78 @@ run_c() {
         fi
     else
         skip "C mpi_cuda (no MPI+CUDA)"
+    fi
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# C igraph
+# ═══════════════════════════════════════════════════════════════════
+run_c_igraph() {
+    if ! pkg-config --exists igraph 2>/dev/null; then
+        skip "C igraph (pkg-config igraph not found)"; return
+    fi
+    header "C igraph"
+    local dir="$ROOT/examples/c"
+    local IGRAPH_CFLAGS IGRAPH_LIBS
+    IGRAPH_CFLAGS=$(pkg-config --cflags igraph)
+    IGRAPH_LIBS=$(pkg-config --libs igraph)
+    local SRC_IGRAPH="$ROOT/libdress-igraph/src/dress_igraph.c"
+    local out
+
+    # cpu_igraph
+    if gcc -O2 -o "$dir/cpu_igraph" "$dir/cpu_igraph.c" $SRC_IGRAPH \
+            -I"$INC_C" -I"$INC_IGRAPH" -I"$ROOT/libdress/src" \
+            $IGRAPH_CFLAGS -L"$LIBDIR" -ldress $IGRAPH_LIBS -lm -fopenmp 2>&1; then
+        out=$("$dir/cpu_igraph" 2>&1) || true
+        verify_cpu "C igraph cpu" "$out"
+    else
+        fail "C igraph cpu (compile)"
+    fi
+
+    # cuda_igraph
+    if [[ $HAS_CUDA -eq 1 && -n "$CUDA_LIBS" ]]; then
+        if gcc -O2 -o "$dir/cuda_igraph" "$dir/cuda_igraph.c" $SRC_IGRAPH \
+                -I"$INC_C" -I"$INC_IGRAPH" -I"$ROOT/libdress/src" \
+                $IGRAPH_CFLAGS -L"$LIBDIR" -ldress $CUDA_LIBS $IGRAPH_LIBS -lm -fopenmp 2>&1; then
+            out=$("$dir/cuda_igraph" 2>&1) || true
+            verify_cpu "C igraph cuda" "$out"
+        else
+            fail "C igraph cuda (compile)"
+        fi
+    else
+        skip "C igraph cuda (no CUDA)"
+    fi
+
+    # mpi_igraph
+    if [[ $HAS_MPI -eq 1 ]]; then
+        local SRC_MPI_IGRAPH="$ROOT/libdress-igraph/src/dress_igraph_mpi.c"
+        if mpicc -O2 -o "$dir/mpi_igraph" "$dir/mpi_igraph.c" \
+                $SRC_IGRAPH $SRC_MPI_IGRAPH \
+                -I"$INC_C" -I"$INC_IGRAPH" -I"$ROOT/libdress/src" \
+                $IGRAPH_CFLAGS -L"$LIBDIR" -ldress $IGRAPH_LIBS -lm -fopenmp 2>&1; then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_igraph" 2>&1) || true
+            verify_mpi_igraph "C igraph mpi" "$out"
+        else
+            fail "C igraph mpi (compile)"
+        fi
+    else
+        skip "C igraph mpi (no MPI)"
+    fi
+
+    # mpi_cuda_igraph
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 && -n "$CUDA_LIBS" ]]; then
+        local SRC_MPI_IGRAPH="$ROOT/libdress-igraph/src/dress_igraph_mpi.c"
+        if mpicc -O2 -DDRESS_CUDA -o "$dir/mpi_cuda_igraph" "$dir/mpi_cuda_igraph.c" \
+                $SRC_IGRAPH $SRC_MPI_IGRAPH \
+                -I"$INC_C" -I"$INC_IGRAPH" -I"$ROOT/libdress/src" \
+                $IGRAPH_CFLAGS -L"$LIBDIR" -ldress $CUDA_LIBS $IGRAPH_LIBS -lm -fopenmp 2>&1; then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_cuda_igraph" 2>&1) || true
+            verify_mpi_igraph "C igraph mpi_cuda" "$out"
+        else
+            fail "C igraph mpi_cuda (compile)"
+        fi
+    else
+        skip "C igraph mpi_cuda (no MPI+CUDA)"
     fi
 }
 
@@ -586,6 +670,7 @@ echo "  CUDA: $([ $HAS_CUDA -eq 1 ] && echo 'available' || echo 'not found')"
 echo "  MPI:  $([ $HAS_MPI  -eq 1 ] && echo 'available' || echo 'not found')"
 
 want c      && run_c
+want igraph && run_c_igraph
 want cpp    && run_cpp
 want python && run_python
 want rust   && run_rust

@@ -15,8 +15,12 @@
  *   ./tests/c/test_delta_dress_igraph
  */
 
-#include "dress_igraph.h"
-#include "dress/dress.h"
+#include <dress/igraph/dress.h>
+#include <dress/dress.h>
+
+/* Undo convenience macros — this test cross-validates against the core
+   C API, so we need the un-redirected delta_dress_fit() symbol. */
+#undef delta_dress_fit
 
 
 #include <igraph/igraph.h>

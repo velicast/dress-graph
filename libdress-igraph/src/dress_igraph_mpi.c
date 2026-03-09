@@ -11,8 +11,8 @@
  *       -I ../libdress/include -I ../libdress-igraph/include
  */
 
-#include "dress_igraph.h"
-#include "dress/dress.h"
+#include <dress/igraph/dress.h>
+#include <dress/dress.h>
 #include "dress/mpi/dress_mpi.h"
 
 #include <igraph/igraph.h>

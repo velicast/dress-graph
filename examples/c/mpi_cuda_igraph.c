@@ -1,13 +1,13 @@
 /* mpi_cuda_igraph.c — Rook vs Shrikhande with Δ¹-DRESS (MPI + CUDA, igraph)
  *
  * Same comparison as mpi_igraph.c but using the CUDA + MPI backend.
- * Including mpi/cuda/dress_igraph.h redirects delta_dress_fit_igraph()
+ * Including dress/mpi/cuda/igraph/dress.h redirects delta_dress_fit()
  * to the GPU + MPI implementation — no source changes required.
  *
  * Build & run:
  *   mpicc -O2 -o mpi_cuda_igraph mpi_cuda_igraph.c \
- *       -ldress -ldress_cuda -ldress_igraph \
- *       $(pkg-config --cflags --libs igraph) -lm
+ *       -ldress -ldress_cuda \
+ *       $(pkg-config --cflags --libs igraph) -lcudart -lm
  *   mpirun -np 4 ./mpi_cuda_igraph
  */
 #include <stdio.h>
@@ -16,7 +16,7 @@
 #include <mpi.h>
 #include <igraph/igraph.h>
 /* Order matters: cuda first, then mpi detects it and routes to GPU + MPI. */
-#include "mpi/cuda/dress_igraph.h"
+#include <dress/mpi/cuda/igraph/dress.h>
 
 static igraph_t make_graph(const int *edges, int n_edges) {
     igraph_t g;
@@ -46,10 +46,10 @@ int main(int argc, char **argv) {
     igraph_t shri = make_graph(shri_e, 96);
 
     delta_dress_result_igraph_t dr, ds;
-    delta_dress_fit_igraph(&rook, NULL, DRESS_VARIANT_UNDIRECTED,
-                           1, 100, 1e-6, 0, &dr);
-    delta_dress_fit_igraph(&shri, NULL, DRESS_VARIANT_UNDIRECTED,
-                           1, 100, 1e-6, 0, &ds);
+    delta_dress_fit(&rook, NULL, DRESS_VARIANT_UNDIRECTED,
+                    1, 100, 1e-6, 0, &dr);
+    delta_dress_fit(&shri, NULL, DRESS_VARIANT_UNDIRECTED,
+                    1, 100, 1e-6, 0, &ds);
 
     if (rank == 0) {
         printf("Rook:       %d bins\n", dr.hist_size);
@@ -61,8 +61,8 @@ int main(int argc, char **argv) {
         printf("Histograms differ: %s\n", same ? "no" : "yes");
     }
 
-    delta_dress_free_igraph(&dr);
-    delta_dress_free_igraph(&ds);
+    delta_dress_free(&dr);
+    delta_dress_free(&ds);
     igraph_destroy(&rook);
     igraph_destroy(&shri);
 

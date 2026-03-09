@@ -163,16 +163,20 @@ build_igraph() {
     IGRAPH_CFLAGS=$(pkg-config --cflags igraph)
     IGRAPH_LIBS=$(pkg-config --libs igraph)
 
+    local COMMON_SRC=(
+        libdress-igraph/src/dress_igraph.c
+        libdress/src/dress.c
+        libdress/src/delta_dress.c
+        libdress/src/delta_dress_impl.c
+    )
+
     # Build + test: DRESS igraph wrapper
     if [[ -f tests/c/test_dress_igraph.c ]]; then
         gcc -O2 -I libdress/include -I libdress-igraph/include \
-            $IGRAPH_CFLAGS \
+            -I libdress/src $IGRAPH_CFLAGS \
             -o tests/c/test_dress_igraph \
             tests/c/test_dress_igraph.c \
-            libdress-igraph/src/dress_igraph.c \
-            libdress/src/dress.c \
-            libdress/src/delta_dress.c \
-            libdress/src/delta_dress_impl.c \
+            "${COMMON_SRC[@]}" \
             $IGRAPH_LIBS -lm -fopenmp 2>&1
         pass "libdress-igraph compiled"
 
@@ -184,13 +188,10 @@ build_igraph() {
     # Build + test: Δ^k-DRESS igraph wrapper
     if [[ -f tests/c/test_delta_dress_igraph.c ]]; then
         gcc -O2 -I libdress/include -I libdress-igraph/include \
-            $IGRAPH_CFLAGS \
+            -I libdress/src $IGRAPH_CFLAGS \
             -o tests/c/test_delta_dress_igraph \
             tests/c/test_delta_dress_igraph.c \
-            libdress-igraph/src/dress_igraph.c \
-            libdress/src/dress.c \
-            libdress/src/delta_dress.c \
-            libdress/src/delta_dress_impl.c \
+            "${COMMON_SRC[@]}" \
             $IGRAPH_LIBS -lm -fopenmp 2>&1
         pass "libdress-igraph delta compiled"
 

@@ -18,12 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - Rust: `dress_graph::mpi::delta_fit()`, `dress_graph::mpi::cuda::delta_fit()`
   - Go: `go/mpi`, `go/mpi/cuda` import paths
   - Julia: `DRESS.MPI`, `DRESS.MPI.CUDA` modules
-- **MPI support for igraph wrapper** (`libdress-igraph`):
-  - `mpi/dress_igraph.h` — MPI-distributed Δᵏ-DRESS on `igraph_t` graphs via include-based macro redirect
-  - `mpi/cuda/dress_igraph.h` — single header for MPI + CUDA igraph
-  - `delta_dress_fit_mpi_igraph()` / `delta_dress_fit_mpi_cuda_igraph()` functions (+ `_fcomm` FFI variants)
+- **igraph wrapper restructured** (`libdress-igraph`):
+  - Headers moved to `dress/igraph/dress.h`, `dress/cuda/igraph/dress.h`, `dress/mpi/igraph/dress.h`, `dress/mpi/cuda/igraph/dress.h`
+  - **Convenience macros** — `dress_fit`, `dress_free`, `dress_to_vector`, `delta_dress_fit`, `delta_dress_free`, `delta_dress_to_vector` map to their `_igraph` counterparts; user code uses the same names as the core API
+  - MPI support: `dress/mpi/igraph/dress.h` redirects `delta_dress_fit()` to MPI backend (`delta_dress_fit_mpi_igraph` / `delta_dress_fit_mpi_cuda_igraph` + `_fcomm` FFI variants)
+  - `dress/mpi/cuda/igraph/dress.h` — single header for MPI + CUDA igraph
   - `dress_igraph_mpi.c` implementation using shared `delta_dress_impl.h`
   - CMake targets: `dress_igraph_mpi_static`, `dress_igraph_mpi_shared`
+  - Examples link against `libdress.a` instead of recompiling core sources
 - Octave CUDA support: `cuda.dress_fit()`, `cuda.delta_dress_fit()` via `+cuda` namespace
 
 ### Fixed
@@ -40,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.4.0] — 2026-03-08
 
 ### Added
-- CUDA support for igraph wrapper via `#include "cuda/dress_igraph.h"` — redirects `dress_fit_igraph()` / `delta_dress_fit_igraph()` to CUDA via macros
+- CUDA support for igraph wrapper via `#include <dress/cuda/igraph/dress.h>` — redirects `dress_fit()` / `delta_dress_fit()` to CUDA via macros
 - CUDA support via import-based switching across all language wrappers
   - C: `#include "dress/cuda/dress.h"` redirects `dress_fit()` / `delta_dress_fit()` to CUDA via macros (also available as explicit `dress_fit_cuda()` in `dress/cuda/dress_cuda.h`)
   - C++: `dress::cuda::fit()`, `dress::cuda::delta_fit()` — same names as CPU, different namespace
