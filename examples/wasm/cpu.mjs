@@ -4,7 +4,7 @@
  * Run:
  *   node cpu.mjs
  */
-import { dressFit } from '../../wasm/dress.js';
+import { dressFit } from 'dress-graph';
 
 // Prism (C₃ □ K₂): 6 vertices, 18 directed edges (0-based)
 const prism_s = [0,1,1,2,2,0,0,3,1,4,2,5,3,4,4,5,5,3];

@@ -105,7 +105,7 @@ SEXP C_dress_fit(SEXP n_vertices_,
 /*  dress_version                                                      */
 /* ------------------------------------------------------------------ */
 SEXP C_dress_version(void) {
-    return ScalarString(mkChar("0.5.0"));
+    return ScalarString(mkChar("0.5.1"));
 }
 
 /* ------------------------------------------------------------------ */

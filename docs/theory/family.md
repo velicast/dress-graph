@@ -48,7 +48,7 @@ For Motif-DRESS to converge to a unique fixed point, the aggregation function $f
 
     By AM-GM this is always $\geq 2$, with equality when $\|u\| = \|v\|$.  In the **unweighted** case (uniform $\bar{w}$), the fixed-point contraction forces the norm ratio to remain bounded, and the converged values satisfy $d^* \in [0, 2]$.  With **non-uniform edge weights**, vertex norms can differ even for structurally identical vertices, so fixed-point values may exceed 2.
 
-3. **Contraction on the Hilbert Projective Metric.** Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part — which follows from the finite per-step bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\!\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to a finite vector $d^*$ (in the unweighted case, $d^* \in [0, 2]^{|E|}$). A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
+3. **Contraction on the Hilbert Projective Metric.** Since $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$, Birkhoff's contraction theorem guarantees that $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_{e} x_e/y_e \cdot \max_{e} y_e/x_e\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part, which follows from the finite per-step bound above. By the Banach fixed-point theorem on the complete metric space $(\mathbb{R}_{>0}^{|E|}/\!\sim,\, d_H)$, the iteration converges to a unique ray, and the boundedness step pins the representative to a finite vector $d^*$ (in the unweighted case, $d^* \in [0, 2]^{|E|}$). A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
 
 **Self-loops.** Self-loops are added to every vertex before iteration (i.e., the algorithm uses the closed neighborhood $N[u] = N(u) \cup \{u\}$). The self-loop edge $(u,u)$ participates in both the aggregation and the vertex norm; without it, an isolated edge with no common neighbors would produce $g(u,v) = 0$, making the iteration undefined.
 
@@ -147,7 +147,7 @@ d^{(t+1)} = \frac{f\bigl(\mathbf{d}^{(t)},\, \mathcal{N},\, \bar{w}\bigr)}{g\big
 
 where $d \equiv d_{uv}$ is the similarity value assigned to edge $(u,v)$, and:
 
-- $\mathcal{N}(u,v)$ is a **symmetric neighborhood operator** — the structural context aggregated for $(u,v)$,
+- $\mathcal{N}(u,v)$ is a **symmetric neighborhood operator**, the structural context aggregated for $(u,v)$,
 - $\bar{w}: E \to \mathbb{R}_{>0}$ is a **symmetric weight function** ($\bar{w}(u,v) = \bar{w}(v,u)$; $\bar{w} \equiv 1$ for unweighted graphs),
 - $f$ is the **aggregation function**,
 - $g$ is the **norm function**.

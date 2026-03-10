@@ -7,7 +7,7 @@
  * Run:
  *   node rook_vs_shrikhande.mjs
  */
-import { deltaDressFit } from '../../wasm/dress.js';
+import { deltaDressFit } from 'dress-graph';
 
 // Rook L₂(4) = K₄ □ K₄ — 16 vertices, 96 directed edges
 const rook_s = [0,1,0,4,0,2,0,8,0,3,0,12,1,5,1,2,1,9,1,3,1,13,2,6,2,10,2,3,2,14,3,7,3,11,3,15,4,5,4,6,4,8,4,7,4,12,5,6,5,9,5,7,5,13,6,10,6,7,6,14,7,11,7,15,8,9,8,10,8,11,8,12,9,10,9,11,9,13,10,11,10,14,11,15,12,13,12,14,12,15,13,14,13,15,14,15];

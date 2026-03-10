@@ -1,9 +1,9 @@
 # API Reference
 
-Every language binding exposes the same three operations — `dress_fit`, `delta_dress_fit`, and `dress_get` — plus a persistent graph object.
+Every language binding exposes the same three operations (`dress_fit`, `delta_dress_fit`, and `dress_get`) plus a persistent graph object.
 For usage examples see the [examples/](https://github.com/velicast/dress-graph/tree/main/examples) directory.
 
-> **CUDA / MPI switching:** In every language the API is identical — only the import or namespace changes.
+> **CUDA / MPI switching:** In every language the API is identical; only the import or namespace changes.
 > WASM is CPU-only (browser).
 
 ---
@@ -38,11 +38,11 @@ For usage examples see the [examples/](https://github.com/velicast/dress-graph/t
 | `histogram` | int64 [hist_size] | Bin counts of converged edge values |
 | `hist_size` | int | Number of bins: \(\lfloor d_{\max}/\varepsilon \rfloor + 1\) (\(d_{\max}=2\) unweighted) |
 | `multisets` | float [\(\binom{N}{k}\) × E] or null | Per-subgraph edge values (row-major; NaN = removed). Present when `keep_multisets` is enabled. |
-| `num_subgraphs` | int64 | \(\binom{N}{k}\) — number of vertex-deletion subgraphs |
+| `num_subgraphs` | int64 | \(\binom{N}{k}\) : number of vertex-deletion subgraphs |
 
 ### `dress_get` return
 
-Single `float` — the DRESS value \(d_{uv}\) for one edge, computed in \(O(\deg u + \deg v)\) time on an already-fitted graph.
+Single `float`: the DRESS value \(d_{uv}\) for one edge, computed in \(O(\deg u + \deg v)\) time on an already-fitted graph.
 
 ---
 
@@ -68,9 +68,9 @@ Header: `dress/delta_dress.h`
 
 Returns a `malloc`'d `int64_t*` histogram; caller must `free()`.
 
-CUDA: include `dress/cuda/dress.h` instead — same signatures, redirected via macros.
-MPI: include `dress/mpi/dress.h` — redirects `delta_dress_fit()` to MPI-distributed backend.
-MPI+CUDA: include `dress/mpi/cuda/dress.h` — single header for GPU + distributed.
+CUDA: include `dress/cuda/dress.h` instead; same signatures, redirected via macros.
+MPI: include `dress/mpi/dress.h`; redirects `delta_dress_fit()` to MPI-distributed backend.
+MPI+CUDA: include `dress/mpi/cuda/dress.h`: single header for GPU + distributed.
 
 ---
 
@@ -80,22 +80,22 @@ Header: `dress/igraph/dress.h`
 
 > **Convenience macros:** The igraph header defines `dress_fit`, `dress_free`, `dress_to_vector`,
 > `delta_dress_fit`, `delta_dress_free`, and `delta_dress_to_vector` as macros that expand to their
-> `_igraph` counterparts. User code calls the same names as with the core API — the igraph backend
+> `_igraph` counterparts. User code calls the same names as with the core API; the igraph backend
 > is transparent.
 
 | Type / Function | Description |
 |--------|-----------|
 | `dress_result_igraph_t` | Struct: `N`, `E`, `src[E]`, `dst[E]`, `dress[E]`, `weight[E]`, `node_dress[N]`, `iterations`, `delta` (zero-copy views) |
-| `dress_fit` | `int dress_fit(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int max_iters, double epsilon, int precompute, dress_result_igraph_t *result)` — macro for `dress_fit_igraph` |
-| `dress_free` | `void dress_free(dress_result_igraph_t *result)` — macro for `dress_free_igraph` |
-| `dress_to_vector` | `int dress_to_vector(const dress_result_igraph_t *result, igraph_vector_t *out)` — macro for `dress_to_vector_igraph` |
+| `dress_fit` | `int dress_fit(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int max_iters, double epsilon, int precompute, dress_result_igraph_t *result)` : macro for `dress_fit_igraph` |
+| `dress_free` | `void dress_free(dress_result_igraph_t *result)` : macro for `dress_free_igraph` |
+| `dress_to_vector` | `int dress_to_vector(const dress_result_igraph_t *result, igraph_vector_t *out)` : macro for `dress_to_vector_igraph` |
 | `delta_dress_result_igraph_t` | Struct: `histogram[hist_size]`, `hist_size` |
-| `delta_dress_fit` | `int delta_dress_fit(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result)` — macro for `delta_dress_fit_igraph` |
-| `delta_dress_free` | `void delta_dress_free(delta_dress_result_igraph_t *result)` — macro for `delta_dress_free_igraph` |
-| `delta_dress_to_vector` | `int delta_dress_to_vector(const delta_dress_result_igraph_t *result, igraph_vector_t *out)` — macro for `delta_dress_to_vector_igraph` |
+| `delta_dress_fit` | `int delta_dress_fit(const igraph_t *graph, const char *weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result)` : macro for `delta_dress_fit_igraph` |
+| `delta_dress_free` | `void delta_dress_free(delta_dress_result_igraph_t *result)` : macro for `delta_dress_free_igraph` |
+| `delta_dress_to_vector` | `int delta_dress_to_vector(const delta_dress_result_igraph_t *result, igraph_vector_t *out)` : macro for `delta_dress_to_vector_igraph` |
 
-CUDA: include `dress/cuda/igraph/dress.h` instead — same calls, CUDA backend.
-MPI: include `dress/mpi/igraph/dress.h` instead — redirects `delta_dress_fit()` to MPI. Adds:
+CUDA: include `dress/cuda/igraph/dress.h` instead; same calls, CUDA backend.
+MPI: include `dress/mpi/igraph/dress.h` instead; redirects `delta_dress_fit()` to MPI. Adds:
 
 | Function | Signature |
 |--------|-----------|
@@ -106,7 +106,7 @@ MPI: include `dress/mpi/igraph/dress.h` instead — redirects `delta_dress_fit()
 
 Uses the same `delta_dress_result_igraph_t`; free with `delta_dress_free()`.
 
-MPI+CUDA: include `dress/mpi/cuda/igraph/dress.h` — single header that composes CUDA + MPI.
+MPI+CUDA: include `dress/mpi/cuda/igraph/dress.h` : single header that composes CUDA + MPI.
 
 ---
 
@@ -114,7 +114,7 @@ MPI+CUDA: include `dress/mpi/cuda/igraph/dress.h` — single header that compose
 
 Header: `dress/dress.hpp`
 
-**`DRESS` class** — RAII wrapper around the C graph.
+**`DRESS` class**: RAII wrapper around the C graph.
 
 | Member | Signature |
 |--------|-----------|
@@ -124,14 +124,14 @@ Header: `dress/dress.hpp`
 | `get` | `double get(int u, int v, int maxIterations = 100, double epsilon = 1e-6, double edgeWeight = 1.0) const` |
 | `deltaFit` | `DeltaFitResult deltaFit(int k, int maxIterations, double epsilon, bool keepMultisets = false, int offset = 0, int stride = 1)` |
 | Accessors | `numVertices()`, `numEdges()`, `edgeDress(e)`, `edgeWeight(e)`, `nodeDress(u)`, `edgeSource(e)`, `edgeTarget(e)` |
-| Bulk access | `edgeDressValues()`, `edgeWeights()`, `nodeDressValues()`, `edgeSources()`, `edgeTargets()` — all `const` pointers |
+| Bulk access | `edgeDressValues()`, `edgeWeights()`, `nodeDressValues()`, `edgeSources()`, `edgeTargets()`, all `const` pointers |
 
 | Result type | Fields |
 |-------------|--------|
 | `FitResult` | `int iterations`, `double delta` |
 | `DeltaFitResult` | `std::vector<int64_t> histogram`, `int hist_size`, `std::vector<double> multisets`, `int64_t num_subgraphs` |
 
-CUDA: `#include "dress/cuda/dress.hpp"` — same class in `dress::cuda` namespace.
+CUDA: `#include "dress/cuda/dress.hpp"`; same class in `dress::cuda` namespace.
 
 ---
 
@@ -229,7 +229,7 @@ Crate: `dress-graph`
 | `DeltaDressResult` | `histogram: Vec<i64>`, `hist_size: i32`, `multisets: Option<Vec<f64>>`, `num_subgraphs: i64` |
 | `Variant` | `Undirected`, `Directed`, `Forward`, `Backward` |
 
-CUDA: `use dress_graph::cuda::DRESS` — same API.
+CUDA: `use dress_graph::cuda::DRESS` ; same API.
 
 ---
 
@@ -258,7 +258,7 @@ Package: `github.com/velicast/dress-graph/go`
 | `DeltaResult` | `Histogram []int64`, `HistSize int`, `Multisets []float64` (nil when not requested), `NumSubgraphs int64` |
 | `Variant` | `Undirected`, `Directed`, `Forward`, `Backward` |
 
-CUDA: `import dress "github.com/velicast/dress-graph/go/cuda"` — same API.
+CUDA: `import dress "github.com/velicast/dress-graph/go/cuda"` ; same API.
 
 ---
 
@@ -317,7 +317,7 @@ Package: `DRESS`
 | `DeltaDRESSResult` | `histogram::Vector{Int64}`, `hist_size::Int`, `multisets::Union{Matrix{Float64}, Nothing}`, `num_subgraphs::Int` |
 | Variants | `UNDIRECTED`, `DIRECTED`, `FORWARD`, `BACKWARD` |
 
-CUDA: `using DRESS.CUDA` — same functions.
+CUDA: `using DRESS.CUDA` ; same functions.
 
 ---
 
@@ -376,4 +376,4 @@ MPI+CUDA: `mpi$cuda$delta_dress_fit(...)`.
 
 Variant values: `0` = undirected, `1` = directed, `2` = forward, `3` = backward.
 
-CUDA: `cuda.dress_fit(...)`, `cuda.delta_dress_fit(...)` (MATLAB `+cuda/` namespace; Octave `+cuda/` namespace — requires `libdress_cuda.so`).
+CUDA: `cuda.dress_fit(...)`, `cuda.delta_dress_fit(...)` (MATLAB `+cuda/` namespace; Octave `+cuda/` namespace; requires `libdress_cuda.so`).

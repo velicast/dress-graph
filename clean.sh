@@ -60,6 +60,11 @@ rm -f wasm/dress_wasm.cjs
 rm -f wasm/dress_wasm.wasm
 rm -f wasm/dress-graph-*.tgz
 
+# WASM example install artifacts
+rm -rf examples/wasm/node_modules/
+rm -f  examples/wasm/package-lock.json
+rm -f  examples/wasm/package.json
+
 # Emscripten SDK (downloaded by build)
 rm -rf emsdk/
 

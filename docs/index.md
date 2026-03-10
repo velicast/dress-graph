@@ -2,7 +2,7 @@
 
 **A Continuous Framework for Structural Graph Refinement**
 
-We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ-DRESS empirically separates all 7,983 graphs in a comprehensive Strongly Regular Graph benchmark, and iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations. Successfully applied to a handful of downstream applications.
+We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ¹-DRESS empirically separates all 51,816 graphs across 34 hard benchmark families (16 SRG families totaling 51,718 graphs from the complete Spence collection and McKay's additional SRG data, plus 18 constructed hard families), resolving over 576 million within-family non-isomorphic pairs, and is the cheapest known method that strictly exceeds 3-WL. Iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations. Successfully applied to a handful of downstream applications.
 
 For the theory and generalizations (DRESS Family), see the research paper:
 [**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
@@ -81,7 +81,7 @@ See [The DRESS Equation](theory/equation.md) for the full derivation.
 
 ## Current Experimented Applications
 
-- **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks.
+- **Graph Isomorphism**: sorting DRESS edge values produces a canonical fingerprint. 100 % accuracy on MiVIA and IsoBench benchmarks. Δ¹-DRESS achieves 100 % within-family separation on all 51,816 graphs across 34 hard benchmark families (16 SRG families, 18 constructed families), resolving over 576 million non-isomorphic pairs. See [paper](https://github.com/velicast/dress-graph/blob/main/research/delta1-dress-hard-families.pdf).
 - **Community Detection**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
 - **Classification**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
 - **Retrieval**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
@@ -103,7 +103,7 @@ DRESS is implemented in C with bindings for:
 - **MATLAB / Octave**: MEX gateway
 - **JavaScript / WASM**: browser and Node.js (CPU only)
 
-All backends — **CPU**, **CUDA** (GPU), **MPI** (distributed), and **MPI+CUDA** — are supported across all native language bindings.
+All backends (**CPU**, **CUDA** (GPU), **MPI** (distributed), and **MPI+CUDA**) are supported across all native language bindings.
 An **igraph** C wrapper (`libdress-igraph`) is also available with the same CPU / CUDA / MPI / MPI+CUDA backend matrix.
 JavaScript / WASM is CPU-only (browser).
 

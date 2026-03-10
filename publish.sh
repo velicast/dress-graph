@@ -67,8 +67,9 @@ publish_npm() {
     echo "  ✓ tarball built: $(ls *.tgz)"
 
     if [[ $INSTALL_LOCAL -eq 1 ]]; then
-        npm install -g *.tgz
-        echo "  ✓ installed locally"
+        cd "$ROOT/examples/wasm"
+        npm install "$ROOT/wasm"/*.tgz
+        echo "  ✓ installed locally in examples/wasm"
     fi
 
     if [[ $BUILD_ONLY -eq 0 ]]; then

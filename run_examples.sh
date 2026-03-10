@@ -596,7 +596,7 @@ run_octave() {
     fi
 
     # Install octave package locally
-    local tarball="$ROOT/dress-graph-0.5.0.tar.gz"
+    local tarball="$ROOT/dress-graph-0.5.1.tar.gz"
     if [[ ! -f "$tarball" ]]; then
         echo "  Building Octave tarball ..."
         bash "$ROOT/build.sh" octave 2>&1 | tail -1
@@ -649,6 +649,11 @@ run_wasm() {
         skip "WASM (dress_wasm.wasm not built — run build.sh wasm first)"
         return
     fi
+
+    # Install local npm package
+    echo "  Installing WASM npm package locally ..."
+    bash "$ROOT/publish.sh" --install-local npm 2>&1 | tail -3
+    echo
 
     local dir="$ROOT/examples/wasm"
     local out

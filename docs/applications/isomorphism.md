@@ -59,8 +59,8 @@ graphs *can* produce identical DRESS vectors:
 - **Strongly Regular Graphs (SRG)**: every edge has identical local structure
   (same degree, same common-neighbor counts).  Original-DRESS assigns the same value to
   every edge and cannot distinguish non-isomorphic SRGs with the same
-  parameters.  **Δ¹-DRESS overcomes this**: all 7,983 tested SRGs are fully
-  separated. See [Large-scale SRG separation](#large-scale-srg-separation) below.
+  parameters.  **Δ¹-DRESS overcomes this**: all 51,816 tested graphs across 34 hard
+  benchmark families are fully separated. See [Large-scale SRG separation](#large-scale-srg-separation) below.
 
 ## Relationship to Weisfeiler–Leman
 
@@ -86,7 +86,7 @@ Original-DRESS **matches 2-WL**: it
 a pair that 1-WL cannot separate but 2-WL can
 (see [Theorem 1 in the DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)).
 Original-DRESS fails on CFI constructions and strongly regular graphs with
-identical parameters — but higher-order Δ^k-DRESS overcomes both; see
+identical parameters, but higher-order Δ^k-DRESS overcomes both; see
 [CFI Staircase](#cfi-staircase) and [Large-scale SRG separation](#large-scale-srg-separation) below.
 See [Properties - WL comparison](../theory/properties.md#weisfeilerleman-wl-color-refinement)
 for a detailed side-by-side table.
@@ -254,14 +254,14 @@ climbs the staircase one level per deletion depth:
 | $K_5$ | 40 | 4-WL | ✗ | ✗ | ✓ | ✓ |
 | $K_6$ | 96 | 5-WL | ✗ | ✗ | ✗ | ✓ |
 | $K_7$ | 224 | 6-WL | ✗ | ✗ | ✗ | ✗ |
-| $K_8$ | 512 | 7-WL | ✗ | ✗ | — | — |
-| $K_9$ | 1,152 | 8-WL | ✗ | ✗ | — | — |
-| $K_{10}$ | 2,560 | 9-WL | ✗ | ✗ | — | — |
+| $K_8$ | 512 | 7-WL | ✗ | ✗ | n/a | n/a |
+| $K_9$ | 1,152 | 8-WL | ✗ | ✗ | n/a | n/a |
+| $K_{10}$ | 2,560 | 9-WL | ✗ | ✗ | n/a | n/a |
 
 The pattern is exact: **Δ^k-DRESS matches $(k{+}2)$-WL**. Each
 additional deletion level adds one WL dimension. The boundary is sharp:
 Δ³-DRESS distinguishes CFI($K_6$) (requires 5-WL) but fails on
-CFI($K_7$) (requires 6-WL). "—" entries were not executed due to
+CFI($K_7$) (requires 6-WL). "n/a" entries were not executed due to
 time constraints.
 
 *Summary of WL level per deletion depth:*
@@ -274,7 +274,7 @@ time constraints.
 | 3 | 5-WL | $k + 2$ |
 
 The computational cost is $\mathcal{O}\bigl(\binom{n}{k} \cdot I \cdot m \cdot d_{\max}\bigr)$
-— polynomial in $n$ for fixed $k$ — while the equivalent
+, polynomial in $n$ for fixed $k$, while the equivalent
 $(k{+}2)$-WL costs $\mathcal{O}(n^{k+3})$.
 
 See the [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
@@ -314,35 +314,42 @@ Motif-$K_4$ distinguishes 3 of the 6 Chang pairs (T(8) vs each Chang graph) and 
 
 #### Large-scale SRG separation
 
-To test Δ-DRESS (i.e. Δ^1-DRESS) beyond isolated pairs, we ran it on
-**7,983 strongly regular graphs** from the repository of
-[Krystal Guo](https://github.com/kguo-sagecode/Strongly-regular-graphs).
-These graphs share SRG parameters within each family —
-identical degree, λ, μ, spectrum — so they all confound 2-WL.
-Plain DRESS (Δ^0) maps every graph in each family to a single
-uniform edge value: **zero separation**.
+To test Δ^1-DRESS beyond isolated pairs, we ran it on all known hard benchmark families.
+These include the complete [Spence SRG collection](https://www.maths.gla.ac.uk/~es/srgraphs.php) (12 families, 43,703 graphs on up to 64 vertices), four additional SRG families from [McKay's collections](https://users.cecs.anu.edu.au/~bdm/data/graphs.html), and 18 constructed hard families (Miyazaki, Chang, Paley, Latin square, Steiner, and others).
+All SRGs confound 2-WL by construction: identical degree, λ, μ, and spectrum within each family.
+Plain DRESS (Δ^0) maps every graph in each SRG family to a single uniform edge value: **zero separation**.
 
-| Family | Parameters | Graphs | Δ^1 unique | Separated | Min L∞ between closest pair |
-|--------|-----------|:------:|:----------:|:---------:|:---------------------------:|
-| Conference (Mathon) | (45, 22, 10, 11) | 6 | 6 | **100 %** | 4.16 × 10⁻³ |
-| Steiner block S(2,4,28) | (63, 32, 16, 16) | 4,466 | 4,466 | **100 %** | 1.95 × 10⁻³ |
-| Quasi-symmetric 2-designs | (63, 32, 16, 16) | 3,511 | 3,511 | **100 %** | 2.23 × 10⁻³ |
+| Family | Graphs | Unique | Pairs | Result |
+|--------|:------:|:------:|------:|:------:|
+| SRG(25,12,5,6) | 15 | 15 | 105 | **100 %** |
+| SRG(26,10,3,4) | 10 | 10 | 45 | **100 %** |
+| SRG(28,12,6,4) | 4 | 4 | 6 | **100 %** |
+| SRG(29,14,6,7) | 41 | 41 | 820 | **100 %** |
+| SRG(35,18,9,9) | 3,854 | 3,854 | 7,424,731 | **100 %** |
+| SRG(36,14,4,6) | 180 | 180 | 16,110 | **100 %** |
+| SRG(36,15,6,6) | 32,548 | 32,548 | 529,669,878 | **100 %** |
+| SRG(37,18,8,9) | 6,760 | 6,760 | 22,845,420 | **100 %** |
+| SRG(40,12,2,4) | 28 | 28 | 378 | **100 %** |
+| SRG(45,12,3,3) | 78 | 78 | 3,003 | **100 %** |
+| SRG(50,21,8,9) | 18 | 18 | 153 | **100 %** |
+| SRG(64,18,2,6) | 167 | 167 | 13,861 | **100 %** |
+| **Spence subtotal** | **43,703** | **43,703** | **559,974,510** | **100 %** |
+| SRG(45,22,10,11) | 6 | 6 | 15 | **100 %** |
+| SRG(63,32,16,26)-S | 4,466 | 4,466 | 9,970,345 | **100 %** |
+| SRG(63,32,16,26)-Q | 3,511 | 3,511 | 6,161,805 | **100 %** |
+| SRG(65,32,15,16) | 32 | 32 | 496 | **100 %** |
+| **SRG total** | **51,718** | **51,718** | **576,107,171** | **100 %** |
+| Constructed hard families (18) | 102 | 102 | n/a | **100 %** |
+| **Grand total (distinct)** | **51,816** | **51,816** | **576,107,171** | **100 %** |
 
-**All 7,983 graphs are pairwise distinguished by Δ^1-DRESS.**
+**All 51,816 graphs across 34 hard benchmark families are pairwise distinguished by Δ^1-DRESS**, resolving over 576 million within-family non-isomorphic pairs.
 
-The "Min L∞" column reports the smallest element-wise maximum difference
-between the sorted fingerprints of any sampled graph pair (1,000 random
-pairs per family). Values around 10⁻³ confirm that the separations are
-genuine, not floating-point artifacts — this was further validated by
-checking that the unique count remains **stable across all rounding
-precisions** from 6 to 14 decimal digits.
+Δ¹-DRESS is strictly more powerful than 3-WL: the Rook L₂(4) vs. Shrikhande pair SRG(16,6,2,2), known to defeat 3-WL, is separated.
+This places Δ¹-DRESS strictly above 3-WL; whether it is bounded above by 4-WL (≡ 3-FWL) remains open.
 
-Cross-file analysis between the two SRG(63, 32, 16, 16) sources
-(Steiner and quasi-symmetric) found **zero collisions**, confirming that
-the two constructions produce entirely disjoint isomorphism classes.
+The fingerprint combines a pooled histogram with a multiplicity signature (an integer invariant counting repeated rows in the deleted-subgraph DRESS matrix), which resolved a single histogram collision in SRG(40,12,2,4).
+Separation is stable across all rounding precisions from 6 to 14 decimal digits.
 
-Computation used 32 CPU cores with the pure-Python DRESS backend:
-~10 min for 4,466 graphs (281,358 DRESS runs) and ~8 min for 3,511
-graphs (221,193 DRESS runs).
+SRG data from [Spence](https://www.maths.gla.ac.uk/~es/srgraphs.php) and [McKay](https://users.cecs.anu.edu.au/~bdm/data/graphs.html). For the full paper: [One Deletion Suffices](https://github.com/velicast/dress-graph/blob/main/research/delta1-dress-hard-families.pdf).
 
 See also [Δ^k-DRESS (Iterated Deletion)](../theory/delta-ell-dress.md) for the generalization of Δ-DRESS to arbitrary depth.

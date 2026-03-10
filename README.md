@@ -10,7 +10,7 @@ Rook vs Shrikhande [![Open in Colab](https://colab.research.google.com/assets/co
 
 ## A Continuous Framework for Structural Graph Refinement
 
-We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ-DRESS empirically separates all 7,983 graphs in a comprehensive Strongly Regular Graph benchmark, and iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations. Successfully applied to a handful of downstream applications.
+We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ¹-DRESS empirically separates all 51,816 graphs across 34 hard benchmark families (16 SRG families totaling 51,718 graphs from the complete Spence collection and McKay's additional SRG data, plus 18 constructed hard families), resolving over 576 million within-family non-isomorphic pairs, and is the cheapest known method that strictly exceeds 3-WL. Iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations. Successfully applied to a handful of downstream applications.
 
 > **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, JS, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
 
@@ -87,19 +87,20 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 
 - **[Graph Isomorphism](https://velicast.github.io/dress-graph/applications/isomorphism/)**: sorting DRESS edge values produces a canonical fingerprint.
 
-  **Strongly Regular Graphs — Δ¹-DRESS (7,983 graphs, 100 % separated)**
+  **Δ¹-DRESS: 51,816 graphs, 34 hard families, 100 % separated** ([paper](https://github.com/velicast/dress-graph/blob/main/research/delta1-dress-hard-families.pdf))
 
-  Plain DRESS (Δ⁰) assigns a single uniform value to every edge in an SRG, producing zero separation. Δ¹-DRESS breaks this symmetry by running DRESS on each vertex-deleted subgraph:
+  Plain DRESS (Δ⁰) assigns a single uniform value to every edge in an SRG, producing zero separation. Δ¹-DRESS breaks this symmetry by running DRESS on each vertex-deleted subgraph. Tested on the complete [Spence SRG collection](https://www.maths.gla.ac.uk/~es/srgraphs.php) (12 families, 43,703 graphs on up to 64 vertices), four additional SRG families from [McKay's collections](https://users.cecs.anu.edu.au/~bdm/data/graphs.html) (8,015 graphs), and 18 constructed hard families (102 graphs including Miyazaki, Chang, Paley, Latin square, and Steiner constructions):
 
-  | Family | Parameters | Graphs | Δ¹ unique | Separated | Min L∞ |
-  |--------|-----------|:------:|:---------:|:---------:|:------:|
-  | Conference (Mathon) | (45, 22, 10, 11) | 6 | 6 | **100 %** | 4.16 × 10⁻³ |
-  | Steiner block S(2,4,28) | (63, 32, 16, 16) | 4,466 | 4,466 | **100 %** | 1.95 × 10⁻³ |
-  | Quasi-symmetric 2-designs | (63, 32, 16, 16) | 3,511 | 3,511 | **100 %** | 2.23 × 10⁻³ |
+  | Category | Families | Graphs | Pairs resolved | Separated |
+  |----------|:--------:|:------:|:--------------:|:---------:|
+  | Spence SRG collection | 12 | 43,703 | 559,974,510 | **100 %** |
+  | Additional SRG families | 4 | 8,015 | 16,132,661 | **100 %** |
+  | Constructed hard families | 18 | 102 | n/a | **100 %** |
+  | **Total (distinct)** | **34** | **51,816** | **576,107,171** | **100 %** |
 
-  SRG data from [Krystal Guo's repository](https://github.com/kguo-sagecode/Strongly-regular-graphs). Min L∞ is the closest-pair distance (1,000 random pairs); separation is stable across all rounding precisions 6d–14d.
+  Δ¹-DRESS is strictly more powerful than 3-WL: the Rook L₂(4) vs. Shrikhande pair SRG(16,6,2,2), known to defeat 3-WL, is separated. This places Δ¹-DRESS strictly above 3-WL; whether it is bounded above by 4-WL (≡ 3-FWL) remains open.
 
-  **CFI Staircase — Δᵏ-DRESS climbs the WL hierarchy**
+  **CFI Staircase: Δᵏ-DRESS climbs the WL hierarchy**
 
   The [CFI construction](https://en.wikipedia.org/wiki/Cai%E2%80%93F%C3%BCrer%E2%80%93Immerman_graph) produces the canonical hard instances for every WL level. Δᵏ-DRESS matches $(k{+}2)$-WL on each:
 
@@ -113,7 +114,7 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 
   Each deletion level adds exactly one WL dimension. See [Paper 2](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) for proofs and the full table up to $K_{10}$.
 
-  **Standard benchmarks — Original-DRESS (Δ⁰)**
+  **Standard benchmarks: Original-DRESS (Δ⁰)**
 
   | Benchmark | Accuracy |
   |-----------|----------|
@@ -207,11 +208,11 @@ DRESS is implemented in C with bindings for:
 - **MATLAB / Octave**: MEX gateway
 - **JavaScript / WASM**: browser and Node.js (CPU only)
 
-All backends — **CPU**, **CUDA** (GPU), **MPI** (distributed), and **MPI+CUDA** — are supported across all native language bindings.
+All backends (**CPU**, **CUDA** (GPU), **MPI** (distributed), and **MPI+CUDA**) are supported across all native language bindings.
 An **igraph** C wrapper (`libdress-igraph`) is also available with the same CPU / CUDA / MPI / MPI+CUDA backend matrix.
 JavaScript / WASM is CPU-only (browser).
 
-Every binding exposes the same `delta_dress_fit` function — switching between CPU, CUDA,
+Every binding exposes the same `delta_dress_fit` function. Switching between CPU, CUDA,
 MPI, and MPI+CUDA is done purely by changing the import / include:
 
 <details>
@@ -378,13 +379,13 @@ Each example compares **Prism vs K₃,₃** (Δ⁰-DRESS, CPU/CUDA) or
 | igraph MPI+CUDA | `dress/mpi/cuda/igraph/dress.h` | `mpicc -ldress -ldress_cuda -lcudart $(pkg-config --libs igraph) -lm` | [`examples/c/mpi_cuda_igraph.c`](examples/c/mpi_cuda_igraph.c) |
 
 ```c
-// Δ⁰ — edge fingerprint
+// Δ⁰ : edge fingerprint
 p_dress_graph_t g = init_dress_graph(N, E, U, V, NULL, DRESS_VARIANT_UNDIRECTED, 0);
 int iters; double delta;
 dress_fit(g, 100, 1e-6, &iters, &delta);        // CPU
 dress_fit_cuda(g, 100, 1e-6, &iters, &delta);   // CUDA
 
-// Δ¹ — histogram fingerprint
+// Δ¹ : histogram fingerprint
 int hs; int64_t ns;
 int64_t *hist = delta_dress_fit(g, /*k=*/1, 100, 1e-6, &hs, 0, NULL, &ns);
 int64_t *hist = delta_dress_fit_mpi(g, 1, 100, 1e-6, &hs, 0, NULL, &ns, MPI_COMM_WORLD);
@@ -393,7 +394,7 @@ int64_t *hist = delta_dress_fit_mpi_cuda(g, 1, 100, 1e-6, &hs, 0, NULL, &ns, MPI
 free(hist);
 free_dress_graph(g);
 
-// igraph wrapper — same API names, transparent backend switching
+// igraph wrapper : same API names, transparent backend switching
 #include <dress/igraph/dress.h>           // CPU
 #include <dress/cuda/igraph/dress.h>      // CUDA
 #include <dress/mpi/igraph/dress.h>       // MPI
@@ -406,7 +407,7 @@ dress_free(&r);
 
 delta_dress_result_igraph_t dr;
 delta_dress_fit(&graph, NULL, DRESS_VARIANT_UNDIRECTED,
-                /*k=*/1, 100, 1e-6, 1, &dr);  // CPU / MPI / CUDA — per header
+                /*k=*/1, 100, 1e-6, 1, &dr);  // CPU / MPI / CUDA, per header
 delta_dress_free(&dr);
 ```
 
@@ -440,18 +441,18 @@ double val = g.edgeDress(e);               // per-edge value after fit
 | NetworkX (MPI+CUDA) | `from dress.mpi.cuda.networkx import delta_dress_graph` | [`mpi_cuda_nx.py`](examples/python/mpi_cuda_nx.py) |
 
 ```python
-# Δ⁰ — edge fingerprint
+# Δ⁰ : edge fingerprint
 result = dress_fit(n_vertices, sources, targets)
 result.edge_dress    # per-edge values
 result.node_dress    # per-node norms
 result.iterations    # convergence iterations
 
-# Δ¹ — histogram fingerprint
+# Δ¹ : histogram fingerprint
 result = delta_dress_fit(n_vertices, sources, targets, k=1)
 result.histogram     # bin counts
 result.hist_size     # number of bins
 
-# NetworkX — pass a graph directly
+# NetworkX: pass a graph directly
 import networkx as nx
 from dress.networkx import dress_graph, delta_dress_graph
 
@@ -462,7 +463,7 @@ G.edges[0, 1]["dress"]      # per-edge similarity
 delta = delta_dress_graph(G, k=1, keep_multisets=True)
 delta.histogram              # bin counts
 
-# MPI NetworkX — same API, distributed
+# MPI NetworkX: same API, distributed
 from dress.mpi.networkx import delta_dress_graph
 delta = delta_dress_graph(G, k=1)  # uses MPI.COMM_WORLD
 ```
@@ -499,12 +500,12 @@ let r = mpi::delta_fit(n, sources, targets, None,
 | MPI+CUDA | `github.com/velicast/dress-graph/go/mpi/cuda` | [`examples/go/mpi_cuda.go`](examples/go/mpi_cuda.go) |
 
 ```go
-// CPU / CUDA — same function, different import
+// CPU / CUDA: same function, different import
 result, _ := dress.DressFit(n, sources, targets, nil,
     dress.Undirected, 100, 1e-6, false)
 // result.EdgeDress, result.Iterations, result.Delta
 
-// MPI / MPI+CUDA — delta only
+// MPI / MPI+CUDA: delta only
 dress.Init()
 defer dress.Finalize()
 r, _ := dress.DeltaDressFit(n, sources, targets, nil,
@@ -522,11 +523,11 @@ r, _ := dress.DeltaDressFit(n, sources, targets, nil,
 | MPI+CUDA | `using DRESS.MPI.CUDA` | [`examples/julia/mpi_cuda.jl`](examples/julia/mpi_cuda.jl) |
 
 ```julia
-# Δ⁰ — edge fingerprint
+# Δ⁰ : edge fingerprint
 r = dress_fit(N, sources, targets)
 # r.edge_dress, r.node_dress, r.iterations, r.delta
 
-# Δ¹ — histogram fingerprint
+# Δ¹ : histogram fingerprint
 r = delta_dress_fit(N, sources, targets; k=1)
 # r.histogram, r.hist_size, r.num_subgraphs
 ```
@@ -543,11 +544,11 @@ r = delta_dress_fit(N, sources, targets; k=1)
 ```r
 library(dress.graph)
 
-# Δ⁰ — edge fingerprint
+# Δ⁰ : edge fingerprint
 r <- dress_fit(6L, sources, targets)
 # r$edge_dress, r$node_dress, r$iterations, r$delta
 
-# Δ¹ — histogram fingerprint
+# Δ¹ : histogram fingerprint
 r <- delta_dress_fit(6L, sources, targets, k = 1L)       # CPU
 r <- cuda$delta_dress_fit(6L, sources, targets, k = 1L)   # CUDA
 r <- mpi$delta_dress_fit(6L, sources, targets, k = 1L)    # MPI
@@ -562,11 +563,11 @@ r <- mpi$cuda$delta_dress_fit(6L, sources, targets, k = 1L) # MPI+CUDA
 | Δ¹-DRESS | `delta_dress_fit(..., 'K', 1)` | [`examples/octave/rook_vs_shrikhande.m`](examples/octave/rook_vs_shrikhande.m) |
 
 ```matlab
-% Δ⁰ — edge fingerprint
+% Δ⁰ : edge fingerprint
 result = dress_fit(6, int32(sources), int32(targets));
 % result.edge_dress, result.node_dress, result.iterations, result.delta
 
-% Δ¹ — histogram fingerprint
+% Δ¹ : histogram fingerprint
 result = delta_dress_fit(6, int32(sources), int32(targets), ...
     'K', 1, 'KeepMultisets', true);
 % result.histogram, result.hist_size, result.multisets, result.num_subgraphs
@@ -586,13 +587,13 @@ g.close();
 | Δ¹-DRESS | `import { deltaDressFit } from './dress.js'` | [`examples/wasm/rook_vs_shrikhande.mjs`](examples/wasm/rook_vs_shrikhande.mjs) |
 
 ```javascript
-// Δ⁰ — edge fingerprint
+// Δ⁰ : edge fingerprint
 const result = await dressFit({
     numVertices: 6, sources, targets,
 });
 // result.edgeDress, result.nodeDress, result.iterations, result.delta
 
-// Δ¹ — histogram fingerprint
+// Δ¹ : histogram fingerprint
 const r = await deltaDressFit({
     numVertices: 6, sources, targets,
     k: 1, keepMultisets: true,

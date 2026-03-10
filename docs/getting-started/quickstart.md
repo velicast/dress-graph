@@ -43,17 +43,17 @@ from dress.networkx import dress_graph, delta_dress_graph
 
 G = nx.karate_club_graph()
 
-# Δ⁰ — DRESS on the full graph
+# Δ⁰: DRESS on the full graph
 result = dress_graph(G, set_attributes=True)
 print(G.edges[0, 1]["dress"])     # per-edge similarity
 print(G.nodes[0]["dress_norm"])   # per-node norm
 
-# Δ¹ — histogram fingerprint
+# Δ¹: histogram fingerprint
 delta = delta_dress_graph(G, k=1)
 print(f"Histogram size: {delta.hist_size}")
 ```
 
-GPU and MPI variants — same API, different import:
+GPU and MPI variants, same API, different import:
 
 ```python
 from dress.cuda.networkx import dress_graph              # GPU

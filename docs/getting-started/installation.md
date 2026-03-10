@@ -12,7 +12,7 @@ This guide covers installation for all supported languages.
 |---|---|
 | C compiler | GCC or Clang with C11 support |
 | CMake | ≥ 3.14 |
-| OpenMP | Optional — auto-detected by CMake |
+| OpenMP | Optional, auto-detected by CMake |
 
 A C++17 compiler is additionally required for the `libdress++` (C++) wrapper.
 
@@ -237,7 +237,7 @@ The provided build script handles `libdress` (C), `libdress++` (C++), and `libdr
 ### From Remote (Octave)
 
 ```octave
-pkg install "https://github.com/velicast/dress-graph/releases/download/v0.5.0/dress-graph-0.5.0.tar.gz"
+pkg install "https://github.com/velicast/dress-graph/releases/download/v0.5.1/dress-graph-0.5.1.tar.gz"
 ```
 
 ### From Source (Octave)
