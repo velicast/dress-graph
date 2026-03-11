@@ -90,6 +90,12 @@ See [The DRESS Equation](theory/equation.md) for the full derivation.
 
 See [Applications Overview](applications/overview.md) for details.
 
+## Experiments
+
+All benchmarks, datasets, and reproducible scripts live in a dedicated repository:
+
+**[dress-experiments](https://github.com/velicast/dress-experiments)** - isomorphism (SRG, CFI, constructed families), classification, retrieval, GED regression, and more.
+
 ## Language bindings
 
 DRESS is implemented in C with bindings for:

@@ -339,10 +339,10 @@ Plain DRESS (Δ^0) maps every graph in each SRG family to a single uniform edge 
 | SRG(63,32,16,26)-Q | 3,511 | 3,511 | 6,161,805 | **100 %** |
 | SRG(65,32,15,16) | 32 | 32 | 496 | **100 %** |
 | **SRG total** | **51,718** | **51,718** | **576,107,171** | **100 %** |
-| Constructed hard families (18) | 102 | 102 | n/a | **100 %** |
-| **Grand total (distinct)** | **51,816** | **51,816** | **576,107,171** | **100 %** |
+| Constructed hard families (18) | 102 | 102 | 664 | **100 %** |
+| **Grand total (distinct)** | **51,816** | **51,816** | **576,107,835** | **100 %** |
 
-**All 51,816 graphs across 34 hard benchmark families are pairwise distinguished by Δ^1-DRESS**, resolving over 576 million within-family non-isomorphic pairs.
+**All 51,816 graphs across 34 hard benchmark families are pairwise distinguished by Δ^1-DRESS**, resolving 576,107,835 within-family non-isomorphic pairs.
 
 Δ¹-DRESS is strictly more powerful than 3-WL: the Rook L₂(4) vs. Shrikhande pair SRG(16,6,2,2), known to defeat 3-WL, is separated.
 This places Δ¹-DRESS strictly above 3-WL; whether it is bounded above by 4-WL (≡ 3-FWL) remains open.

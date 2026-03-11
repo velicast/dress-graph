@@ -95,8 +95,8 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
   |----------|:--------:|:------:|:--------------:|:---------:|
   | Spence SRG collection | 12 | 43,703 | 559,974,510 | **100 %** |
   | Additional SRG families | 4 | 8,015 | 16,132,661 | **100 %** |
-  | Constructed hard families | 18 | 102 | n/a | **100 %** |
-  | **Total (distinct)** | **34** | **51,816** | **576,107,171** | **100 %** |
+  | Constructed hard families | 18 | 102 | 664 | **100 %** |
+  | **Total (distinct)** | **34** | **51,816** | **576,107,835** | **100 %** |
 
   Δ¹-DRESS is strictly more powerful than 3-WL: the Rook L₂(4) vs. Shrikhande pair SRG(16,6,2,2), known to defeat 3-WL, is separated. This places Δ¹-DRESS strictly above 3-WL; whether it is bounded above by 4-WL (≡ 3-FWL) remains open.
 
@@ -126,6 +126,14 @@ Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
 - **[GED Regression](https://velicast.github.io/dress-graph/applications/ged-regression/)**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs - no GNN required.
 - **[Edge Robustness](https://velicast.github.io/dress-graph/applications/edge-robustness/)**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
 - **[DRESS + GNN](https://velicast.github.io/dress-graph/applications/dress-gnns/)**: DRESS node/edge values injected as plug-in features into GIN, PNA, GPS, and custom DRESSNet architectures on ZINC-12K molecular property prediction. GIN+bond+DRESS drops MAE from 0.526 → 0.235; PNA+bond+DRESS achieves 0.212 MAE, competitive with the published PNA baseline (0.188).
+
+Full experimental setups, datasets, and scripts are available in the **[dress-experiments](https://github.com/velicast/dress-experiments)** repository.
+
+## Experiments
+
+All benchmarks, datasets, and reproducible scripts live in a dedicated repository:
+
+**[dress-experiments](https://github.com/velicast/dress-experiments)** - isomorphism (SRG, CFI, constructed families), classification, retrieval, GED regression, and more.
 
 ## Quick start (Python)
 
