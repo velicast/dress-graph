@@ -1,11 +1,14 @@
 # Research Directions
 
-DRESS is a continuous equivalent of 2-WL with
+DRESS is established as an empirical equivalent to 2-WL, with
 **real-valued edge scores** instead of discrete colors.  DRESS
 matches 2-WL in expressiveness (e.g. it
 [distinguishes the prism graph from \(K_{3,3}\)](isomorphism.md#dress-matches-2-wl),
-which 1-WL cannot but 2-WL can).  Whether 2-WL can distinguish any pair that DRESS
-cannot remains open.  Below are research directions where the continuous
+which 1-WL cannot but 2-WL can).  The Δᵏ-DRESS extension climbs the WL hierarchy:
+Δᵏ-DRESS is proved to distinguish every CFI(K_{k+3}) pair unconditionally
+(CFI Staircase Theorem), and is conjectured to match (k+2)-WL for all graphs
+(conditional on the WL-Deck Separation Conjecture).  Δ¹-DRESS strictly exceeds
+3-WL.  Below are research directions where the continuous
 output may provide concrete advantages.
 
 ---

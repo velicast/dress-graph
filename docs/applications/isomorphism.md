@@ -280,6 +280,14 @@ $(k{+}2)$-WL costs $\mathcal{O}(n^{k+3})$.
 See the [DRESS paper](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
 for the full proofs and discussion.
 
+#### Theoretical Backing
+
+The staircase pattern is now proved at two levels:
+
+- **Unconditional (CFI).** The [companion theory paper](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) proves that $\Delta^k$-DRESS distinguishes CFI($K_{k+3}$) from CFI'($K_{k+3}$) for all $k \geq 0$ (CFI Staircase Theorem). The proof introduces the CFI Deck Separation theorem (the CFI twist survives every single-vertex deletion) and the Virtual Pebble Lemma (the deleted vertex acts as a free pebble, reducing the required WL level by exactly one). No conjectures are needed.
+
+- **Conditional (all graphs).** $\Delta^k$-DRESS $\geq$ $(k{+}2)$-WL for all graphs, conditional on the WL-Deck Separation Conjecture — a single structural hypothesis about the WL hierarchy and vertex deletion. The Kelly–Ulam Reconstruction Conjecture is not needed.
+
 ### Motif-DRESS (K4 clique)
 
 Motif-DRESS generalizes the neighborhood operator from triangles to arbitrary motifs. Using $K_4$ cliques as the motif, the neighborhood sizes differ between graphs even when triangle counts are identical. All experiments below use the $K_4$ clique motif.

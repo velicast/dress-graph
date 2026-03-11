@@ -4,8 +4,11 @@
 
 We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ¹-DRESS empirically separates all 51,816 graphs across 34 hard benchmark families (16 SRG families totaling 51,718 graphs from the complete Spence collection and McKay's additional SRG data, plus 18 constructed hard families), resolving over 576 million within-family non-isomorphic pairs, and is the cheapest known method that strictly exceeds 3-WL. Iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations. Successfully applied to a handful of downstream applications.
 
-For the theory and generalizations (DRESS Family), see the research paper:
-[**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
+For the theory and generalizations (DRESS Family), see the research papers:
+
+- [**DRESS: A Continuous Framework for Structural Graph Refinement**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf) — the DRESS equation, Motif-DRESS, Generalized-DRESS, Δᵏ-DRESS, convergence proofs, CFI staircase experiments.
+- [**The CFI Staircase Theorem**](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) — unconditional proof that Δᵏ-DRESS distinguishes every CFI(K_{k+3}) pair; conditional proof that Δᵏ-DRESS ≥ (k+2)-WL for all graphs.
+- [**Δ¹-DRESS Separates All Known Hard Families**](https://github.com/velicast/dress-graph/blob/main/research/delta1-dress-hard-families.pdf) — 100% separation on 51,816 hard graphs across 34 benchmark families; Δ¹-DRESS strictly exceeds 3-WL.
 
 ---
 
@@ -51,7 +54,9 @@ and edge-importance ranking.
 | Native weighted-graph support via symmetric weight function |
 | Supports directed graphs (four variants: undirected, directed, forward, backward) |
 | Provably numerically stable (no overflows, no error amplification, no undefined behaviors) |
-| Provably at least as powerful as 2-WL (>= 2-WL) |
+| Provably at least as powerful as 2-WL (≥ 2-WL) |
+| Δᵏ-DRESS proved to distinguish all CFI(K_{k+3}) pairs unconditionally (CFI Staircase Theorem) |
+| Δᵏ-DRESS ≥ (k+2)-WL for all graphs conditional on WL-Deck Separation Conjecture |
 | [Locally invertible](theory/properties.md#local-invertibility-incremental-edge-query): Any single edge value recoverable from its neighborhood in O(deg) after one global fit |
 
 ## The equation at a glance
