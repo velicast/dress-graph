@@ -33,3 +33,6 @@ cuda = ["nvidia-cuda-runtime-cu12"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"dress._libdress" = ["**/*.c", "**/*.cu", "**/*.h"]

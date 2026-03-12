@@ -36,9 +36,15 @@ _lib = None
 
 # Path constants for auto-build
 _HERE = os.path.dirname(os.path.abspath(__file__))
+_PKG_DIR = os.path.dirname(_HERE)                       # dress/
+_VENDORED = os.path.join(_PKG_DIR, '_libdress')          # dress/_libdress/
 _ROOT = os.path.normpath(os.path.join(_HERE, '..', '..', '..', '..'))
-_LIB_DIR = os.path.join(_ROOT, 'libdress')
-_LOCAL_SO = os.path.join(_ROOT, 'libdress', 'src', 'cuda', 'libdress_cuda.so')
+# Prefer vendored sources (pip install) over repo-relative (editable install)
+if os.path.isdir(_VENDORED):
+    _LIB_DIR = _VENDORED
+else:
+    _LIB_DIR = os.path.join(_ROOT, 'libdress')
+_LOCAL_SO = os.path.join(_LIB_DIR, 'src', 'cuda', 'libdress_cuda.so')
 
 
 def _build_cuda_so():

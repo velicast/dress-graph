@@ -46,8 +46,25 @@ publish_pypi() {
     fi
 
     rm -rf dist build *.egg-info src/*.egg-info
+
+    # Vendor libdress C/CUDA sources so pip users can auto-build CUDA
+    local VENDOR="src/dress/_libdress"
+    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/src/cuda"
+    cp "$ROOT/libdress/include/dress/dress.h"           "$VENDOR/include/dress/"
+    cp "$ROOT/libdress/include/dress/delta_dress.h"     "$VENDOR/include/dress/"
+    cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$VENDOR/include/dress/cuda/"
+    cp "$ROOT/libdress/src/dress.c"                     "$VENDOR/src/"
+    cp "$ROOT/libdress/src/delta_dress.c"               "$VENDOR/src/"
+    cp "$ROOT/libdress/src/delta_dress_impl.c"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/delta_dress_impl.h"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/cuda/dress_cuda.cu"          "$VENDOR/src/cuda/"
+    cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"     "$VENDOR/src/cuda/"
+
     $PY -m build
     echo "  ✓ wheel built: $(ls dist/*.whl)"
+
+    # Cleanup vendored sources
+    rm -rf "$VENDOR"
 
     if [[ $INSTALL_LOCAL -eq 1 ]]; then
         $PY -m pip install --force-reinstall dist/*.whl
