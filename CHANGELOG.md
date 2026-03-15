@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.3] - 2026-03-15
+
+### Changed
+- **WASM/JS**: renamed OO class `DressGraph` → `DRESS` and options type `DressGraphOptions` → `DRESSOptions` for consistency with other language wrappers
+
 ## [0.5.2] - 2026-03-15
 
 ### Added
@@ -112,7 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - R: environment-based `DRESS()` class with GC finalizer (`$fit()`, `$get()`, `$result()`, `$close()`); backed by `EXTPTRSXP` + `R_RegisterCFinalizerEx`
   - Julia: mutable `DressGraph` struct with GC finalizer: `DressGraph()` → `fit!()` → `get()` → `result()` → `close!()`
   - MATLAB/Octave: `DRESS` handle class + five new MEX gateways (`dress_init_mex`, `dress_fit_obj_mex`, `dress_get_mex`, `dress_result_mex`, `dress_free_mex`)
-  - WASM/JS: `DressGraph` class with async `create()` factory: `.fit()` → `.get()` → `.result()` → `.free()`; TypeScript declarations included
+  - WASM/JS: `DRESS` class with async `create()` factory: `.fit()` → `.get()` → `.result()` → `.free()`; TypeScript declarations included
   - Python/NetworkX: `NxDRESS` persistent class in `dress.networkx`: wraps NetworkX graphs with node-label translation, supports `fit()` → `get(u, v)` → `result()` → `close()` and context-manager protocol
 - `dress_get` re-exported from WASM build (`EXPORTED_FUNCTIONS`)
 - Rust FFI: `dress_get` declaration restored in both CPU and CUDA extern blocks

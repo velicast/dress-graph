@@ -619,7 +619,7 @@ g.close();
 |---------|--------|---------|
 | CPU | `import { dressFit } from './dress.js'` | [`examples/wasm/cpu.mjs`](examples/wasm/cpu.mjs) |
 | Δ¹-DRESS | `import { deltaDressFit } from './dress.js'` | [`examples/wasm/rook_vs_shrikhande.mjs`](examples/wasm/rook_vs_shrikhande.mjs) |
-| CPU (OO) | `import { DressGraph } from 'dress-graph'` | [`examples/wasm/cpu_oo.mjs`](examples/wasm/cpu_oo.mjs) |
+| CPU (OO) | `import { DRESS } from 'dress-graph'` | [`examples/wasm/cpu_oo.mjs`](examples/wasm/cpu_oo.mjs) |
 
 ```javascript
 // Δ⁰ : edge fingerprint
@@ -636,7 +636,7 @@ const r = await deltaDressFit({
 // r.histogram, r.histSize, r.multisets, r.numSubgraphs
 
 // Persistent graph with get()
-const g = await DressGraph.create({ numVertices: 6, sources, targets });
+const g = await DRESS.create({ numVertices: 6, sources, targets });
 g.fit(100, 1e-6);
 const d = g.get(u, v);   // query edge similarity
 g.free();

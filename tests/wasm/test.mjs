@@ -7,7 +7,7 @@
  * Requires: dress_wasm.js + dress_wasm.wasm built by wasm/build.sh
  */
 
-import { dressFit, DressGraph, Variant } from '../../wasm/dress.js';
+import { dressFit, DRESS, Variant } from '../../wasm/dress.js';
 
 function assert(cond, msg) {
     if (!cond) {
@@ -84,9 +84,9 @@ async function testWeighted() {
     console.log('  OK');
 }
 
-async function testDressGraph() {
-    console.log('test: persistent DressGraph …');
-    const g = await DressGraph.create({
+async function testDRESS() {
+    console.log('test: persistent DRESS …');
+    const g = await DRESS.create({
         numVertices: 3,
         sources: [0, 1, 0],
         targets: [1, 2, 2],
@@ -124,7 +124,7 @@ async function main() {
     await testPath();
     await testVariants();
     await testWeighted();
-    await testDressGraph();
+    await testDRESS();
     console.log('\nAll tests passed.');
 }
 

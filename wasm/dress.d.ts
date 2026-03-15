@@ -50,7 +50,7 @@ export interface DressResult {
  */
 export declare function dressFit(opts: DressOptions): Promise<DressResult>;
 
-export interface DressGraphOptions {
+export interface DRESSOptions {
     /** Number of vertices (vertex ids must be in 0..numVertices-1) */
     numVertices: number;
     /** Edge source vertices (0-based) */
@@ -68,9 +68,9 @@ export interface DressGraphOptions {
 /**
  * A persistent DRESS graph supporting repeated fit / get calls.
  */
-export declare class DressGraph {
+export declare class DRESS {
     private constructor();
-    static create(opts: DressGraphOptions): Promise<DressGraph>;
+    static create(opts: DRESSOptions): Promise<DRESS>;
     fit(maxIterations?: number, epsilon?: number): { iterations: number; delta: number };
     get(u: number, v: number, maxIterations?: number, epsilon?: number, edgeWeight?: number): number;
     result(): DressResult;

@@ -281,11 +281,11 @@ Module: `dress.js`
 | `DressResult` | `sources: Int32Array`, `targets: Int32Array`, `edgeDress: Float64Array`, `edgeWeight: Float64Array`, `nodeDress: Float64Array`, `iterations: number`, `delta: number` |
 | `DeltaDressResult` | `histogram: Float64Array`, `histSize: number`, `multisets: Float64Array \| null`, `numSubgraphs: number` |
 
-**`DressGraph` class:**
+**`DRESS` class:**
 
 | Method | Signature |
 |--------|-----------|
-| `create` | `static async create(opts: DressGraphOptions) → DressGraph` |
+| `create` | `static async create(opts: DRESSOptions) → DRESS` |
 | `fit` | `fit(maxIterations?: number, epsilon?: number) → { iterations: number, delta: number }` |
 | `get` | `get(u: number, v: number, maxIterations?: number, epsilon?: number, edgeWeight?: number) → number` |
 | `result` | `result() → DressResult` |

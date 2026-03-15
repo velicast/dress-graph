@@ -1,13 +1,13 @@
 /**
  * cpu_oo.mjs — Prism vs K₃,₃ with DRESS (WASM/Node.js, OO API)
  *
- * Demonstrates the persistent DressGraph object: create once, then
+ * Demonstrates the persistent DRESS object: create once, then
  * fit, query virtual edges, and extract results without rebuilding.
  *
  * Run:
  *   node cpu_oo.mjs
  */
-import { DressGraph } from 'dress-graph';
+import { DRESS } from 'dress-graph';
 
 // Prism (C₃ □ K₂): 6 vertices, 18 directed edges (0-based)
 const prism_s = [0,1,1,2,2,0,0,3,1,4,2,5,3,4,4,5,5,3];
@@ -18,8 +18,8 @@ const k33_s = [0,3,0,4,0,5,1,3,1,4,1,5,2,3,2,4,2,5];
 const k33_t = [3,0,4,0,5,0,3,1,4,1,5,1,3,2,4,2,5,2];
 
 // Construct persistent graph objects
-const prism = await DressGraph.create({ numVertices: 6, sources: prism_s, targets: prism_t });
-const k33   = await DressGraph.create({ numVertices: 6, sources: k33_s,   targets: k33_t });
+const prism = await DRESS.create({ numVertices: 6, sources: prism_s, targets: prism_t });
+const k33   = await DRESS.create({ numVertices: 6, sources: k33_s,   targets: k33_t });
 
 // Fit
 prism.fit();

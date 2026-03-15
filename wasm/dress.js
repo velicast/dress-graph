@@ -201,13 +201,13 @@ export async function dressFit(opts) {
     };
 }
 
-// ── Persistent DressGraph class ─────────────────────────────────────
+// ── Persistent DRESS class ──────────────────────────────────────────
 
 /**
  * A persistent DRESS graph that supports repeated fit and get calls.
  *
  * Usage:
- *   const g = await DressGraph.create({
+ *   const g = await DRESS.create({
  *     numVertices: 4,
  *     sources: [0,1,2,0],
  *     targets: [1,2,3,3],
@@ -217,7 +217,7 @@ export async function dressFit(opts) {
  *   const res = g.result();          // snapshot of current results
  *   g.free();                        // explicitly free C graph
  */
-export class DressGraph {
+export class DRESS {
     /** @private */
     constructor(module, gPtr, n, e, sources, targets) {
         this._M = module;
@@ -231,7 +231,7 @@ export class DressGraph {
     }
 
     /**
-     * Create a persistent DressGraph.
+     * Create a persistent DRESS graph.
      *
      * @param {Object} opts
      * @param {number}              opts.numVertices
@@ -240,7 +240,7 @@ export class DressGraph {
      * @param {Float64Array|number[]|null} [opts.weights]
      * @param {number} [opts.variant=0]
      * @param {boolean} [opts.precomputeIntercepts=false]
-     * @returns {Promise<DressGraph>}
+     * @returns {Promise<DRESS>}
      */
     static async create(opts) {
         const M = await getModule();
@@ -272,7 +272,7 @@ export class DressGraph {
         const g = M._init_dress_graph(N, E, uPtr, vPtr, wPtr, variant, precompute);
         if (g === 0) throw new Error('init_dress_graph returned NULL');
 
-        return new DressGraph(M, g, N, E, opts.sources, opts.targets);
+        return new DRESS(M, g, N, E, opts.sources, opts.targets);
     }
 
     /**
@@ -282,7 +282,7 @@ export class DressGraph {
      * @returns {{iterations: number, delta: number}}
      */
     fit(maxIterations = 100, epsilon = 1e-6) {
-        if (!this._g) throw new Error('DressGraph already freed');
+        if (!this._g) throw new Error('DRESS already freed');
         const M = this._M;
         M._dress_fit(this._g, maxIterations, epsilon, this._iterPtr, this._deltaPtr);
         return {
@@ -301,7 +301,7 @@ export class DressGraph {
      * @returns {number}
      */
     get(u, v, maxIterations = 100, epsilon = 1e-6, edgeWeight = 1.0) {
-        if (!this._g) throw new Error('DressGraph already freed');
+        if (!this._g) throw new Error('DRESS already freed');
         return this._M._dress_get(this._g, u, v, maxIterations, epsilon, edgeWeight);
     }
 
@@ -310,7 +310,7 @@ export class DressGraph {
      * @returns {DressResult}
      */
     result() {
-        if (!this._g) throw new Error('DressGraph already freed');
+        if (!this._g) throw new Error('DRESS already freed');
         const M = this._M;
         const E = this._e;
         const N = this._n;
