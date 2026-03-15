@@ -480,12 +480,13 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
 
     for (iter = 0; iter < max_iterations; ++iter) {
         double max_delta = 0.0;
+        int u, e;
 
         // Phase 1: compute per-node dress norm
 #ifdef _OPENMP
         #pragma omp parallel for
 #endif
-        for (int u = 0; u < g->N; u++) {
+        for (u = 0; u < g->N; u++) {
             double dress_u = 4.0; // self-loop contribution
             int base = g->adj_offset[u];
             int end  = g->adj_offset[u + 1];
@@ -500,7 +501,7 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
 #ifdef _OPENMP
         #pragma omp parallel for reduction(max:max_delta)
 #endif
-        for (int e = 0; e < g->E; e++) {
+        for (e = 0; e < g->E; e++) {
             double prev = g->edge_dress[e];
             double next = fit_impl(g, e);
             double d    = fabs(prev - next);

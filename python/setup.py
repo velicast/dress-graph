@@ -56,12 +56,17 @@ def _find_sources():
 
 def _get_flags():
     """Return (compile_args, link_args) appropriate for the platform."""
+    no_omp = os.environ.get("DRESS_NO_OPENMP", "0") == "1"
+
     if platform.system() == "Windows":
+        omp = [] if no_omp else ["/openmp:llvm"]
         return (
-            ["/std:c++14", "/O2", "/openmp:llvm", "/EHsc"],
+            ["/std:c++14", "/O2"] + omp + ["/EHsc"],
             [],
         )
     elif platform.system() == "Darwin":
+        if no_omp:
+            return (["-std=c++11", "-O3", "-fPIC"], ["-lm"])
         # Apple Clang: use Homebrew libomp if available
         omp_compile = ["-Xpreprocessor", "-fopenmp"]
         omp_link = ["-lomp"]

@@ -96,16 +96,15 @@ jobs:
           # Linux: install OpenMP dev headers inside the manylinux container
           CIBW_BEFORE_BUILD_LINUX: "yum install -y libgomp-devel || apt-get install -y libgomp1 || true && pip install pybind11"
 
-          # macOS: point compiler to Homebrew's libomp
+          # macOS: build without OpenMP to avoid libomp deployment target mismatch.
+          # Homebrew libomp targets macOS 15.0+ but wheels need to support 11.0+.
+          # Users who need OpenMP can build from source with `brew install libomp`.
           CIBW_ENVIRONMENT_MACOS: >-
             DRESS_REQUIRE_NATIVE=1
-            CFLAGS="-I$(brew --prefix libomp)/include"
-            LDFLAGS="-L$(brew --prefix libomp)/lib"
-            CXXFLAGS="-I$(brew --prefix libomp)/include"
+            DRESS_NO_OPENMP=1
 
-          # macOS: tell delocate where libomp lives so it can bundle it
+          # macOS: no repair command needed (no external dylibs to bundle)
           CIBW_REPAIR_COMMAND_MACOS: >-
-            DYLD_LIBRARY_PATH="$(brew --prefix libomp)/lib"
             delocate-wheel --require-archs {delocate_archs} -w {dest_dir} -v {wheel}
 
           # Test: quick import check
