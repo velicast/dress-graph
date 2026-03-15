@@ -23,7 +23,7 @@ Usage::
 
 from __future__ import annotations
 
-from dress.core import DRESSResult, DeltaDRESSResult, Variant, UNDIRECTED, DRESS
+from dress.core import DRESSResult, DeltaDRESSResult, Variant, UNDIRECTED
 
 __all__ = ["dress_graph", "delta_dress_graph", "NxDRESS"]
 
@@ -235,20 +235,15 @@ class NxDRESS:
     Translates NetworkX node labels to 0-based indices automatically,
     so :meth:`get` accepts the original node labels.
 
-    Usage::
+    The backend is determined by which module you import from::
 
-        from dress.networkx import NxDRESS
+        from dress.networkx import NxDRESS           # CPU
+        from dress.cuda.networkx import NxDRESS      # CUDA
+        from dress.mpi.networkx import NxDRESS       # MPI
+        from dress.mpi.cuda.networkx import NxDRESS  # MPI+CUDA
 
-        dg = NxDRESS(G)
-        dg.fit()
-        sim = dg.get("Alice", "Bob")
-        r   = dg.result()
-        dg.close()
-
-        # or as a context manager
-        with NxDRESS(G) as dg:
-            dg.fit()
-            print(dg.get("Alice", "Bob"))
+    All share the same API: ``fit()``, ``delta_fit()``, ``get()``,
+    ``result()``.
 
     Parameters
     ----------
@@ -262,6 +257,9 @@ class NxDRESS:
         Pre-compute common-neighbour index (default ``False``).
     """
 
+    # Subclasses / factory functions override this to inject a different backend.
+    _dress_cls = None
+
     def __init__(
         self,
         G,
@@ -273,7 +271,10 @@ class NxDRESS:
         n_vertices, sources, targets, weights, nodes = _extract_edges(G, weight)
         self._nodes = nodes
         self._node_to_idx = {n: i for i, n in enumerate(nodes)}
-        self._dress = DRESS(
+        cls = self._dress_cls
+        if cls is None:
+            from dress import DRESS as cls
+        self._dress = cls(
             n_vertices, sources, targets,
             weights=weights, variant=variant,
             precompute_intercepts=precompute_intercepts,
@@ -296,6 +297,28 @@ class NxDRESS:
         self._last_fit = fr
         return fr
 
+    def delta_fit(
+        self,
+        k: int = 0,
+        max_iterations: int = 100,
+        epsilon: float = 1e-6,
+        keep_multisets: bool = False,
+        **kwargs,
+    ):
+        """Compute the Δ^k-DRESS histogram.
+
+        Accepts the same parameters as :meth:`dress.DRESS.delta_fit`
+        plus any backend-specific keyword arguments (e.g. ``comm``).
+
+        Returns
+        -------
+        DeltaDRESSResult
+        """
+        return self._dress.delta_fit(
+            k=k, max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, **kwargs,
+        )
+
     def get(
         self,
         u,
@@ -316,13 +339,14 @@ class NxDRESS:
     def result(self) -> DRESSResult:
         """Extract current results as a :class:`DRESSResult`."""
         g = self._dress
+        E = g.n_edges
         fr = getattr(self, '_last_fit', None)
         return DRESSResult(
-            sources=list(g._U),
-            targets=list(g._V),
-            edge_dress=list(g._edge_dress),
-            edge_weight=list(g._edge_weight),
-            node_dress=list(g._node_dress),
+            sources=[g.edge_source(e) for e in range(E)],
+            targets=[g.edge_target(e) for e in range(E)],
+            edge_dress=[g.edge_dress(e) for e in range(E)],
+            edge_weight=[g.edge_weight(e) for e in range(E)],
+            node_dress=[g.node_dress(u) for u in range(g.n_vertices)],
             iterations=fr.iterations if fr else 0,
             delta=fr.delta if fr else 0.0,
         )

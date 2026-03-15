@@ -170,3 +170,193 @@ mpi$cuda$delta_dress_fit <- function(n_vertices,
         keep_multisets,
         comm_f)
 }
+
+#' Create a persistent MPI DRESS graph object
+#'
+#' Same as \code{DRESS()} but \code{$fit()} uses the CPU and
+#' \code{$delta_fit()} uses MPI distribution.
+#'
+#' @inheritParams DRESS
+#' @return An environment (class \code{"DRESS"}) with methods:
+#' \describe{
+#'   \item{\code{$fit(max_iterations, epsilon)}}{Fit (CPU).}
+#'   \item{\code{$delta_fit(k, ...)}}{MPI-distributed Δ^k-DRESS.}
+#'   \item{\code{$get(u, v, ...)}}{Query edge value.}
+#'   \item{\code{$result()}}{Extract current results.}
+#'   \item{\code{$close()}}{Free C graph.}
+#' }
+#' @export
+mpi$DRESS <- function(n_vertices,
+                      sources,
+                      targets,
+                      weights               = NULL,
+                      variant               = DRESS_UNDIRECTED,
+                      precompute_intercepts = FALSE) {
+
+  n_vertices <- as.integer(n_vertices)
+  sources    <- as.integer(sources)
+  targets    <- as.integer(targets)
+  variant    <- as.integer(variant)
+  precompute <- as.integer(precompute_intercepts)
+
+  stopifnot(length(sources) == length(targets))
+  stopifnot(n_vertices >= 1L)
+  stopifnot(variant >= 0L && variant <= 3L)
+
+  if (!is.null(weights)) {
+    weights <- as.double(weights)
+    stopifnot(length(weights) == length(sources))
+  }
+
+  ptr <- .Call(C_dress_init,
+               n_vertices, sources, targets, weights,
+               variant, precompute)
+
+  self <- new.env(parent = emptyenv())
+  self$.ptr <- ptr
+
+  self$fit <- function(max_iterations = 100L, epsilon = 1e-6) {
+    .Call(C_dress_fit_obj,
+          self$.ptr,
+          as.integer(max_iterations),
+          as.double(epsilon))
+  }
+
+  self$delta_fit <- function(k                = 0L,
+                             max_iterations   = 100L,
+                             epsilon          = 1e-6,
+                             keep_multisets   = FALSE,
+                             comm_f           = NULL) {
+    if (is.null(comm_f)) {
+      if (requireNamespace("pbdMPI", quietly = TRUE)) {
+        comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+      } else {
+        stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+      }
+    }
+    mpi$delta_dress_fit(n_vertices, sources, targets,
+                        weights          = weights,
+                        k                = as.integer(k),
+                        variant          = variant,
+                        max_iterations   = as.integer(max_iterations),
+                        epsilon          = as.double(epsilon),
+                        precompute       = as.logical(precompute),
+                        keep_multisets   = keep_multisets,
+                        comm_f           = as.integer(comm_f))
+  }
+
+  self$get <- function(u, v, max_iterations = 100L, epsilon = 1e-6,
+                       edge_weight = 1.0) {
+    .Call(C_dress_get_obj,
+          self$.ptr,
+          as.integer(u),
+          as.integer(v),
+          as.integer(max_iterations),
+          as.double(epsilon),
+          as.double(edge_weight))
+  }
+
+  self$result <- function() {
+    .Call(C_dress_result, self$.ptr)
+  }
+
+  self$close <- function() {
+    .Call(C_dress_close, self$.ptr)
+    invisible(NULL)
+  }
+
+  class(self) <- "DRESS"
+  self
+}
+
+#' Create a persistent MPI+CUDA DRESS graph object
+#'
+#' Same as \code{cuda$DRESS()} but \code{$delta_fit()} uses MPI+CUDA.
+#'
+#' @inheritParams DRESS
+#' @return An environment (class \code{"DRESS"}) with \code{$fit} (CUDA),
+#'   \code{$delta_fit} (MPI+CUDA), \code{$get}, \code{$result}, \code{$close}.
+#' @export
+mpi$cuda$DRESS <- function(n_vertices,
+                           sources,
+                           targets,
+                           weights               = NULL,
+                           variant               = DRESS_UNDIRECTED,
+                           precompute_intercepts = FALSE) {
+
+  n_vertices <- as.integer(n_vertices)
+  sources    <- as.integer(sources)
+  targets    <- as.integer(targets)
+  variant    <- as.integer(variant)
+  precompute <- as.integer(precompute_intercepts)
+
+  stopifnot(length(sources) == length(targets))
+  stopifnot(n_vertices >= 1L)
+  stopifnot(variant >= 0L && variant <= 3L)
+
+  if (!is.null(weights)) {
+    weights <- as.double(weights)
+    stopifnot(length(weights) == length(sources))
+  }
+
+  ptr <- .Call(C_dress_init,
+               n_vertices, sources, targets, weights,
+               variant, precompute)
+
+  self <- new.env(parent = emptyenv())
+  self$.ptr <- ptr
+
+  self$fit <- function(max_iterations = 100L, epsilon = 1e-6) {
+    .Call("C_dress_fit_cuda_obj",
+          self$.ptr,
+          as.integer(max_iterations),
+          as.double(epsilon),
+          PACKAGE = "dress.graph")
+  }
+
+  self$delta_fit <- function(k                = 0L,
+                             max_iterations   = 100L,
+                             epsilon          = 1e-6,
+                             keep_multisets   = FALSE,
+                             comm_f           = NULL) {
+    if (is.null(comm_f)) {
+      if (requireNamespace("pbdMPI", quietly = TRUE)) {
+        comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+      } else {
+        stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+      }
+    }
+    mpi$cuda$delta_dress_fit(n_vertices, sources, targets,
+                             weights          = weights,
+                             k                = as.integer(k),
+                             variant          = variant,
+                             max_iterations   = as.integer(max_iterations),
+                             epsilon          = as.double(epsilon),
+                             precompute       = as.logical(precompute),
+                             keep_multisets   = keep_multisets,
+                             comm_f           = as.integer(comm_f))
+  }
+
+  self$get <- function(u, v, max_iterations = 100L, epsilon = 1e-6,
+                       edge_weight = 1.0) {
+    .Call(C_dress_get_obj,
+          self$.ptr,
+          as.integer(u),
+          as.integer(v),
+          as.integer(max_iterations),
+          as.double(epsilon),
+          as.double(edge_weight))
+  }
+
+  self$result <- function() {
+    .Call(C_dress_result, self$.ptr)
+  }
+
+  self$close <- function() {
+    .Call(C_dress_close, self$.ptr)
+    invisible(NULL)
+  }
+
+  class(self) <- "DRESS"
+  self
+}

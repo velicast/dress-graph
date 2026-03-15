@@ -198,6 +198,7 @@ class DRESS:
         self._precompute_intercepts = precompute_intercepts
 
         w_in = [1.0] * E if _weights is None else [float(w) for w in _weights]
+        self._weights_input = _weights  # original caller weights (None = unweighted)
 
         # Build variant adjacency (CSR)
         self._build_adjacency(w_in)
@@ -638,6 +639,116 @@ class DRESS:
             d_uv = next_val
 
         return d_uv
+
+    # -- hardware backends ------------------------------------------------
+
+    def delta_fit(self, k: int = 0, max_iterations: int = 100,
+                  epsilon: float = 1e-6, keep_multisets: bool = False,
+                  offset: int = 0, stride: int = 1):
+        """Compute the Δ^k-DRESS histogram.
+
+        Exhaustively removes all k-vertex subsets from the graph, runs
+        DRESS on each resulting subgraph, and accumulates every converged
+        edge value into a single histogram binned by *epsilon*.
+
+        Parameters
+        ----------
+        k : int
+            Deletion depth (0 = original graph).
+        max_iterations : int
+            Maximum DRESS iterations per subgraph (default 100).
+        epsilon : float
+            Convergence threshold and histogram bin width (default 1e-6).
+        keep_multisets : bool
+            If True, return per-subgraph DRESS values in a 2D array
+            of shape ``(C(N,k), E)``; NaN marks removed edges.
+        offset : int
+            Process only subgraphs where ``index % stride == offset``.
+        stride : int
+            Total number of strides (default 1 = process all).
+
+        Returns
+        -------
+        DeltaDRESSResult
+        """
+        return delta_dress_fit(
+            self._N, self._U, self._V,
+            weights=self._weights_input,
+            k=k,
+            variant=self._variant,
+            max_iterations=max_iterations,
+            epsilon=epsilon,
+            keep_multisets=keep_multisets,
+        )
+
+    def fit_cuda(self, max_iterations: int = 100, epsilon: float = 1e-6):
+        """Run DRESS fitting on the GPU.  Requires ``libdress_cuda.so``."""
+        from dress.cuda import dress_fit as _cuda_fit
+        result = _cuda_fit(
+            self._N, self._U, self._V,
+            weights=self._weights_input,
+            variant=self._variant,
+            max_iterations=max_iterations,
+            epsilon=epsilon,
+        )
+        self._edge_dress = list(result.edge_dress)
+        self._node_dress = list(result.node_dress)
+        if hasattr(self, '_np_dress'):
+            del self._np_dress
+        if hasattr(self, '_np_node_dress'):
+            del self._np_node_dress
+        return FitResult(iterations=result.iterations, delta=result.delta)
+
+    def delta_fit_cuda(self, k: int = 0, max_iterations: int = 100,
+                       epsilon: float = 1e-6, keep_multisets: bool = False,
+                       offset: int = 0, stride: int = 1):
+        """Δ^k-DRESS histogram on the GPU.  Requires ``libdress_cuda.so``."""
+        from dress.cuda import delta_dress_fit as _cuda_delta
+        return _cuda_delta(
+            self._N, self._U, self._V,
+            weights=self._weights_input,
+            k=k,
+            variant=self._variant,
+            max_iterations=max_iterations,
+            epsilon=epsilon,
+            keep_multisets=keep_multisets,
+            offset=offset,
+            stride=stride,
+        )
+
+    def delta_fit_mpi(self, k: int = 0, max_iterations: int = 100,
+                      epsilon: float = 1e-6, keep_multisets: bool = False,
+                      comm=None):
+        """Δ^k-DRESS histogram distributed over MPI (CPU).
+        Requires ``libdress.so`` built with ``-DDRESS_MPI=ON``."""
+        from dress.mpi import delta_dress_fit as _mpi_delta
+        return _mpi_delta(
+            self._N, self._U, self._V,
+            weights=self._weights_input,
+            k=k,
+            variant=self._variant,
+            max_iterations=max_iterations,
+            epsilon=epsilon,
+            keep_multisets=keep_multisets,
+            comm=comm,
+        )
+
+    def delta_fit_mpi_cuda(self, k: int = 0, max_iterations: int = 100,
+                           epsilon: float = 1e-6, keep_multisets: bool = False,
+                           comm=None):
+        """Δ^k-DRESS histogram distributed over MPI with GPU acceleration.
+        Requires ``libdress.so`` built with ``-DDRESS_MPI=ON`` + CUDA."""
+        from dress.mpi.cuda import delta_dress_fit as _mpi_cuda_delta
+        return _mpi_cuda_delta(
+            self._N, self._U, self._V,
+            weights=self._weights_input,
+            k=k,
+            variant=self._variant,
+            max_iterations=max_iterations,
+            epsilon=epsilon,
+            keep_multisets=keep_multisets,
+            comm=comm,
+        )
 
 
 # -- top-level convenience function -----------------------------------------

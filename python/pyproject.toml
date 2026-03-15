@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dress-graph"
-version = "0.5.1"
+version = "0.5.2"
 description = "DRESS: A deterministic, parameter-free framework for canonical graph fingerprinting via continuous structural edge refinement."
 authors = [{name = "Eduar Castrillo Velilla"}]
 maintainers = [{name = "Eduar Castrillo Velilla"}]
@@ -35,4 +35,4 @@ cuda = ["nvidia-cuda-runtime-cu12"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-"dress._libdress" = ["**/*.c", "**/*.cu", "**/*.h"]
+"dress._vendored" = ["**/*.c", "**/*.h", "**/*.hpp", "**/*.cu"]

@@ -1,22 +1,26 @@
 """MPI-distributed NetworkX helpers for DRESS.
 
-Drop-in replacement for ``dress.networkx.delta_dress_graph`` — just
-change the import::
+Drop-in replacement for ``dress.networkx`` — just change the import::
 
-    from dress.mpi.networkx import delta_dress_graph
+    from dress.mpi.networkx import dress_graph, delta_dress_graph, NxDRESS
 
     delta = delta_dress_graph(G, k=1)
 
-Note: only ``delta_dress_graph`` is available (MPI backends do not
-expose a single-graph ``dress_fit``).
+    with NxDRESS(G) as dg:   # delta_fit() distributed over MPI
+        dg.fit()              # CPU (single graph)
+        dg.delta_fit(k=3)    # MPI-distributed
 """
 
 from __future__ import annotations
 
-from dress.core import DeltaDRESSResult, Variant, UNDIRECTED
-from dress.networkx import _delta_dress_graph_impl
+from dress.core import DRESSResult, DeltaDRESSResult, Variant, UNDIRECTED
+from dress.networkx import (
+    _dress_graph_impl,
+    _delta_dress_graph_impl,
+    NxDRESS as _BaseNxDRESS,
+)
 
-__all__ = ["delta_dress_graph"]
+__all__ = ["dress_graph", "delta_dress_graph", "NxDRESS"]
 
 
 def delta_dress_graph(
@@ -70,3 +74,37 @@ def delta_dress_graph(
         keep_multisets=keep_multisets,
         comm=comm,
     )
+
+
+def dress_graph(
+    G,
+    *,
+    variant: Variant = UNDIRECTED,
+    weight: str = "weight",
+    max_iterations: int = 100,
+    epsilon: float = 1e-6,
+    precompute_intercepts: bool = False,
+    set_attributes: bool = False,
+) -> DRESSResult:
+    """Compute DRESS similarity on a NetworkX graph (CPU).
+
+    ``fit()`` runs on CPU — MPI only accelerates ``delta_dress_graph``.
+    Same interface as :func:`dress.networkx.dress_graph`.
+    """
+    from dress import dress_fit
+    return _dress_graph_impl(
+        dress_fit, G,
+        variant=variant, weight=weight,
+        max_iterations=max_iterations, epsilon=epsilon,
+        precompute_intercepts=precompute_intercepts,
+        set_attributes=set_attributes,
+    )
+
+
+class NxDRESS(_BaseNxDRESS):
+    """MPI-distributed ``NxDRESS`` — ``delta_fit`` distributed over MPI."""
+
+    @property
+    def _dress_cls(self):
+        from dress.mpi import DRESS
+        return DRESS

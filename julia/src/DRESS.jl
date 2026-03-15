@@ -32,25 +32,46 @@ const BACKWARD   = Cint(3)
 # ── locate / build shared library ────────────────────────────────────
 
 const _PKG_DIR  = dirname(@__DIR__)
-const _LIB_DIR  = normpath(joinpath(_PKG_DIR, "..", "libdress"))
+
+# Two possible source layouts:
+#   1. vendor/  inside the Julia package (standalone / published)
+#   2. ../libdress/  sibling directory (monorepo development)
+const _VENDOR_DIR = joinpath(_PKG_DIR, "vendor")
+const _LIB_DIR    = normpath(joinpath(_PKG_DIR, "..", "libdress"))
 const _SO_NAME  = "libdress" * (Sys.iswindows() ? ".dll" :
                                 Sys.isapple()   ? ".dylib" : ".so")
 const _SO_PATH  = joinpath(_PKG_DIR, _SO_NAME)
 
+function _find_sources()
+    # Try vendored sources first (standalone package)
+    vendor_src = joinpath(_VENDOR_DIR, "src", "dress.c")
+    if isfile(vendor_src)
+        return joinpath(_VENDOR_DIR, "src"), joinpath(_VENDOR_DIR, "include")
+    end
+    # Fall back to monorepo layout
+    mono_src = joinpath(_LIB_DIR, "src", "dress.c")
+    if isfile(mono_src)
+        return joinpath(_LIB_DIR, "src"), joinpath(_LIB_DIR, "include")
+    end
+    error("Cannot find DRESS C sources.  Expected either:\n" *
+          "  $vendor_src  (standalone package)\n" *
+          "  $mono_src  (monorepo)")
+end
+
 """
     dress_build()
 
-Compile the shared library from `libdress/src/dress.c` into `julia/libdress.so`.
+Compile the shared library from C sources into `julia/libdress.so`.
 Called automatically on first use if the `.so` is missing.
 """
 function dress_build()
-    src = joinpath(_LIB_DIR, "src", "dress.c")
-    src_delta = joinpath(_LIB_DIR, "src", "delta_dress.c")
-    inc = joinpath(_LIB_DIR, "include")
+    src_dir, inc_dir = _find_sources()
+    src = joinpath(src_dir, "dress.c")
+    src_delta = joinpath(src_dir, "delta_dress.c")
     isfile(src) || error("Cannot find dress.c at $src")
     isfile(src_delta) || error("Cannot find delta_dress.c at $src_delta")
     cc = get(ENV, "CC", "gcc")
-    cmd = `$cc -shared -fPIC -O3 -fopenmp -I$inc -o $_SO_PATH $src $src_delta -lm`
+    cmd = `$cc -shared -fPIC -O3 -fopenmp -I$inc_dir -o $_SO_PATH $src $src_delta -lm`
     @info "Building DRESS shared library…" cmd
     run(cmd)
     @info "Built $_SO_PATH"

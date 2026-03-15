@@ -1,0 +1,56 @@
+// cpu_oo.rs — Prism vs K₃,₃ with DRESS (CPU, OO API)
+//
+// Demonstrates the persistent DRESS object: build once, then
+// fit, query virtual edges, and extract results without rebuilding.
+//
+// Add to Cargo.toml:
+//   [dependencies]
+//   dress-graph = { path = "../../rust" }
+//
+// Run:
+//   cargo run --example cpu_oo
+use dress_graph::{DRESS, Variant};
+
+fn main() {
+    // Prism (C₃ □ K₂): 6 vertices, 18 directed edges
+    let prism_s = vec![0,1,1,2,2,0,0,3,1,4,2,5,3,4,4,5,5,3];
+    let prism_t = vec![1,0,2,1,0,2,3,0,4,1,5,2,4,3,5,4,3,5];
+
+    // K₃,₃: bipartite {0,1,2} ↔ {3,4,5} — 18 directed edges
+    let k33_s = vec![0,3,0,4,0,5,1,3,1,4,1,5,2,3,2,4,2,5];
+    let k33_t = vec![3,0,4,0,5,0,3,1,4,1,5,1,3,2,4,2,5,2];
+
+    // Build persistent graph objects
+    let mut prism = DRESS::builder(6, prism_s, prism_t)
+        .variant(Variant::Undirected)
+        .build()
+        .unwrap();
+
+    let mut k33 = DRESS::builder(6, k33_s, k33_t)
+        .variant(Variant::Undirected)
+        .build()
+        .unwrap();
+
+    // Fit
+    prism.fit(100, 1e-6);
+    k33.fit(100, 1e-6);
+
+    // Extract result snapshots
+    let rp = prism.result();
+    let rk = k33.result();
+
+    let mut fp = rp.edge_dress.clone();
+    let mut fk = rk.edge_dress.clone();
+    fp.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    fk.sort_by(|a, b| a.partial_cmp(b).unwrap());
+
+    println!("Prism: {:?}", fp.iter().map(|v| format!("{v:.6}")).collect::<Vec<_>>());
+    println!("K3,3:  {:?}", fk.iter().map(|v| format!("{v:.6}")).collect::<Vec<_>>());
+    println!("Distinguished: {}", fp != fk);
+
+    // Virtual edge queries
+    let vp = prism.get(0, 4, 100, 1e-6, 1.0);
+    let vk = k33.get(0, 1, 100, 1e-6, 1.0);
+    println!("\nVirtual edge prism(0,4) = {vp:.6}");
+    println!("Virtual edge k33(0,1)   = {vk:.6}");
+}

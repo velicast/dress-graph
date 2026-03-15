@@ -19,8 +19,8 @@
 package dress
 
 /*
-#cgo CFLAGS:  -O3 -DDRESS_CUDA -I../../libdress/include -I../../libdress/src
-#cgo LDFLAGS: -L../../libdress/src/cuda -l:libdress_cuda.a -lcudart_static -lm -fopenmp -ldl -lrt -lpthread
+#cgo CFLAGS:  -O3 -DDRESS_CUDA -Ivendor/include -Ivendor/src -I../../libdress/include -I../../libdress/src
+#cgo LDFLAGS: -Lvendor/lib -L../../libdress/src/cuda -l:libdress_cuda.a -lcudart_static -lm -fopenmp -ldl -lrt -lpthread
 #include <stdlib.h>
 #include "dress/dress.h"
 #include "dress/delta_dress.h"

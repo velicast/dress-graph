@@ -447,6 +447,10 @@ double val = g.edgeDress(e);               // per-edge value after fit
 | NetworkX (CUDA) | `from dress.cuda.networkx import dress_graph, delta_dress_graph` | [`cuda_nx.py`](examples/python/cuda_nx.py) |
 | NetworkX (MPI) | `from dress.mpi.networkx import delta_dress_graph` | [`mpi_nx.py`](examples/python/mpi_nx.py) |
 | NetworkX (MPI+CUDA) | `from dress.mpi.cuda.networkx import delta_dress_graph` | [`mpi_cuda_nx.py`](examples/python/mpi_cuda_nx.py) |
+| CPU (OO) | `from dress import DRESS` | [`cpu_oo.py`](examples/python/cpu_oo.py) |
+| CUDA (OO) | `from dress.cuda import DRESS` | [`cuda_oo.py`](examples/python/cuda_oo.py) |
+| MPI (OO) | `from dress.mpi import DRESS` | [`mpi_oo.py`](examples/python/mpi_oo.py) |
+| MPI+CUDA (OO) | `from dress.mpi.cuda import DRESS` | [`mpi_cuda_oo.py`](examples/python/mpi_cuda_oo.py) |
 
 ```python
 # Δ⁰ : edge fingerprint
@@ -484,6 +488,10 @@ delta = delta_dress_graph(G, k=1)  # uses MPI.COMM_WORLD
 | CUDA | `use dress_graph::cuda::DRESS` | [`examples/rust/cuda.rs`](examples/rust/cuda.rs) |
 | MPI | `use dress_graph::mpi` | [`examples/rust/mpi.rs`](examples/rust/mpi.rs) |
 | MPI+CUDA | `use dress_graph::mpi::cuda` | [`examples/rust/mpi_cuda.rs`](examples/rust/mpi_cuda.rs) |
+| CPU (OO) | `use dress_graph::{DRESS, Variant}` | [`examples/rust/cpu_oo.rs`](examples/rust/cpu_oo.rs) |
+| CUDA (OO) | `use dress_graph::{cuda, Variant}` | [`examples/rust/cuda_oo.rs`](examples/rust/cuda_oo.rs) |
+| MPI (OO) | `use dress_graph::{mpi, Variant}` | [`examples/rust/mpi_oo.rs`](examples/rust/mpi_oo.rs) |
+| MPI+CUDA (OO) | `use dress_graph::{mpi, Variant}` | [`examples/rust/mpi_cuda_oo.rs`](examples/rust/mpi_cuda_oo.rs) |
 
 ```rust
 // Builder pattern (CPU / CUDA)
@@ -506,6 +514,10 @@ let r = mpi::delta_fit(n, sources, targets, None,
 | CUDA | `github.com/velicast/dress-graph/go/cuda` | [`examples/go/cuda.go`](examples/go/cuda.go) |
 | MPI | `github.com/velicast/dress-graph/go/mpi` | [`examples/go/mpi.go`](examples/go/mpi.go) |
 | MPI+CUDA | `github.com/velicast/dress-graph/go/mpi/cuda` | [`examples/go/mpi_cuda.go`](examples/go/mpi_cuda.go) |
+| CPU (OO) | `github.com/velicast/dress-graph/go` | [`examples/go/cpu_oo.go`](examples/go/cpu_oo.go) |
+| CUDA (OO) | `github.com/velicast/dress-graph/go/cuda` | [`examples/go/cuda_oo.go`](examples/go/cuda_oo.go) |
+| MPI (OO) | `github.com/velicast/dress-graph/go/mpi` | [`examples/go/mpi_oo.go`](examples/go/mpi_oo.go) |
+| MPI+CUDA (OO) | `github.com/velicast/dress-graph/go/mpi/cuda` | [`examples/go/mpi_cuda_oo.go`](examples/go/mpi_cuda_oo.go) |
 
 ```go
 // CPU / CUDA: same function, different import
@@ -529,6 +541,10 @@ r, _ := dress.DeltaDressFit(n, sources, targets, nil,
 | CUDA | `using DRESS.CUDA` | [`examples/julia/cuda.jl`](examples/julia/cuda.jl) |
 | MPI | `using DRESS.MPI` | [`examples/julia/mpi.jl`](examples/julia/mpi.jl) |
 | MPI+CUDA | `using DRESS.MPI.CUDA` | [`examples/julia/mpi_cuda.jl`](examples/julia/mpi_cuda.jl) |
+| CPU (OO) | `using DRESS` | [`examples/julia/cpu_oo.jl`](examples/julia/cpu_oo.jl) |
+| CUDA (OO) | `using DRESS.CUDA` | [`examples/julia/cuda_oo.jl`](examples/julia/cuda_oo.jl) |
+| MPI (OO) | `using DRESS.MPI` | [`examples/julia/mpi_oo.jl`](examples/julia/mpi_oo.jl) |
+| MPI+CUDA (OO) | `using DRESS.MPI.CUDA` | [`examples/julia/mpi_cuda_oo.jl`](examples/julia/mpi_cuda_oo.jl) |
 
 ```julia
 # Δ⁰ : edge fingerprint
@@ -548,6 +564,10 @@ r = delta_dress_fit(N, sources, targets; k=1)
 | CUDA | `cuda$dress_fit()` / `cuda$delta_dress_fit()` | [`examples/r/cuda.R`](examples/r/cuda.R) |
 | MPI | `mpi$delta_dress_fit()` | [`examples/r/mpi.R`](examples/r/mpi.R) |
 | MPI+CUDA | `mpi$cuda$delta_dress_fit()` | [`examples/r/mpi_cuda.R`](examples/r/mpi_cuda.R) |
+| CPU (OO) | `DRESS(...)$fit()` | [`examples/r/cpu_oo.R`](examples/r/cpu_oo.R) |
+| CUDA (OO) | `cuda$DRESS(...)$fit()` | [`examples/r/cuda_oo.R`](examples/r/cuda_oo.R) |
+| MPI (OO) | `mpi$DRESS(...)$delta_fit()` | [`examples/r/mpi_oo.R`](examples/r/mpi_oo.R) |
+| MPI+CUDA (OO) | `mpi$cuda$DRESS(...)$delta_fit()` | [`examples/r/mpi_cuda_oo.R`](examples/r/mpi_cuda_oo.R) |
 
 ```r
 library(dress.graph)
@@ -568,7 +588,13 @@ r <- mpi$cuda$delta_dress_fit(6L, sources, targets, k = 1L) # MPI+CUDA
 | Backend | Function | Example |
 |---------|----------|---------|
 | CPU | `dress_fit()` / `delta_dress_fit()` | [`examples/octave/cpu.m`](examples/octave/cpu.m) |
+| CUDA | `cuda.dress_fit()` | [`examples/octave/cuda_example.m`](examples/octave/cuda_example.m) |
 | Δ¹-DRESS | `delta_dress_fit(..., 'K', 1)` | [`examples/octave/rook_vs_shrikhande.m`](examples/octave/rook_vs_shrikhande.m) |
+| CPU (OO) | `DRESS(...)` | [`examples/octave/cpu_oo.m`](examples/octave/cpu_oo.m) |
+| CPU (OO, Matlab) | `DRESS(...)` | [`examples/matlab/cpu_oo.m`](examples/matlab/cpu_oo.m) |
+| CUDA (OO, Matlab) | `cuda.DRESS(...)` | [`examples/matlab/cuda_oo.m`](examples/matlab/cuda_oo.m) |
+| MPI (OO, Matlab) | `mpi.DRESS(...)` | [`examples/matlab/mpi_oo.m`](examples/matlab/mpi_oo.m) |
+| MPI+CUDA (OO, Matlab) | `mpi.cuda.DRESS(...)` | [`examples/matlab/mpi_cuda_oo.m`](examples/matlab/mpi_cuda_oo.m) |
 
 ```matlab
 % Δ⁰ : edge fingerprint
@@ -593,6 +619,7 @@ g.close();
 |---------|--------|---------|
 | CPU | `import { dressFit } from './dress.js'` | [`examples/wasm/cpu.mjs`](examples/wasm/cpu.mjs) |
 | Δ¹-DRESS | `import { deltaDressFit } from './dress.js'` | [`examples/wasm/rook_vs_shrikhande.mjs`](examples/wasm/rook_vs_shrikhande.mjs) |
+| CPU (OO) | `import { DressGraph } from 'dress-graph'` | [`examples/wasm/cpu_oo.mjs`](examples/wasm/cpu_oo.mjs) |
 
 ```javascript
 // Δ⁰ : edge fingerprint

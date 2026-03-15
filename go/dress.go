@@ -25,7 +25,7 @@
 package dress
 
 /*
-#cgo CFLAGS:  -O3 -I../libdress/include
+#cgo CFLAGS:  -O3 -Ivendor/include -I../libdress/include
 #cgo LDFLAGS: -lm -fopenmp
 #include <stdlib.h>
 #include "dress/dress.h"

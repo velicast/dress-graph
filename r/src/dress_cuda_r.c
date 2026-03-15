@@ -207,7 +207,32 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
     return result;
 }
 
-#endif /* DRESS_CUDA */
+/* ------------------------------------------------------------------ */
+/*  dress_fit_cuda_obj — CUDA fit on persistent graph pointer          */
+/* ------------------------------------------------------------------ */
+SEXP C_dress_fit_cuda_obj(SEXP ptr_,
+                          SEXP max_iterations_,
+                          SEXP epsilon_) {
 
-/* Avoid "empty translation unit" warning (-Wpedantic) when CUDA is disabled. */
-typedef int dress_cuda_r_dummy_;
+    p_dress_graph_t g = (p_dress_graph_t) R_ExternalPtrAddr(ptr_);
+    if (!g) error("dress_fit_cuda_obj: graph already closed");
+
+    int max_iterations = INTEGER(max_iterations_)[0];
+    double epsilon     = REAL(epsilon_)[0];
+
+    int iterations = 0;
+    double delta = 0.0;
+    dress_fit_cuda(g, max_iterations, epsilon, &iterations, &delta);
+
+    SEXP result = PROTECT(allocVector(VECSXP, 2));
+    SEXP names  = PROTECT(allocVector(STRSXP, 2));
+    SET_STRING_ELT(names, 0, mkChar("iterations"));
+    SET_STRING_ELT(names, 1, mkChar("delta"));
+    setAttrib(result, R_NamesSymbol, names);
+    SET_VECTOR_ELT(result, 0, ScalarInteger(iterations));
+    SET_VECTOR_ELT(result, 1, ScalarReal(delta));
+    UNPROTECT(2);
+    return result;
+}
+
+#endif /* DRESS_CUDA */

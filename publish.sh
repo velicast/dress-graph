@@ -4,7 +4,7 @@
 # Usage:
 #   ./publish.sh [FLAGS] [TARGET...]
 #
-# Targets: pypi npm cargo cran julia octave brew vcpkg all (default: all)
+# Targets: pypi npm cargo cran julia go octave brew vcpkg all (default: all)
 #
 # Flags:
 #   --build-only       Build packages but do not upload to registries.
@@ -37,6 +37,14 @@ publish_pypi() {
     echo "=== PyPI ==="
     cd "$ROOT/python"
 
+    # Detect version from pyproject.toml (single source of truth)
+    VERSION=$(grep -oP '^version = "\K[^"]+' "$ROOT/python/pyproject.toml")
+    if [[ -z "$VERSION" ]]; then
+        echo "ERROR: could not detect version from python/pyproject.toml"
+        exit 1
+    fi
+    echo "  Version: $VERSION"
+
     # Use venv if available, otherwise system python3
     local PY="python3"
     if [[ -f "$ROOT/.venv/bin/activate" ]]; then
@@ -47,11 +55,12 @@ publish_pypi() {
 
     rm -rf dist build *.egg-info src/*.egg-info
 
-    # Vendor libdress C/CUDA sources so pip users can auto-build CUDA
-    local VENDOR="src/dress/_libdress"
+    # Vendor libdress C/C++ sources for the native extension + CUDA auto-build
+    local VENDOR="src/dress/_vendored"
     mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/src/cuda"
     cp "$ROOT/libdress/include/dress/dress.h"           "$VENDOR/include/dress/"
     cp "$ROOT/libdress/include/dress/delta_dress.h"     "$VENDOR/include/dress/"
+    cp "$ROOT/libdress++/include/dress/dress.hpp"       "$VENDOR/include/dress/"
     cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$VENDOR/include/dress/cuda/"
     cp "$ROOT/libdress/src/dress.c"                     "$VENDOR/src/"
     cp "$ROOT/libdress/src/delta_dress.c"               "$VENDOR/src/"
@@ -72,8 +81,46 @@ publish_pypi() {
     fi
 
     if [[ $BUILD_ONLY -eq 0 ]]; then
-        twine upload dist/*
-        echo "=== PyPI uploaded ==="
+        # Publish via CI: create a GitHub release which triggers the
+        # build_wheels.yml workflow (cross-platform cibuildwheel + trusted
+        # publishing to PyPI).  No local API token or twine needed.
+
+        if ! command -v gh &>/dev/null; then
+            echo "ERROR: gh CLI is required to create a GitHub release."
+            echo "  Install: https://cli.github.com"
+            exit 1
+        fi
+
+        local TAG="v${VERSION}"
+
+        # Ensure the working tree is clean
+        cd "$ROOT"
+        if ! git diff --quiet HEAD 2>/dev/null; then
+            echo "ERROR: uncommitted changes in working tree.  Commit or stash first."
+            exit 1
+        fi
+
+        # Create and push tag if it doesn't exist
+        if ! git tag -l "$TAG" | grep -q .; then
+            git tag "$TAG"
+            echo "  ✓ created tag $TAG"
+        fi
+        git push origin "$TAG"
+        echo "  ✓ pushed tag $TAG"
+
+        # Create GitHub release (triggers build_wheels.yml → PyPI)
+        if gh release view "$TAG" --repo "$GH_REPO" &>/dev/null; then
+            echo "  Release $TAG already exists — CI may already be running."
+        else
+            gh release create "$TAG" --repo "$GH_REPO" \
+                --title "dress-graph $VERSION" \
+                --generate-notes
+            echo "  ✓ created release $TAG"
+        fi
+
+        echo "  ✓ CI triggered: cross-platform wheels will be built and published to PyPI."
+        echo "  Monitor: https://github.com/${GH_REPO}/actions"
+        echo "=== PyPI (via CI) ==="
     fi
 }
 
@@ -326,6 +373,17 @@ publish_julia() {
     fi
     echo "  Version: $VERSION"
 
+    # Vendor C sources into julia/vendor/ for standalone use
+    local VENDOR="$ROOT/julia/vendor"
+    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/include/dress/mpi" "$VENDOR/src/cuda" "$VENDOR/src/mpi"
+    cp "$ROOT/libdress/include/dress/dress.h"           "$VENDOR/include/dress/"
+    cp "$ROOT/libdress/include/dress/delta_dress.h"     "$VENDOR/include/dress/"
+    cp "$ROOT/libdress/src/dress.c"                     "$VENDOR/src/"
+    cp "$ROOT/libdress/src/delta_dress.c"               "$VENDOR/src/"
+    cp "$ROOT/libdress/src/delta_dress_impl.c"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/delta_dress_impl.h"          "$VENDOR/src/"
+    echo "  ✓ C sources vendored into julia/vendor/"
+
     if [[ $INSTALL_LOCAL -eq 1 ]]; then
         julia -e "using Pkg; Pkg.develop(path=\"$ROOT/julia\")"
         echo "  ✓ installed locally via Pkg.develop"
@@ -335,7 +393,6 @@ publish_julia() {
         echo "  ✓ Julia package ready at $ROOT/julia"
         return
     fi
-    echo "  Version: $VERSION"
 
     # Clone the DRESS.jl repo into /tmp
     JULIA_DIR=$(mktemp -d)
@@ -380,8 +437,100 @@ publish_julia() {
     git push origin "v${VERSION}"
 
     rm -rf "$JULIA_DIR"
+    # Cleanup vendored sources from the local tree
+    rm -rf "$VENDOR"
     echo "=== Julia done: tag v${VERSION} pushed to ${GH_JULIA_REPO} ==="
     echo "  To register: comment '@JuliaRegistrator register' on the tagged commit."
+}
+
+publish_go() {
+    echo "=== Go ==="
+
+    VERSION=$(grep -oP '^version = "\K[^"]+' "$ROOT/python/pyproject.toml")
+    if [[ -z "$VERSION" ]]; then
+        echo "ERROR: could not detect version from python/pyproject.toml"
+        exit 1
+    fi
+    echo "  Version: $VERSION"
+
+    # Vendor C sources into each Go sub-module
+    _vendor_go_sources() {
+        local DEST="$1"
+        mkdir -p "$DEST/include/dress/cuda" "$DEST/include/dress/mpi" \
+                 "$DEST/src/cuda" "$DEST/src/mpi"
+        # Headers
+        cp "$ROOT/libdress/include/dress/dress.h"            "$DEST/include/dress/"
+        cp "$ROOT/libdress/include/dress/delta_dress.h"      "$DEST/include/dress/"
+        cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h"  "$DEST/include/dress/cuda/" 2>/dev/null || true
+        cp "$ROOT/libdress/include/dress/mpi/dress_mpi.h"    "$DEST/include/dress/mpi/"  2>/dev/null || true
+        # C sources
+        cp "$ROOT/libdress/src/dress.c"                      "$DEST/src/"
+        cp "$ROOT/libdress/src/delta_dress.c"                "$DEST/src/"
+        cp "$ROOT/libdress/src/delta_dress_impl.c"           "$DEST/src/"
+        cp "$ROOT/libdress/src/delta_dress_impl.h"           "$DEST/src/"
+        # CUDA sources
+        cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"      "$DEST/src/cuda/"  2>/dev/null || true
+        # MPI sources
+        cp "$ROOT/libdress/src/mpi/dress_mpi.c"              "$DEST/src/mpi/"   2>/dev/null || true
+    }
+
+    for mod_dir in "$ROOT/go" "$ROOT/go/cuda" "$ROOT/go/mpi" "$ROOT/go/mpi/cuda"; do
+        _vendor_go_sources "$mod_dir/vendor"
+        echo "  ✓ vendored into $(basename "$(dirname "$mod_dir")")/$(basename "$mod_dir")/vendor/"
+    done
+
+    # CUDA: also link pre-compiled kernel if nvcc was available
+    for cuda_dir in "$ROOT/go/cuda" "$ROOT/go/mpi/cuda"; do
+        local cuda_o="$ROOT/libdress/src/cuda/dress_cuda.o"
+        if [[ -f "$cuda_o" ]]; then
+            mkdir -p "$cuda_dir/vendor/lib"
+            # Build a static library from the kernel object
+            ar rcs "$cuda_dir/vendor/lib/libdress_cuda.a" "$cuda_o"
+        fi
+    done
+
+    if [[ $INSTALL_LOCAL -eq 1 ]]; then
+        echo "  Go modules are imported directly — use the local path:"
+        echo "    go mod edit -replace github.com/velicast/dress-graph/go=$ROOT/go"
+        echo "  ✓ vendor/ populated for local builds"
+    fi
+
+    if [[ $BUILD_ONLY -eq 1 ]]; then
+        echo "  ✓ Go modules ready with vendored sources"
+        return
+    fi
+
+    # Tag and push each sub-module
+    cd "$ROOT"
+    TAG="v${VERSION}"
+    GO_TAG="go/${TAG}"
+
+    if ! git tag -l "$GO_TAG" | grep -q .; then
+        git tag "$GO_TAG"
+        echo "  ✓ created tag $GO_TAG"
+    fi
+
+    # Sub-module tags (required by Go module proxy)
+    for sub in cuda mpi mpi/cuda; do
+        SUB_TAG="go/${sub}/${TAG}"
+        if ! git tag -l "$SUB_TAG" | grep -q .; then
+            git tag "$SUB_TAG"
+            echo "  ✓ created tag $SUB_TAG"
+        fi
+    done
+
+    git push origin "$GO_TAG"
+    for sub in cuda mpi mpi/cuda; do
+        git push origin "go/${sub}/${TAG}"
+    done
+
+    # Cleanup vendored sources
+    for mod_dir in "$ROOT/go" "$ROOT/go/cuda" "$ROOT/go/mpi" "$ROOT/go/mpi/cuda"; do
+        rm -rf "$mod_dir/vendor"
+    done
+
+    echo "=== Go done: tags pushed ==="
+    echo "  Users install with:  go get github.com/velicast/dress-graph/go@${TAG}"
 }
 
 publish_octave() {
@@ -485,6 +634,7 @@ dispatch() {
         cargo) publish_cargo ;;
         cran)  publish_cran  ;;
         julia)  publish_julia  ;;
+        go)     publish_go     ;;
         octave) publish_octave ;;
         brew)   publish_brew   ;;
         vcpkg)  publish_vcpkg  ;;
@@ -494,13 +644,14 @@ dispatch() {
             publish_cargo
             publish_cran
             publish_julia
+            publish_go
             publish_octave
             publish_brew
             publish_vcpkg
             ;;
         *)
             echo "Unknown target: $1"
-            echo "Usage: $0 [--build-only|--install-local] [pypi|npm|cargo|cran|julia|octave|brew|vcpkg|all]"
+            echo "Usage: $0 [--build-only|--install-local] [pypi|npm|cargo|cran|julia|go|octave|brew|vcpkg|all]"
             exit 1
             ;;
     esac

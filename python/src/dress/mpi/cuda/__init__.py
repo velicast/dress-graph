@@ -1,18 +1,22 @@
-"""``dress.mpi.cuda`` — MPI-distributed Δ^k-DRESS (CUDA backend).
+"""``dress.mpi.cuda`` — MPI-distributed DRESS (CUDA backend).
+
+Switch to the MPI+CUDA backend by changing the import::
+
+    from dress.mpi.cuda import DRESS
+
+    g = DRESS(N, sources, targets)
+    g.fit()           # GPU (single graph)
+    g.delta_fit(k=3)  # MPI-distributed, each rank uses GPU
+    g.get(0, 1)       # CPU
 
 Requires ``libdress.so`` built with ``-DDRESS_MPI=ON``,
 ``libdress_cuda.so``, and ``mpi4py``.  All MPI logic (stride
 partitioning + Allreduce) runs in C.  The wrapper passes the
 Fortran communicator handle via ``comm.py2f()``.
 
-Usage::
+Module-level functions are also available::
 
-    from mpi4py import MPI
     from dress.mpi.cuda import delta_dress_fit
-
-    result = delta_dress_fit(N, sources, targets, k=3)
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        print(result.histogram)
 """
 
 import ctypes
@@ -220,3 +224,55 @@ def delta_dress_fit(
         multisets=ms,
         num_subgraphs=ns,
     )
+
+
+# ---------------------------------------------------------------------------
+#  DRESS class — same API as dress.DRESS, fit uses CUDA, delta_fit uses MPI+CUDA
+# ---------------------------------------------------------------------------
+
+from dress import DRESS as _BaseDRESS  # noqa: E402
+from dress.core import FitResult as _FitResult  # noqa: E402
+
+
+class DRESS(_BaseDRESS):
+    """MPI+CUDA DRESS — same API, ``fit`` on GPU, ``delta_fit`` MPI+GPU.
+
+    ``fit()`` runs on the GPU (single graph).  ``delta_fit()`` distributes
+    C(N,k) subgraph enumeration across MPI ranks, each using the GPU.
+    ``get()`` runs on CPU.
+
+    Usage::
+
+        from dress.mpi.cuda import DRESS
+
+        g = DRESS(4, [0, 1, 2, 0], [1, 2, 3, 3])
+        g.fit()               # GPU
+        dr = g.delta_fit(k=3) # MPI + GPU
+    """
+
+    _force_python_impl = True
+
+    def fit(self, max_iterations=100, epsilon=1e-6):
+        from dress.cuda import dress_fit as _cuda_fit
+        result = _cuda_fit(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+        )
+        self._sync_hardware_fit(result)
+        return _FitResult(iterations=result.iterations, delta=result.delta)
+
+    def delta_fit(self, k=0, max_iterations=100, epsilon=1e-6,
+                  keep_multisets=False, comm=None):
+        return delta_dress_fit(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, comm=comm,
+        )
+
+    def __repr__(self):
+        return (
+            f"DRESS(n_vertices={self.n_vertices}, n_edges={self.n_edges}, "
+            f"variant={self._var.name}, backend=mpi.cuda)"
+        )

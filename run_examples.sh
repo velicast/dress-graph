@@ -95,6 +95,11 @@ INC_CPP="$ROOT/libdress++/include"
 INC_IGRAPH="$ROOT/libdress-igraph/include"
 export LD_LIBRARY_PATH="${LIBDIR}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
+# WSL2: ensure the real CUDA driver stub is found before any stale system copies
+if [[ -d /usr/lib/wsl/lib ]]; then
+    export LD_LIBRARY_PATH="/usr/lib/wsl/lib:${LD_LIBRARY_PATH}"
+fi
+
 CUDA_LIBS=""
 if [[ -f "$LIBDIR/libdress_cuda.so" ]]; then
     CUDA_LIBS="-ldress_cuda -lcudart"
@@ -364,6 +369,36 @@ run_python() {
     else
         skip "Python mpi_cuda_nx (no MPI+CUDA)"
     fi
+
+    # ── OO API examples ──
+
+    # cpu_oo
+    out=$($PY "$dir/cpu_oo.py" 2>&1) || true
+    verify_cpu "Python cpu_oo" "$out"
+
+    # cuda_oo
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$($PY "$dir/cuda_oo.py" 2>&1) || true
+        verify_cpu "Python cuda_oo" "$out"
+    else
+        skip "Python cuda_oo (no CUDA)"
+    fi
+
+    # mpi_oo
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 $PY "$dir/mpi_oo.py" 2>&1) || true
+        verify_mpi "Python mpi_oo" "$out"
+    else
+        skip "Python mpi_oo (no MPI)"
+    fi
+
+    # mpi_cuda_oo
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 $PY "$dir/mpi_cuda_oo.py" 2>&1) || true
+        verify_mpi "Python mpi_cuda_oo" "$out"
+    else
+        skip "Python mpi_cuda_oo (no MPI+CUDA)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -424,6 +459,50 @@ run_rust() {
     else
         skip "Rust mpi_cuda (no MPI+CUDA)"
     fi
+
+    # ── OO API examples ──
+
+    # cpu_oo
+    out=$(cd "$dir" && cargo run --example cpu_oo 2>&1) || true
+    verify_cpu "Rust cpu_oo" "$out"
+
+    # cuda_oo
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$(cd "$dir" && cargo run --example cuda_oo --features cuda 2>&1) || true
+        verify_cpu "Rust cuda_oo" "$out"
+    else
+        skip "Rust cuda_oo (no CUDA)"
+    fi
+
+    # mpi_oo
+    if [[ $HAS_MPI -eq 1 ]]; then
+        (cd "$dir" && cargo build --example mpi_oo --features mpi 2>&1) || true
+        local bin
+        bin=$(find "$dir/target" -name mpi_oo -type f -executable 2>/dev/null | head -1)
+        if [[ -n "$bin" ]]; then
+            out=$(mpirun --oversubscribe -np 4 "$bin" 2>&1) || true
+            verify_mpi "Rust mpi_oo" "$out"
+        else
+            fail "Rust mpi_oo (binary not found)"
+        fi
+    else
+        skip "Rust mpi_oo (no MPI)"
+    fi
+
+    # mpi_cuda_oo
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 ]]; then
+        (cd "$dir" && cargo build --example mpi_cuda_oo --features "mpi cuda" 2>&1) || true
+        local bin
+        bin=$(find "$dir/target" -name mpi_cuda_oo -type f -executable 2>/dev/null | head -1)
+        if [[ -n "$bin" ]]; then
+            out=$(mpirun --oversubscribe -np 4 "$bin" 2>&1) || true
+            verify_mpi "Rust mpi_cuda_oo" "$out"
+        else
+            fail "Rust mpi_cuda_oo (binary not found)"
+        fi
+    else
+        skip "Rust mpi_cuda_oo (no MPI+CUDA)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -435,22 +514,21 @@ run_go() {
         skip "Go (go not found)"; return
     fi
 
+    # Vendor C sources into each Go sub-module (simulates what a user gets)
+    echo "  Installing Go package locally ..."
+    bash "$ROOT/publish.sh" --install-local go 2>&1 | tail -3
+    echo
+
     local dir="$ROOT/examples/go"
     local out
 
-    # cpu
-    out=$(cd "$dir" && CGO_ENABLED=1 \
-        CGO_CFLAGS="-I$INC_C" \
-        CGO_LDFLAGS="-L$LIBDIR -ldress -lm" \
-        go run cpu.go 2>&1) || true
+    # cpu — module builds C from source via cgo
+    out=$(cd "$dir" && go run cpu.go 2>&1) || true
     verify_cpu "Go cpu" "$out"
 
     # cuda
-    if [[ $HAS_CUDA -eq 1 && -n "$CUDA_LIBS" ]]; then
-        out=$(cd "$dir" && CGO_ENABLED=1 \
-            CGO_CFLAGS="-I$INC_C" \
-            CGO_LDFLAGS="-L$LIBDIR -ldress -ldress_cuda -lcudart -lm" \
-            go run cuda.go 2>&1) || true
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$(cd "$dir" && go run cuda.go 2>&1) || true
         verify_cpu "Go cuda" "$out"
     else
         skip "Go cuda (no CUDA)"
@@ -458,10 +536,7 @@ run_go() {
 
     # mpi
     if [[ $HAS_MPI -eq 1 ]]; then
-        (cd "$dir" && CGO_ENABLED=1 \
-            CGO_CFLAGS="-I$INC_C" \
-            CGO_LDFLAGS="-L$LIBDIR -ldress -lm" \
-            go build -o mpi_bin mpi.go 2>&1) || true
+        (cd "$dir" && go build -o mpi_bin mpi.go 2>&1) || true
         if [[ -f "$dir/mpi_bin" ]]; then
             out=$(mpirun --oversubscribe -np 4 "$dir/mpi_bin" 2>&1) || true
             verify_mpi "Go mpi" "$out"
@@ -474,11 +549,8 @@ run_go() {
     fi
 
     # mpi_cuda
-    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 && -n "$CUDA_LIBS" ]]; then
-        (cd "$dir" && CGO_ENABLED=1 \
-            CGO_CFLAGS="-I$INC_C" \
-            CGO_LDFLAGS="-L$LIBDIR -ldress -ldress_cuda -lcudart -lm" \
-            go build -o mpi_cuda_bin mpi_cuda.go 2>&1) || true
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 ]]; then
+        (cd "$dir" && go build -o mpi_cuda_bin mpi_cuda.go 2>&1) || true
         if [[ -f "$dir/mpi_cuda_bin" ]]; then
             out=$(mpirun --oversubscribe -np 4 "$dir/mpi_cuda_bin" 2>&1) || true
             verify_mpi "Go mpi_cuda" "$out"
@@ -490,6 +562,47 @@ run_go() {
         skip "Go mpi_cuda (no MPI+CUDA)"
     fi
 
+    # ── OO API examples ──
+
+    # cpu_oo
+    out=$(cd "$dir" && go run cpu_oo.go 2>&1) || true
+    verify_cpu "Go cpu_oo" "$out"
+
+    # cuda_oo
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$(cd "$dir" && go run cuda_oo.go 2>&1) || true
+        verify_cpu "Go cuda_oo" "$out"
+    else
+        skip "Go cuda_oo (no CUDA)"
+    fi
+
+    # mpi_oo
+    if [[ $HAS_MPI -eq 1 ]]; then
+        (cd "$dir" && go build -o mpi_oo_bin mpi_oo.go 2>&1) || true
+        if [[ -f "$dir/mpi_oo_bin" ]]; then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_oo_bin" 2>&1) || true
+            verify_mpi "Go mpi_oo" "$out"
+            rm -f "$dir/mpi_oo_bin"
+        else
+            fail "Go mpi_oo (build)"
+        fi
+    else
+        skip "Go mpi_oo (no MPI)"
+    fi
+
+    # mpi_cuda_oo
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 ]]; then
+        (cd "$dir" && go build -o mpi_cuda_oo_bin mpi_cuda_oo.go 2>&1) || true
+        if [[ -f "$dir/mpi_cuda_oo_bin" ]]; then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_cuda_oo_bin" 2>&1) || true
+            verify_mpi "Go mpi_cuda_oo" "$out"
+            rm -f "$dir/mpi_cuda_oo_bin"
+        else
+            fail "Go mpi_cuda_oo (build)"
+        fi
+    else
+        skip "Go mpi_cuda_oo (no MPI+CUDA)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -536,6 +649,36 @@ run_julia() {
     else
         skip "Julia mpi_cuda (no MPI+CUDA)"
     fi
+
+    # ── OO API examples ──
+
+    # cpu_oo
+    out=$(julia "$dir/cpu_oo.jl" 2>&1) || true
+    verify_cpu "Julia cpu_oo" "$out"
+
+    # cuda_oo
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$(julia "$dir/cuda_oo.jl" 2>&1) || true
+        verify_cpu "Julia cuda_oo" "$out"
+    else
+        skip "Julia cuda_oo (no CUDA)"
+    fi
+
+    # mpi_oo
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 julia "$dir/mpi_oo.jl" 2>&1) || true
+        verify_mpi "Julia mpi_oo" "$out"
+    else
+        skip "Julia mpi_oo (no MPI)"
+    fi
+
+    # mpi_cuda_oo
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 julia "$dir/mpi_cuda_oo.jl" 2>&1) || true
+        verify_mpi "Julia mpi_cuda_oo" "$out"
+    else
+        skip "Julia mpi_cuda_oo (no MPI+CUDA)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -545,6 +688,16 @@ run_r() {
     header "R"
     if ! command -v R &>/dev/null || ! command -v Rscript &>/dev/null; then
         skip "R (R/Rscript not found)"; return
+    fi
+
+    # Ensure R_LIBS_USER matches where publish.sh installs
+    export R_LIBS_USER="${R_LIBS_USER:-$HOME/R/library}"
+
+    # WSL2: R's /etc/R/ldpaths prepends /usr/lib/x86_64-linux-gnu to
+    # LD_LIBRARY_PATH, which may contain a stale CUDA driver stub.
+    # Override R_LD_LIBRARY_PATH so the real WSL2 driver is found first.
+    if [[ -d /usr/lib/wsl/lib ]]; then
+        export R_LD_LIBRARY_PATH="/usr/lib/wsl/lib:${R_LD_LIBRARY_PATH:-}"
     fi
 
     # Install local package
@@ -582,6 +735,36 @@ run_r() {
     else
         skip "R mpi_cuda (no MPI+CUDA)"
     fi
+
+    # ── OO API examples ──
+
+    # cpu_oo
+    out=$(Rscript "$dir/cpu_oo.R" 2>&1) || true
+    verify_cpu "R cpu_oo" "$out"
+
+    # cuda_oo
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$(Rscript "$dir/cuda_oo.R" 2>&1) || true
+        verify_cpu "R cuda_oo" "$out"
+    else
+        skip "R cuda_oo (no CUDA)"
+    fi
+
+    # mpi_oo
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 Rscript "$dir/mpi_oo.R" 2>&1) || true
+        verify_mpi "R mpi_oo" "$out"
+    else
+        skip "R mpi_oo (no MPI)"
+    fi
+
+    # mpi_cuda_oo
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 Rscript "$dir/mpi_cuda_oo.R" 2>&1) || true
+        verify_mpi "R mpi_cuda_oo" "$out"
+    else
+        skip "R mpi_cuda_oo (no MPI+CUDA)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -596,7 +779,7 @@ run_octave() {
     fi
 
     # Install octave package locally
-    local tarball="$ROOT/dress-graph-0.5.1.tar.gz"
+    local tarball="$ROOT/dress-graph-0.5.2.tar.gz"
     if [[ ! -f "$tarball" ]]; then
         echo "  Building Octave tarball ..."
         bash "$ROOT/build.sh" octave 2>&1 | tail -1
@@ -632,6 +815,58 @@ run_octave() {
         run('$dir/rook_vs_shrikhande.m');
     " 2>&1) || true
     verify_mpi "Octave rook_vs_shrikhande" "$out"
+
+    # ── OO API examples ──
+
+    # cpu_oo
+    out=$(octave --no-gui --eval "
+        pkg load dress-graph;
+        run('$dir/cpu_oo.m');
+    " 2>&1) || true
+    verify_cpu "Octave cpu_oo" "$out"
+}
+
+# ═══════════════════════════════════════════════════════════════════
+# Matlab
+# ═══════════════════════════════════════════════════════════════════
+run_matlab() {
+    header "Matlab"
+
+    if ! command -v matlab &>/dev/null; then
+        skip "Matlab (matlab not found)"
+        return
+    fi
+
+    local dir="$ROOT/examples/matlab"
+    local out
+
+    # cpu_oo
+    out=$(matlab -batch "run('$dir/cpu_oo.m')" 2>&1) || true
+    verify_cpu "Matlab cpu_oo" "$out"
+
+    # cuda_oo
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$(matlab -batch "run('$dir/cuda_oo.m')" 2>&1) || true
+        verify_cpu "Matlab cuda_oo" "$out"
+    else
+        skip "Matlab cuda_oo (no CUDA)"
+    fi
+
+    # mpi_oo
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 matlab -batch "run('$dir/mpi_oo.m')" 2>&1) || true
+        verify_mpi "Matlab mpi_oo" "$out"
+    else
+        skip "Matlab mpi_oo (no MPI)"
+    fi
+
+    # mpi_cuda_oo
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 matlab -batch "run('$dir/mpi_cuda_oo.m')" 2>&1) || true
+        verify_mpi "Matlab mpi_cuda_oo" "$out"
+    else
+        skip "Matlab mpi_cuda_oo (no MPI+CUDA)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -665,6 +900,12 @@ run_wasm() {
     # rook vs shrikhande (delta-1)
     out=$(node "$dir/rook_vs_shrikhande.mjs" 2>&1) || true
     verify_mpi "WASM rook_vs_shrikhande" "$out"
+
+    # ── OO API examples ──
+
+    # cpu_oo
+    out=$(node "$dir/cpu_oo.mjs" 2>&1) || true
+    verify_cpu "WASM cpu_oo" "$out"
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -683,6 +924,7 @@ want go     && run_go
 want julia  && run_julia
 want r      && run_r
 want octave && run_octave
+want matlab && run_matlab
 want wasm   && run_wasm
 
 # ── Summary ─────────────────────────────────────────────────────────

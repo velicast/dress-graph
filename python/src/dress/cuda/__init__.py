@@ -1,21 +1,23 @@
 """
-dress.cuda — GPU-accelerated DRESS fitting (drop-in replacement for dress).
+dress.cuda — GPU-accelerated DRESS fitting.
 
-The simplest usage mirrors the CPU API exactly — just change the import:
+Switch to the GPU backend by changing the import::
 
-    from dress.cuda import dress_fit, delta_dress_fit   # GPU
-    # from dress import dress_fit, delta_dress_fit      # CPU (same API)
+    from dress.cuda import DRESS        # GPU
+    # from dress import DRESS            # CPU (same API)
 
-    result = dress_fit(N, sources, targets)
-    delta  = delta_dress_fit(N, sources, targets, k=2)
+    g = DRESS(N, sources, targets)
+    g.fit()           # runs on GPU
+    g.delta_fit(k=2)  # runs on GPU
+    g.get(0, 1)       # runs on CPU
 
-NetworkX helpers are also available:
+Module-level functions are also available::
+
+    from dress.cuda import dress_fit, delta_dress_fit
+
+NetworkX helpers::
 
     from dress.cuda.networkx import dress_graph, delta_dress_graph
-
-Lower-level helpers are also available for advanced use:
-
-    from dress.cuda import dress_cuda, dress_fit_cuda, delta_dress_fit_cuda
 
 Importing this module never fails — CUDA availability is checked lazily
 on first call.  Use ``dress.cuda.is_available()`` to probe.
@@ -422,3 +424,51 @@ def delta_dress_fit(
         multisets=ms,
         num_subgraphs=ns,
     )
+
+
+# ---------------------------------------------------------------------------
+#  DRESS class — same API as dress.DRESS, fit/delta_fit run on GPU
+# ---------------------------------------------------------------------------
+
+from dress import DRESS as _BaseDRESS  # noqa: E402
+from dress.core import FitResult as _FitResult  # noqa: E402
+
+
+class DRESS(_BaseDRESS):
+    """GPU-accelerated DRESS — same API, ``fit``/``delta_fit`` run on CUDA.
+
+    Usage::
+
+        from dress.cuda import DRESS
+
+        g = DRESS(4, [0, 1, 2, 0], [1, 2, 3, 3])
+        fr = g.fit()          # GPU
+        dr = g.delta_fit(k=2) # GPU
+        val = g.get(0, 2)     # CPU (uses converged state)
+    """
+
+    _force_python_impl = True
+
+    def fit(self, max_iterations=100, epsilon=1e-6):
+        result = dress_fit(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+        )
+        self._sync_hardware_fit(result)
+        return _FitResult(iterations=result.iterations, delta=result.delta)
+
+    def delta_fit(self, k=0, max_iterations=100, epsilon=1e-6,
+                  keep_multisets=False, offset=0, stride=1):
+        return delta_dress_fit(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, offset=offset, stride=stride,
+        )
+
+    def __repr__(self):
+        return (
+            f"DRESS(n_vertices={self.n_vertices}, n_edges={self.n_edges}, "
+            f"variant={self._var.name}, backend=cuda)"
+        )

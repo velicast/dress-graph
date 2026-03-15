@@ -237,7 +237,7 @@ The provided build script handles `libdress` (C), `libdress++` (C++), and `libdr
 ### From Remote (Octave)
 
 ```octave
-pkg install "https://github.com/velicast/dress-graph/releases/download/v0.5.1/dress-graph-0.5.1.tar.gz"
+pkg install "https://github.com/velicast/dress-graph/releases/download/v0.5.2/dress-graph-0.5.2.tar.gz"
 ```
 
 ### From Source (Octave)

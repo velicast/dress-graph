@@ -30,3 +30,22 @@ required-features = ["mpi"]
 name = "mpi_cuda"
 path = "mpi_cuda.rs"
 required-features = ["mpi", "cuda"]
+
+[[example]]
+name = "cpu_oo"
+path = "cpu_oo.rs"
+
+[[example]]
+name = "cuda_oo"
+path = "cuda_oo.rs"
+required-features = ["cuda"]
+
+[[example]]
+name = "mpi_oo"
+path = "mpi_oo.rs"
+required-features = ["mpi"]
+
+[[example]]
+name = "mpi_cuda_oo"
+path = "mpi_cuda_oo.rs"
+required-features = ["mpi", "cuda"]

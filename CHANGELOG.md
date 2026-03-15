@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.5.2] - 2026-03-15
+
+### Added
+- **OO API examples**: 26 new end-to-end examples demonstrating the persistent `DRESS` object (construct → fit → get → result → close) across all language wrappers:
+  - Python: `cpu_oo.py`, `cuda_oo.py`, `mpi_oo.py`, `mpi_cuda_oo.py`
+  - Rust: `cpu_oo.rs`, `cuda_oo.rs`, `mpi_oo.rs`, `mpi_cuda_oo.rs`
+  - Go: `cpu_oo.go`, `cuda_oo.go`, `mpi_oo.go`, `mpi_cuda_oo.go`
+  - Julia: `cpu_oo.jl`, `cuda_oo.jl`, `mpi_oo.jl`, `mpi_cuda_oo.jl`
+  - R: `cpu_oo.R`, `cuda_oo.R`, `mpi_oo.R`, `mpi_cuda_oo.R`
+  - MATLAB: `cpu_oo.m`, `cuda_oo.m`, `mpi_oo.m`, `mpi_cuda_oo.m`
+  - Octave: `cpu_oo.m`
+  - WASM: `cpu_oo.mjs`
+- `publish.sh pypi`: PyPI publishing via `gh release create` triggering `build_wheels.yml` GitHub Actions workflow (cibuildwheel cross-platform builds + trusted publishing)
+- MATLAB section in `run_examples.sh` (skipped when MATLAB unavailable)
+- Octave `src/Makefile` for MEX compilation
+
+### Fixed
+- `build.sh`: missing `+cuda/DRESS.m`, `+mpi/DRESS.m`, `+mpi/+cuda/DRESS.m`, and `dress_fit_cuda_obj_mex.c` in Octave vendor step
+- `clean.sh`: added cleanup for CUDA build artifacts, `rust/LICENSE`, Python egg-info variants, `wasm/.npmrc`, Go vendor dirs, Julia `vendor/libdress.so`, Octave `inst/` and `src/` build outputs, R vendored sources, LaTeX auxiliary files; preserved `octave/src/Makefile`
+- Octave `INDEX`: added CUDA, MPI, and MPI+CUDA sections
+- Rust `examples/Cargo.toml`: registered OO example binaries
+- Julia OO examples: fixed imports (`using DRESS` / `using DRESS.CUDA`)
+- Rust MPI OO examples: fixed `Option<Vec<f64>>` unwrap for multisets
+
+### Changed
+- README: API reference tables updated with OO example links for all languages
+- `run_examples.sh`: all 26 OO examples registered (63 pass, 0 fail, 1 skip)
+
 ## [0.5.1] - 2026-03-10
 
 ### Fixed

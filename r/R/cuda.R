@@ -123,5 +123,68 @@ cuda <- local({
           PACKAGE = "dress.graph")
   }
 
+  env$DRESS <- function(n_vertices,
+                        sources,
+                        targets,
+                        weights               = NULL,
+                        variant               = DRESS_UNDIRECTED,
+                        precompute_intercepts = FALSE) {
+
+    .check_cuda()
+
+    n_vertices <- as.integer(n_vertices)
+    sources    <- as.integer(sources)
+    targets    <- as.integer(targets)
+    variant    <- as.integer(variant)
+    precompute <- as.integer(precompute_intercepts)
+
+    stopifnot(length(sources) == length(targets))
+    stopifnot(n_vertices >= 1L)
+    stopifnot(variant >= 0L && variant <= 3L)
+
+    if (!is.null(weights)) {
+      weights <- as.double(weights)
+      stopifnot(length(weights) == length(sources))
+    }
+
+    ptr <- .Call(C_dress_init,
+                 n_vertices, sources, targets, weights,
+                 variant, precompute)
+
+    self <- new.env(parent = emptyenv())
+    self$.ptr <- ptr
+
+    self$fit <- function(max_iterations = 100L, epsilon = 1e-6) {
+      .Call("C_dress_fit_cuda_obj",
+            self$.ptr,
+            as.integer(max_iterations),
+            as.double(epsilon),
+            PACKAGE = "dress.graph")
+    }
+
+    self$get <- function(u, v, max_iterations = 100L, epsilon = 1e-6,
+                         edge_weight = 1.0) {
+      .Call(C_dress_get_obj,
+            self$.ptr,
+            as.integer(u),
+            as.integer(v),
+            as.integer(max_iterations),
+            as.double(epsilon),
+            as.double(edge_weight))
+    }
+
+    self$result <- function() {
+      .Call(C_dress_result, self$.ptr)
+    }
+
+    self$close <- function() {
+      .Call(C_dress_close, self$.ptr)
+      invisible(NULL)
+    }
+
+    class(self) <- "DRESS"
+    self
+  }
+
   env
 })

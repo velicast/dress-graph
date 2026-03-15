@@ -105,7 +105,7 @@ SEXP C_dress_fit(SEXP n_vertices_,
 /*  dress_version                                                      */
 /* ------------------------------------------------------------------ */
 SEXP C_dress_version(void) {
-    return ScalarString(mkChar("0.5.1"));
+    return ScalarString(mkChar("0.5.2"));
 }
 
 /* ------------------------------------------------------------------ */
@@ -221,6 +221,7 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
 /* CUDA bridge (defined in dress_cuda_r.c) */
 extern SEXP C_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP C_delta_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_dress_fit_cuda_obj(SEXP, SEXP, SEXP);
 #endif
 
 #ifdef DRESS_MPI
@@ -395,6 +396,7 @@ static const R_CallMethodDef callMethods[] = {
 #ifdef DRESS_CUDA
     {"C_dress_fit_cuda",       (DL_FUNC) &C_dress_fit_cuda,       8},
     {"C_delta_dress_fit_cuda", (DL_FUNC) &C_delta_dress_fit_cuda, 12},
+    {"C_dress_fit_cuda_obj",   (DL_FUNC) &C_dress_fit_cuda_obj,   3},
 #endif
 #ifdef DRESS_MPI
     {"C_delta_dress_fit_mpi",  (DL_FUNC) &C_delta_dress_fit_mpi,  11},

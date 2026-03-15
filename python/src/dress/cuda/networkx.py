@@ -7,6 +7,10 @@ Drop-in replacement for ``dress.networkx`` — just change the import::
 
     result = dress_graph(G)
     delta  = delta_dress_graph(G, k=1)
+
+    with NxDRESS(G) as dg:   # fit() / delta_fit() run on GPU
+        dg.fit()
+        print(dg.get("Alice", "Bob"))
 """
 
 from __future__ import annotations
@@ -15,7 +19,7 @@ from dress.core import DRESSResult, DeltaDRESSResult, Variant, UNDIRECTED
 from dress.networkx import (
     _dress_graph_impl,
     _delta_dress_graph_impl,
-    NxDRESS,
+    NxDRESS as _BaseNxDRESS,
 )
 
 __all__ = ["dress_graph", "delta_dress_graph", "NxDRESS"]
@@ -70,3 +74,12 @@ def delta_dress_graph(
         precompute=precompute,
         keep_multisets=keep_multisets,
     )
+
+
+class NxDRESS(_BaseNxDRESS):
+    """GPU-accelerated ``NxDRESS`` — ``fit`` / ``delta_fit`` run on CUDA."""
+
+    @property
+    def _dress_cls(self):
+        from dress.cuda import DRESS
+        return DRESS

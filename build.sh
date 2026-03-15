@@ -221,7 +221,7 @@ build_python() {
     # Ensure pybind11 + numpy are available for the native C extension
     $PY -m pip install pybind11 numpy --quiet 2>&1
 
-    DRESS_BUILD_NATIVE=1 $PY -m pip install -e "python/[native]" --no-build-isolation --quiet 2>&1
+    $PY -m pip install -e "python/[native]" --no-build-isolation --quiet 2>&1
     pass "Python package installed"
 
     # Verify the C extension was built
@@ -247,7 +247,7 @@ build_python() {
         fi
 
         # Restore the native extension for subsequent use
-        DRESS_BUILD_NATIVE=1 $PY -m pip install -e "python/[native]" --no-build-isolation --quiet 2>&1
+        $PY -m pip install -e "python/[native]" --no-build-isolation --quiet 2>&1
     fi
 }
 
@@ -350,6 +350,12 @@ build_octave() {
     mkdir -p "$PKG/inst/+cuda"
     cp "$ROOT/matlab/+cuda/dress_fit.m"       "$PKG/inst/+cuda/"
     cp "$ROOT/matlab/+cuda/delta_dress_fit.m" "$PKG/inst/+cuda/"
+    cp "$ROOT/matlab/+cuda/DRESS.m"           "$PKG/inst/+cuda/"
+
+    # Vendor +mpi/ namespace (MPI wrappers)
+    mkdir -p "$PKG/inst/+mpi/+cuda"
+    cp "$ROOT/matlab/+mpi/DRESS.m"            "$PKG/inst/+mpi/"
+    cp "$ROOT/matlab/+mpi/+cuda/DRESS.m"      "$PKG/inst/+mpi/+cuda/"
 
     # Vendor C sources into src/
     cp "$ROOT/matlab/dress_mex.c"        "$PKG/src/"
@@ -361,6 +367,7 @@ build_octave() {
     cp "$ROOT/matlab/dress_free_mex.c"   "$PKG/src/"
     cp "$ROOT/matlab/dress_cuda_mex.c"        "$PKG/src/"
     cp "$ROOT/matlab/delta_dress_cuda_mex.c"  "$PKG/src/"
+    cp "$ROOT/matlab/dress_fit_cuda_obj_mex.c" "$PKG/src/"
     cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c" "$PKG/src/"
     cp "$ROOT/libdress/src/cuda/dress_cuda.cu"      "$PKG/src/"
     cp "$ROOT/libdress/src/dress.c"          "$PKG/src/"

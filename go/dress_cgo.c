@@ -3,8 +3,16 @@
  * can compile everything in one translation unit without needing a separate
  * build step.
  *
- * This file is referenced by the #cgo directive in dress.go.
+ * Supports two layouts:
+ *   - vendor/src/  (standalone / published module)
+ *   - ../libdress/src/  (monorepo development)
  */
+#if __has_include("vendor/src/dress.c")
+#include "vendor/src/dress.c"
+#include "vendor/src/delta_dress_impl.c"
+#include "vendor/src/delta_dress.c"
+#else
 #include "../libdress/src/dress.c"
 #include "../libdress/src/delta_dress_impl.c"
 #include "../libdress/src/delta_dress.c"
+#endif

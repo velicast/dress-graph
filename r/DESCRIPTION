@@ -1,7 +1,7 @@
 Package: dress.graph
 Type: Package
 Title: DRESS - A Continuous Framework for Structural Graph Refinement
-Version: 0.5.1
+Version: 0.5.2
 Authors@R: person("Eduar", "Castrillo Velilla", role = c("aut", "cre"),
                   email = "velicast@outlook.com",
                   comment = c(ORCID = "0009-0005-2492-0957"))

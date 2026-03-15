@@ -1,17 +1,21 @@
-"""``dress.mpi`` — MPI-distributed Δ^k-DRESS (CPU backend).
+"""``dress.mpi`` — MPI-distributed DRESS (CPU backend).
+
+Switch to the MPI backend by changing the import::
+
+    from dress.mpi import DRESS
+
+    g = DRESS(N, sources, targets)
+    g.fit()           # CPU (single graph)
+    g.delta_fit(k=3)  # MPI-distributed across ranks
+    g.get(0, 1)       # CPU
 
 Requires ``libdress.so`` built with ``-DDRESS_MPI=ON`` and ``mpi4py``.
 All MPI logic (stride partitioning + Allreduce) runs in C.
 The wrapper passes the Fortran communicator handle via ``comm.py2f()``.
 
-Usage::
+Module-level functions are also available::
 
-    from mpi4py import MPI
     from dress.mpi import delta_dress_fit
-
-    result = delta_dress_fit(N, sources, targets, k=3)
-    if MPI.COMM_WORLD.Get_rank() == 0:
-        print(result.histogram)
 """
 
 import ctypes
@@ -170,3 +174,44 @@ def delta_dress_fit(
         multisets=ms,
         num_subgraphs=ns,
     )
+
+
+# ---------------------------------------------------------------------------
+#  DRESS class — same API as dress.DRESS, delta_fit runs over MPI
+# ---------------------------------------------------------------------------
+
+from dress import DRESS as _BaseDRESS  # noqa: E402
+
+
+class DRESS(_BaseDRESS):
+    """MPI-distributed DRESS — same API, ``delta_fit`` runs over MPI.
+
+    ``fit()`` and ``get()`` run on CPU (single graph, no distribution
+    benefit).  ``delta_fit()`` distributes the C(N,k) subgraph
+    enumeration across MPI ranks.
+
+    Usage::
+
+        from dress.mpi import DRESS
+
+        g = DRESS(4, [0, 1, 2, 0], [1, 2, 3, 3])
+        g.fit()               # CPU
+        dr = g.delta_fit(k=3) # MPI-distributed
+    """
+
+    _force_python_impl = True
+
+    def delta_fit(self, k=0, max_iterations=100, epsilon=1e-6,
+                  keep_multisets=False, comm=None):
+        return delta_dress_fit(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, comm=comm,
+        )
+
+    def __repr__(self):
+        return (
+            f"DRESS(n_vertices={self.n_vertices}, n_edges={self.n_edges}, "
+            f"variant={self._var.name}, backend=mpi)"
+        )

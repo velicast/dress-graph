@@ -1,3 +1,4 @@
 include LICENSE
 include README.md
-recursive-include src/dress/_libdress *.c *.cu *.h
+recursive-include bindings *.cpp
+recursive-include src/dress/_vendored *.c *.h *.hpp *.cu

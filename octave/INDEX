@@ -8,3 +8,14 @@ DRESS similarity
 
 Delta-k-DRESS
  delta_dress_fit
+
+CUDA
+ cuda.dress_fit
+ cuda.delta_dress_fit
+ cuda.DRESS
+
+MPI
+ mpi.DRESS
+
+MPI+CUDA
+ mpi.cuda.DRESS

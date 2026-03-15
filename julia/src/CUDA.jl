@@ -282,4 +282,154 @@ function delta_dress_fit(N::Integer,
     return DeltaDRESSResult(histogram, hsize, ms_mat, nsub)
 end
 
+# ── persistent DressGraph (CUDA) ─────────────────────────────────────
+
+"""
+    DressGraph
+
+A persistent DRESS graph whose `fit!` runs on the GPU via CUDA.
+Same API as `DRESS.DressGraph`, different import.
+
+```julia
+using DRESS.CUDA
+g = DressGraph(4, [0,1,2,0], [1,2,3,3])
+fit!(g)
+d = get(g, 0, 2)
+close!(g)
+```
+"""
+mutable struct DressGraph
+    ptr      :: Ptr{Cvoid}
+    n        :: Int
+    e        :: Int
+    sources  :: Vector{Int32}
+    targets  :: Vector{Int32}
+end
+
+export DressGraph, fit!, close!
+
+"""
+    DressGraph(N, sources, targets; weights=nothing,
+               variant=UNDIRECTED, precompute_intercepts=false)
+
+Create a persistent CUDA DRESS graph object.
+"""
+function DressGraph(N::Integer,
+                    sources::AbstractVector{<:Integer},
+                    targets::AbstractVector{<:Integer};
+                    weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                    variant::Integer   = UNDIRECTED,
+                    precompute_intercepts::Bool = false)
+
+    E = length(sources)
+    length(targets) == E || throw(ArgumentError("sources/targets length mismatch"))
+    if weights !== nothing
+        length(weights) == E || throw(ArgumentError("weights length mismatch"))
+    end
+
+    _ensure_lib()
+
+    U_c = Libc.malloc(E * sizeof(Cint))
+    V_c = Libc.malloc(E * sizeof(Cint))
+    unsafe_wrap(Array, Ptr{Cint}(U_c), E) .= Cint.(sources)
+    unsafe_wrap(Array, Ptr{Cint}(V_c), E) .= Cint.(targets)
+
+    W_c = if weights !== nothing
+        w_ptr = Libc.malloc(E * sizeof(Cdouble))
+        unsafe_wrap(Array, Ptr{Cdouble}(w_ptr), E) .= Cdouble.(weights)
+        Ptr{Cdouble}(w_ptr)
+    else
+        Ptr{Cdouble}(C_NULL)
+    end
+
+    g = ccall(_FN_INIT[], Ptr{Cvoid},
+              (Cint, Cint, Ptr{Cint}, Ptr{Cint}, Ptr{Cdouble}, Cint, Cint),
+              Cint(N), Cint(E),
+              Ptr{Cint}(U_c), Ptr{Cint}(V_c), W_c,
+              Cint(variant), Cint(precompute_intercepts))
+
+    g == C_NULL && error("init_dress_graph returned NULL")
+
+    obj = DressGraph(g, Int(N), E, Int32.(sources), Int32.(targets))
+    finalizer(obj) do o
+        close!(o)
+    end
+    obj
+end
+
+"""
+    fit!(g::DressGraph; max_iterations=100, epsilon=1e-6) → (iterations, delta)
+
+Fit the DRESS model on the GPU via CUDA.
+"""
+function fit!(g::DressGraph; max_iterations::Integer=100, epsilon::Real=1e-6)
+    g.ptr == C_NULL && error("DressGraph already closed")
+    iters_ref = Ref{Cint}(0)
+    delta_ref = Ref{Cdouble}(0.0)
+    ccall(_FN_FIT[], Cvoid,
+          (Ptr{Cvoid}, Cint, Cdouble, Ptr{Cint}, Ptr{Cdouble}),
+          g.ptr, Cint(max_iterations), Cdouble(epsilon),
+          iters_ref, delta_ref)
+    (Int(iters_ref[]), Float64(delta_ref[]))
+end
+
+# get — uses CPU dress_get (single-pair too small for GPU)
+const _FN_GET = Ref{Ptr{Cvoid}}(C_NULL)
+
+function _ensure_get()
+    _FN_GET[] != C_NULL && return
+    _ensure_lib()
+    # dress_get lives in the CPU library
+    _FN_GET[] = dlsym(_LIB_CPU[], :dress_get)
+end
+
+"""
+    Base.get(g::DressGraph, u, v; max_iterations=100, epsilon=1e-6, edge_weight=1.0)
+
+Query the DRESS value for an edge (existing or virtual).  Runs on the CPU.
+"""
+function Base.get(g::DressGraph, u::Integer, v::Integer;
+                  max_iterations::Integer=100, epsilon::Real=1e-6,
+                  edge_weight::Real=1.0)
+    g.ptr == C_NULL && error("DressGraph already closed")
+    _ensure_get()
+    ccall(_FN_GET[], Cdouble,
+          (Ptr{Cvoid}, Cint, Cint, Cint, Cdouble, Cdouble),
+          g.ptr, Cint(u), Cint(v), Cint(max_iterations),
+          Cdouble(epsilon), Cdouble(edge_weight))
+end
+
+"""
+    result(g::DressGraph) → DRESSResult
+
+Extract a snapshot of the current DRESS results without freeing.
+"""
+function result(g::DressGraph)
+    g.ptr == C_NULL && error("DressGraph already closed")
+    ew = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 64)), g.e))
+    ed = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 72)), g.e))
+    nd = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 88)), g.n))
+    DRESSResult(copy(g.sources), copy(g.targets), ew, ed, nd, 0, 0.0)
+end
+
+export result
+
+"""
+    close!(g::DressGraph)
+
+Explicitly free the underlying C graph.
+"""
+function close!(g::DressGraph)
+    if g.ptr != C_NULL
+        ccall(_FN_FREE[], Cvoid, (Ptr{Cvoid},), g.ptr)
+        g.ptr = C_NULL
+    end
+    nothing
+end
+
+function Base.show(io::IO, g::DressGraph)
+    state = g.ptr == C_NULL ? "closed" : "open"
+    print(io, "DressGraph{CUDA}(N=$(g.n), E=$(g.e), $state)")
+end
+
 end # module CUDA
