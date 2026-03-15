@@ -49,22 +49,41 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install libomp
 
-      # Pre-cache virtualenv to avoid 429 rate limits from GitHub
+      # Pre-cache virtualenv .pyz to avoid 429 rate limits from GitHub blob URLs
+      - name: Resolve cibuildwheel cache dir
+        id: cbw-cache
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            echo "dir=$LOCALAPPDATA/pypa/cibuildwheel/Cache" >> "$GITHUB_OUTPUT"
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            echo "dir=$HOME/Library/Caches/cibuildwheel" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=$HOME/.cache/cibuildwheel" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.cbw-cache.outputs.dir }}
+          key: cibuildwheel-virtualenv-20.27.1
+
       - name: Pre-download virtualenv
         shell: bash
         run: |
           VER="20.27.1"
-          URL="https://github.com/pypa/get-virtualenv/blob/${VER}/public/virtualenv.pyz?raw=true"
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            CACHE_DIR="$LOCALAPPDATA/pypa/cibuildwheel/Cache"
-          elif [ "$RUNNER_OS" = "macOS" ]; then
-            CACHE_DIR="$HOME/Library/Caches/cibuildwheel"
-          else
-            CACHE_DIR="$HOME/.cache/cibuildwheel"
-          fi
+          CACHE_DIR="${{ steps.cbw-cache.outputs.dir }}"
           mkdir -p "$CACHE_DIR"
           DEST="$CACHE_DIR/virtualenv-${VER}.pyz"
-          if [ ! -f "$DEST" ]; then
+          if [ -f "$DEST" ] && python3 -c "
+          import zipfile, sys
+          try: zipfile.ZipFile(sys.argv[1]).testzip(); print('valid')
+          except: sys.exit(1)
+          " "$DEST" 2>/dev/null; then
+            echo "✓ cached virtualenv ${VER} found"
+          else
+            rm -f "$DEST"
+            # Use raw URL (less rate-limited than blob?raw=true)
+            URL="https://raw.githubusercontent.com/pypa/get-virtualenv/${VER}/public/virtualenv.pyz"
             for i in 1 2 3 4 5; do
               echo "Attempt $i: downloading virtualenv ${VER}..."
               if curl -fsSL --retry 3 --retry-delay 10 -o "$DEST" "$URL"; then
