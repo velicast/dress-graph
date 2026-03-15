@@ -101,6 +101,8 @@ class build_ext(_build_ext):
         try:
             super().build_extensions()
         except Exception as exc:
+            if os.environ.get("DRESS_REQUIRE_NATIVE", "0") == "1":
+                raise RuntimeError(f"C extension build failed: {exc}") from exc
             print(f"\n*** C extension build failed: {exc}")
             print("*** Installing pure-Python fallback.\n")
 
@@ -108,6 +110,8 @@ class build_ext(_build_ext):
         try:
             super().run()
         except Exception as exc:
+            if os.environ.get("DRESS_REQUIRE_NATIVE", "0") == "1":
+                raise RuntimeError(f"C extension build failed: {exc}") from exc
             print(f"\n*** C extension build failed: {exc}")
             print("*** Installing pure-Python fallback.\n")
 
