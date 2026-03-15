@@ -49,6 +49,33 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install libomp
 
+      # Pre-cache virtualenv to avoid 429 rate limits from GitHub
+      - name: Pre-download virtualenv
+        shell: bash
+        run: |
+          VER="20.27.1"
+          URL="https://github.com/pypa/get-virtualenv/blob/${VER}/public/virtualenv.pyz?raw=true"
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            CACHE_DIR="$LOCALAPPDATA/pypa/cibuildwheel/Cache"
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            CACHE_DIR="$HOME/Library/Caches/cibuildwheel"
+          else
+            CACHE_DIR="$HOME/.cache/cibuildwheel"
+          fi
+          mkdir -p "$CACHE_DIR"
+          DEST="$CACHE_DIR/virtualenv-${VER}.pyz"
+          if [ ! -f "$DEST" ]; then
+            for i in 1 2 3 4 5; do
+              echo "Attempt $i: downloading virtualenv ${VER}..."
+              if curl -fsSL --retry 3 --retry-delay 10 -o "$DEST" "$URL"; then
+                echo "  ✓ downloaded"
+                break
+              fi
+              echo "  failed, waiting 30s..."
+              sleep 30
+            done
+          fi
+
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.22.0
         with:

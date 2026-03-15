@@ -551,8 +551,12 @@ publish_octave() {
 
     TARBALL="$ROOT/dress-graph-${VERSION}.tar.gz"
     if [[ ! -f "$TARBALL" ]]; then
-        echo "ERROR: $TARBALL not found. Run './build.sh octave' first."
-        exit 1
+        echo "  Tarball not found — building octave package ..."
+        bash "$ROOT/build.sh" octave
+        if [[ ! -f "$TARBALL" ]]; then
+            echo "ERROR: $TARBALL still not found after build.sh octave."
+            exit 1
+        fi
     fi
 
     if ! command -v gh &>/dev/null; then
