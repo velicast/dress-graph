@@ -78,9 +78,13 @@ update octave/DESCRIPTION \
     '^Version: .*' \
     "Version: $NEW"
 
-# Docs — Octave install URL in installation.md
+# Docs — Octave install URLs in installation.md
 if [[ -f docs/getting-started/installation.md ]]; then
+    # Remote URL: .../download/vX.Y.Z/dress-graph-X.Y.Z.tar.gz
     sedi -E 's|/download/v[^/]+/dress-graph-[^"]+\.tar\.gz|/download/v'"${NEW}"'/dress-graph-'"${NEW}"'.tar.gz|g' \
+        docs/getting-started/installation.md
+    # Source: pkg install dress-graph-X.Y.Z.tar.gz
+    sedi -E 's|dress-graph-[0-9]+\.[0-9]+\.[0-9]+\.tar\.gz|dress-graph-'"${NEW}"'.tar.gz|g' \
         docs/getting-started/installation.md
     echo "  ✓ docs/getting-started/installation.md"
     CHANGED=$((CHANGED + 1))

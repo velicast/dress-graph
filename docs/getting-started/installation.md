@@ -249,7 +249,7 @@ Build the tarball and install locally:
 ```
 
 ```octave
-pkg install dress-graph-0.4.0.tar.gz
+pkg install dress-graph-0.5.3.tar.gz
 pkg load dress-graph
 ```
 
