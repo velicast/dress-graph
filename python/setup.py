@@ -58,7 +58,7 @@ def _get_flags():
     """Return (compile_args, link_args) appropriate for the platform."""
     if platform.system() == "Windows":
         return (
-            ["/std:c++14", "/O2", "/openmp", "/EHsc"],
+            ["/std:c++14", "/O2", "/openmp:llvm", "/EHsc"],
             [],
         )
     elif platform.system() == "Darwin":
@@ -98,6 +98,17 @@ class build_ext(_build_ext):
         import pybind11
         for ext in self.extensions:
             ext.include_dirs.append(pybind11.get_include())
+
+        # Ensure C files don't receive C++ standard flags
+        orig_compile = self.compiler._compile
+        def _compile_filtered(obj, src, ext, cc_args, extra_postargs, pp_opts):
+            postargs = list(extra_postargs)
+            if src.endswith('.c'):
+                postargs = [a for a in postargs
+                            if not a.startswith(('-std=c++', '/std:c++', '/EHsc'))]
+            return orig_compile(obj, src, ext, cc_args, postargs, pp_opts)
+        self.compiler._compile = _compile_filtered
+
         try:
             super().build_extensions()
         except Exception as exc:
