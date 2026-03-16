@@ -455,7 +455,7 @@ static double fit_impl(p_dress_graph_t g, int e)
         max_terms = (deg_u < deg_v ? deg_u : deg_v) + 1;
     }
 
-    double stack_buf[max_terms <= KBN_STACK_LIMIT ? max_terms : 1];
+    double stack_buf[KBN_STACK_LIMIT];
     double *buf = (max_terms <= KBN_STACK_LIMIT)
                 ? stack_buf
                 : (double *)malloc(max_terms * sizeof(double));
@@ -543,8 +543,8 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
             int end  = g->adj_offset[u + 1];
             int deg  = end - base;
 
-            double stack_buf[deg <= KBN_STACK_LIMIT ? deg + 1 : 1];
-            double *buf = (deg <= KBN_STACK_LIMIT)
+            double stack_buf[KBN_STACK_LIMIT];
+            double *buf = (deg + 1 <= KBN_STACK_LIMIT)
                         ? stack_buf
                         : (double *)malloc((deg + 1) * sizeof(double));
 
@@ -650,7 +650,7 @@ double dress_get(const p_dress_graph_t g, int u, int v,
     int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
     int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
     int max_cn = (deg_u < deg_v ? deg_u : deg_v) + 1;  // +1 for self-loop
-    double cn_stack[max_cn <= KBN_STACK_LIMIT ? max_cn : 1];
+    double cn_stack[KBN_STACK_LIMIT];
     double *cn_buf = (max_cn <= KBN_STACK_LIMIT)
                    ? cn_stack
                    : (double *)malloc(max_cn * sizeof(double));
