@@ -113,9 +113,9 @@ func DressFit(n int, sources, targets []int32, weights []float64,
 
 	base := uintptr(unsafe.Pointer(g))
 
-	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
-	edPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
-	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 88))
+	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
+	edPtr := *(*(*C.double))(unsafe.Pointer(base + 80))
+	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 96))
 
 	ewSlice := unsafe.Slice(ewPtr, e)
 	edSlice := unsafe.Slice(edPtr, e)
@@ -365,9 +365,9 @@ func (dg *DRESS) Result() (*Result, error) {
 
 	uwPtr := *(*(*C.int))(unsafe.Pointer(base + 16))
 	uvPtr := *(*(*C.int))(unsafe.Pointer(base + 24))
-	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
-	edPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
-	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 88))
+	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
+	edPtr := *(*(*C.double))(unsafe.Pointer(base + 80))
+	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 96))
 
 	uSlice := unsafe.Slice(uwPtr, dg.e)
 	vSlice := unsafe.Slice(uvPtr, dg.e)

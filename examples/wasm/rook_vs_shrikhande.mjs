@@ -48,5 +48,5 @@ function canonicalize(ms, nSub) {
 const cr = canonicalize(dr.multisets, dr.numSubgraphs);
 const cs = canonicalize(ds.multisets, ds.numSubgraphs);
 const msSame = cr.length === cs.length &&
-    cr.every((row, i) => row.every((v, j) => Math.abs(v - cs[i][j]) < 1e-12 || (isNaN(v) && isNaN(cs[i][j]))));
+    cr.every((row, i) => row.length === cs[i].length && row.every((v, j) => v === cs[i][j]));
 console.log(`Multisets differ:   ${!msSame}`);

@@ -465,22 +465,33 @@ class DRESS:
         for iteration in range(max_iterations):
             max_delta = 0.0
 
-            # Phase 1: compute node norms
+            # Phase 1: compute node norms (sort+KBN for bitwise reproducibility)
             for u in range(N):
-                s = 4.0  # self-loop: w=2, d=2 -> w*d = 4
                 base = adj_offset[u]
                 end = adj_offset[u + 1]
+                terms = [4.0]  # self-loop: w=2, d=2 -> w*d = 4
                 for k in range(base, end):
                     ei = adj_eidx[k]
-                    s += ew[ei] * ed[ei]
-                nd[u] = math.sqrt(s)
+                    terms.append(ew[ei] * ed[ei])
+                terms.sort()
+                # KBN compensated sum
+                s = terms[0]
+                comp = 0.0
+                for i in range(1, len(terms)):
+                    t = s + terms[i]
+                    if abs(s) >= abs(terms[i]):
+                        comp += (s - t) + terms[i]
+                    else:
+                        comp += (terms[i] - t) + s
+                    s = t
+                nd[u] = math.sqrt(s + comp)
 
             # Phase 2: compute next dress values
             for e in range(E):
                 u, v = self._U[e], self._V[e]
-                numerator = 0.0
 
-                # Sorted-merge walk for common neighbours
+                # Collect numerator terms for sort+KBN
+                terms = []
                 iu, iu_end = adj_offset[u], adj_offset[u + 1]
                 iv, iv_end = adj_offset[v], adj_offset[v + 1]
                 i, j = iu, iv
@@ -489,7 +500,7 @@ class DRESS:
                     if x == y:
                         eu = adj_eidx[i]
                         ev = adj_eidx[j]
-                        numerator += ew[eu] * ed[eu] + ew[ev] * ed[ev]
+                        terms.append(ew[eu] * ed[eu] + ew[ev] * ed[ev])
                         i += 1
                         j += 1
                     elif x < y:
@@ -498,17 +509,24 @@ class DRESS:
                         j += 1
 
                 # Self-loop + edge's own contribution
-                #
-                # UNDIRECTED/DIRECTED: both u∈N[v] and v∈N[u], so both
-                # self-loops cross:  (4 + w·d) + (w·d + 4) = 8 + 2·w·d.
-                #
-                # FORWARD/BACKWARD: only one direction exists, so only
-                # one self-loop crosses: 4 + w·d.
                 uv = ew[e] * ed[e]
                 if self._variant in (Variant.FORWARD, Variant.BACKWARD):
-                    numerator += 4.0 + uv
+                    terms.append(4.0 + uv)
                 else:
-                    numerator += 8.0 + 2.0 * uv
+                    terms.append(8.0 + 2.0 * uv)
+
+                # Sort + KBN sum
+                terms.sort()
+                numerator = terms[0]
+                comp = 0.0
+                for i in range(1, len(terms)):
+                    t = numerator + terms[i]
+                    if abs(numerator) >= abs(terms[i]):
+                        comp += (numerator - t) + terms[i]
+                    else:
+                        comp += (terms[i] - t) + numerator
+                    numerator = t
+                numerator += comp
 
                 denom = nd[u] * nd[v]
                 ed_next[e] = numerator / denom if denom > 0.0 else 0.0
@@ -596,8 +614,8 @@ class DRESS:
             else:
                 hi = mid
 
-        # Virtual edge: merge-join neighbour lists
-        intercept = 0.0
+        # Virtual edge: merge-join neighbour lists (sort+KBN for consistency)
+        terms = []
         iu, iu_end = adj_offset[u], adj_offset[u + 1]
         iv, iv_end = adj_offset[v], adj_offset[v + 1]
         i, j = iu, iv
@@ -606,7 +624,7 @@ class DRESS:
             if x == y:
                 eu = adj_eidx[i]
                 ev = adj_eidx[j]
-                intercept += ew[eu] * ed[eu] + ew[ev] * ed[ev]
+                terms.append(ew[eu] * ed[eu] + ew[ev] * ed[ev])
                 i += 1
                 j += 1
             elif x < y:
@@ -615,11 +633,25 @@ class DRESS:
                 j += 1
 
         self_loop = 4.0 if self._variant in (Variant.FORWARD, Variant.BACKWARD) else 8.0
+        terms.append(self_loop)
+
+        # Sort + KBN sum
+        terms.sort()
+        s = terms[0]
+        comp = 0.0
+        for i in range(1, len(terms)):
+            t = s + terms[i]
+            if abs(s) >= abs(terms[i]):
+                comp += (s - t) + terms[i]
+            else:
+                comp += (terms[i] - t) + s
+            s = t
+        A = s + comp
+
         cross_factor = 1.0 if self._variant in (Variant.FORWARD, Variant.BACKWARD) else 2.0
 
         cw = 2.0 * edge_weight if self._variant == Variant.UNDIRECTED else edge_weight
 
-        A = intercept + self_loop
         Du2 = nd[u] * nd[u]
         Dv2 = nd[v] * nd[v]
 

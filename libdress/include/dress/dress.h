@@ -46,6 +46,7 @@ typedef struct __dress_graph_t {
     int     *adj_offset;           // [N+1] CSR row offsets
     int     *adj_target;           // [S]   neighbor vertex ids
     int     *adj_edge_idx;         // [S]   maps half-edge to input edge index
+    int      max_degree;            // max(deg(u)) over all vertices
 
     // Per-edge arrays — indexed by edge id 0..E-1.
     double  *W;                    // [E]   raw input weight (NULL when unweighted)

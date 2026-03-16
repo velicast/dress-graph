@@ -24,5 +24,5 @@ fprintf('Histograms differ:  %s\n', mat2str(~isequal(dr.histogram, ds.histogram)
 % Canonicalize: sort each row, then sort rows
 cr = sortrows(sort(dr.multisets, 2));
 cs = sortrows(sort(ds.multisets, 2));
-ms_same = isequal(size(cr), size(cs)) && all(all(abs(cr - cs) < 1e-12 | (isnan(cr) & isnan(cs))));
+ms_same = isequal(cr, cs);
 fprintf('Multisets differ:   %s\n', mat2str(~ms_same));

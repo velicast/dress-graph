@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.0] - 2026-03-16
+
+### Added
+- **Sort + KBN compensated summation** in C, CUDA and Pure-Python backends — ensures DRESS fingerprints are true graph invariants independent of vertex labeling (bitwise-equal results regardless of accumulation order):
+  - `dress.c`: all floating-point accumulations (node norms, edge dress, virtual-edge intercepts) now use sorted Kahan–Babuška–Neumaier (KBN) summation with stack-allocated buffers (heap fallback above 4096 terms)
+  - `dress_cuda.cu`: GPU kernels use per-thread iterative quicksort (median-of-three pivot, insertion-sort cutoff at n ≤ 16, 64-entry stack) followed by KBN summation on global-memory workspace
+- **`max_degree` field** in `dress_graph_t` struct: computed O(1) inline during CSR construction; used by the CUDA backend to size per-thread workspace dynamically
+- **CUDA Makefile** (`libdress/src/cuda/Makefile`): standalone build for `libdress_cuda.so` (nvcc + gcc/mpicc), compiles `dress_cuda.cu`, `delta_dress_cuda.c`, `delta_dress_impl.c`, and optionally `dress_mpi.c`
+- **Tests**: 346 new lines in `tests/c/test_dress.c` (sort+KBN correctness, compensated-sum edge cases) and 155 new lines in `tests/python/test_dress_core.py` (Python sort+KBN parity tests)
+- `publish.sh`: vendors `dress_mpi.c` into PyPI wheel (matching Rust/R/Go) so `dress.mpi.cuda` auto-build works from vendored sources
+
+### Fixed
+- **Python CUDA auto-build**: `cuda/__init__.py` and `mpi/cuda/__init__.py` now use separate `.so` filenames (`libdress_cuda.so` vs `libdress_mpi_cuda.so`) preventing the MPI+CUDA build from clobbering the plain CUDA `.so` — and vice versa
+- **Python CUDA vendoring**: fixed `_libdress` → `_vendored` path in `cuda/__init__.py`; added vendored-path fallback in `mpi/cuda/__init__.py`
+- **Python auto-build staleness**: both CUDA modules detect when vendored sources are newer than the cached `.so` and rebuild automatically
+- **Python install isolation**: `publish.sh --install-local` now uninstalls any editable install first (removes `.pth` redirect), installs the wheel with `--no-deps`, and cleans stale `.so`/`.o` from the vendored directory
+- **Venv discovery**: `run_examples.sh` and `publish.sh` search `$ROOT/.venv` then `$ROOT/../.venv`, supporting both project-local and parent-directory venv layouts
+- `clean.sh`: no longer deletes `libdress/src/cuda/Makefile` (it's a source file)
+- `.gitignore`: added `!libdress/src/cuda/Makefile` and `!octave/src/Makefile` exceptions to the blanket `Makefile` rule
+- Rust: removed unused `use mpi::ffi::MPI_Comm` import in CUDA submodule
+
+### Changed
+- **Struct offsets updated** across all FFI bindings (Rust, Go, Julia, WASM, Python) to account for the new `max_degree` field at offset 56 (LP64) / 36 (wasm32)
+- `run_examples.sh`: 63 examples pass across 9 languages (C, C++, Python, Rust, Go, Julia, R, Octave, WASM), 0 failures
+
 ## [0.5.3] - 2026-03-15
 
 ### Changed

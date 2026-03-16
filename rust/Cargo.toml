@@ -1,6 +1,6 @@
 [package]
 name    = "dress-graph"
-version = "0.5.3"
+version = "0.6.0"
 edition = "2021"
 authors = ["Eduar Castrillo Velilla <https://orcid.org/0009-0005-2492-0957>"]
 license = "MIT"

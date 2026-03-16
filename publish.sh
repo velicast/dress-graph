@@ -90,6 +90,11 @@ publish_pypi() {
         # would shadow the wheel and redirect imports to the source tree.
         $PY -m pip uninstall -y dress-graph 2>/dev/null || true
         $PY -m pip install --no-deps dist/*.whl
+
+        # Remove stale auto-built artifacts so the CUDA module rebuilds
+        # from the freshly vendored sources on next import.
+        local site=$($PY -c "import sysconfig; print(sysconfig.get_path('purelib'))")
+        rm -f "$site/dress/_vendored/src/cuda/"*.so "$site/dress/_vendored/src/cuda/"*.o 2>/dev/null || true
         echo "  ✓ installed locally"
     fi
 

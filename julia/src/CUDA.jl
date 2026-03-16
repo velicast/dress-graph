@@ -176,9 +176,9 @@ function dress_fit(N::Integer,
           iters_ref, delta_ref)
 
     # Read struct fields (LP64 offsets — same as CPU)
-    edge_weight_ptr = unsafe_load(Ptr{Ptr{Cdouble}}(g + 64))
-    edge_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 72))
-    node_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 88))
+    edge_weight_ptr = unsafe_load(Ptr{Ptr{Cdouble}}(g + 72))
+    edge_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 80))
+    node_dress_ptr  = unsafe_load(Ptr{Ptr{Cdouble}}(g + 96))
 
     ew = copy(unsafe_wrap(Array, edge_weight_ptr, E))
     ed = copy(unsafe_wrap(Array, edge_dress_ptr,  E))
@@ -406,9 +406,9 @@ Extract a snapshot of the current DRESS results without freeing.
 """
 function result(g::DressGraph)
     g.ptr == C_NULL && error("DressGraph already closed")
-    ew = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 64)), g.e))
-    ed = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 72)), g.e))
-    nd = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 88)), g.n))
+    ew = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 72)), g.e))
+    ed = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 80)), g.e))
+    nd = copy(unsafe_wrap(Array, unsafe_load(Ptr{Ptr{Cdouble}}(g.ptr + 96)), g.n))
     DRESSResult(copy(g.sources), copy(g.targets), ew, ed, nd, 0, 0.0)
 end
 

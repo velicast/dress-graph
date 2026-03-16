@@ -125,15 +125,15 @@ func DressFit(n int, sources, targets []int32, weights []float64,
 	C.dress_fit(g, C.int(maxIterations), C.double(epsilon), &iterations, &delta)
 
 	// Read C struct by offset (LP64 layout — see dress.h):
-	//   offset 56: *W             (double*)  raw input weights
-	//   offset 64: *edge_weight   (double*)
-	//   offset 72: *edge_dress    (double*)
-	//   offset 88: *node_dress    (double*)
+	//   offset 64: *W             (double*)  raw input weights
+	//   offset 72: *edge_weight   (double*)
+	//   offset 80: *edge_dress    (double*)
+	//   offset 96: *node_dress    (double*)
 	base := uintptr(unsafe.Pointer(g))
 
-	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
-	edPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
-	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 88))
+	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
+	edPtr := *(*(*C.double))(unsafe.Pointer(base + 80))
+	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 96))
 
 	ewSlice := unsafe.Slice(ewPtr, e)
 	edSlice := unsafe.Slice(edPtr, e)
@@ -397,12 +397,12 @@ func (dg *DRESS) Result() (*Result, error) {
 	}
 	base := uintptr(dg.g)
 
-	// Struct field offsets (LP64): U=16, V=24, edge_weight=64, edge_dress=72, node_dress=88
+	// Struct field offsets (LP64): U=16, V=24, edge_weight=72, edge_dress=80, node_dress=96
 	uwPtr := *(*(*C.int))(unsafe.Pointer(base + 16))
 	uvPtr := *(*(*C.int))(unsafe.Pointer(base + 24))
-	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
-	edPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
-	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 88))
+	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
+	edPtr := *(*(*C.double))(unsafe.Pointer(base + 80))
+	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 96))
 
 	uSlice := unsafe.Slice(uwPtr, dg.e)
 	vSlice := unsafe.Slice(uvPtr, dg.e)

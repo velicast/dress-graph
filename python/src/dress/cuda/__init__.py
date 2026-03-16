@@ -39,7 +39,7 @@ _lib = None
 # Path constants for auto-build
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _PKG_DIR = os.path.dirname(_HERE)                       # dress/
-_VENDORED = os.path.join(_PKG_DIR, '_vendored')          # dress/_vendored/
+_VENDORED = os.path.join(_PKG_DIR, '_vendored')           # dress/_vendored/
 _ROOT = os.path.normpath(os.path.join(_HERE, '..', '..', '..', '..'))
 # Prefer vendored sources (pip install) over repo-relative (editable install)
 if os.path.isdir(_VENDORED):

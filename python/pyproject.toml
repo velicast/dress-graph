@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dress-graph"
-version = "0.5.3"
+version = "0.6.0"
 description = "DRESS: A deterministic, parameter-free framework for canonical graph fingerprinting via continuous structural edge refinement."
 authors = [{name = "Eduar Castrillo Velilla"}]
 maintainers = [{name = "Eduar Castrillo Velilla"}]

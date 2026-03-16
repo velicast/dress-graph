@@ -54,6 +54,7 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Unique fixed point via Birkhoff contraction |
 | Bounded exactly in [0, 2] for unweighted graphs, self-similarity $d_{uu} = 2$ |
 | Isomorphism-invariant |
+| Guaranteed bitwise-equal results regardless of vertex labeling (sort + KBN compensated summation) |
 | Symmetric by design ($d(u,v) = d(v,u)$ for all pairs) |
 | Scale-invariant (degree-0 homogeneous) |
 | Completely deterministic |
@@ -190,8 +191,8 @@ r2 = dress_fit(6, k33_s, k33_t)
 
 print("Prism edge_dress:", sorted(r1.edge_dress))
 print("K3,3  edge_dress:", sorted(r2.edge_dress))
-fp1 = sorted(round(val, 6) for val in r1.edge_dress)
-fp2 = sorted(round(val, 6) for val in r2.edge_dress)
+fp1 = sorted(r1.edge_dress)
+fp2 = sorted(r2.edge_dress)
 print("Distinguished:", fp1 != fp2)
 ```
 

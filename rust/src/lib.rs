@@ -197,9 +197,9 @@ impl DRESS {
         let n = self.n as usize;
         unsafe {
             let base = self.g as *const u8;
-            let ew_ptr = *(base.add(64) as *const *const f64);
-            let ed_ptr = *(base.add(72) as *const *const f64);
-            let nd_ptr = *(base.add(88) as *const *const f64);
+            let ew_ptr = *(base.add(72) as *const *const f64);
+            let ed_ptr = *(base.add(80) as *const *const f64);
+            let nd_ptr = *(base.add(96) as *const *const f64);
             DressResult {
                 sources:     self.sources.clone(),
                 targets:     self.targets.clone(),
@@ -541,16 +541,17 @@ impl DRESSBuilder {
             //   offset 32: *adj_offset
             //   offset 40: *adj_target
             //   offset 48: *adj_edge_idx
-            //   offset 56: *W             (raw input weights)
-            //   offset 64: *edge_weight
-            //   offset 72: *edge_dress
-            //   offset 80: *edge_dress_next
-            //   offset 88: *node_dress
+            //   offset 56: max_degree     (i32 + pad4)
+            //   offset 64: *W             (raw input weights)
+            //   offset 72: *edge_weight
+            //   offset 80: *edge_dress
+            //   offset 88: *edge_dress_next
+            //   offset 96: *node_dress
             let base = g as *const u8;
 
-            let ew_ptr = *(base.add(64) as *const *const f64);
-            let ed_ptr = *(base.add(72) as *const *const f64);
-            let nd_ptr = *(base.add(88) as *const *const f64);
+            let ew_ptr = *(base.add(72) as *const *const f64);
+            let ed_ptr = *(base.add(80) as *const *const f64);
+            let nd_ptr = *(base.add(96) as *const *const f64);
 
             let edge_weight = std::slice::from_raw_parts(ew_ptr, e).to_vec();
             let edge_dress  = std::slice::from_raw_parts(ed_ptr, e).to_vec();

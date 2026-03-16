@@ -208,3 +208,158 @@ class TestCrossValidation:
         # edge 0: 0-1, edge 1: 1-2, edge 2: 2-3
         assert r.edge_dress[0] > r.edge_dress[1], \
             "endpoint edge should have higher dress than middle"
+
+
+# ── helpers for relabeling tests ──────────────────────────────────
+
+import struct
+
+
+def _permute_edges(src, dst, perm):
+    """Apply vertex permutation perm[old] = new to an edge list."""
+    return [perm[s] for s in src], [perm[d] for d in dst]
+
+
+def _fit_dress(n, src, dst, **kwargs):
+    """Build a DRESS object, fit it, and return it."""
+    g = DRESS(n, list(src), list(dst), **kwargs)
+    g.fit(max_iterations=200, epsilon=1e-12)
+    return g
+
+
+def _sorted_fingerprint(values):
+    """Sort a list of doubles and return packed bytes for bitwise comparison."""
+    s = sorted(values)
+    return struct.pack(f'{len(s)}d', *s)
+
+
+def _assert_fingerprint_equal(g1, g2, label=""):
+    """Sorted edge_dress and node_dress must be bitwise identical."""
+    assert _sorted_fingerprint(g1._edge_dress) == \
+           _sorted_fingerprint(g2._edge_dress), \
+        f"edge fingerprint mismatch: {label}"
+    assert _sorted_fingerprint(g1._node_dress) == \
+           _sorted_fingerprint(g2._node_dress), \
+        f"node fingerprint mismatch: {label}"
+
+
+# ── label-independence (sort+KBN) ────────────────────────────────
+
+class TestLabelIndependence:
+    """The sort+KBN implementation guarantees that sorted DRESS arrays
+    are bitwise identical for isomorphic graphs (the product)."""
+
+    def test_relabel_petersen(self):
+        """Petersen graph under a non-trivial vertex permutation."""
+        src = [0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 6, 7, 8]
+        dst = [1, 4, 5, 2, 6, 3, 7, 4, 8, 9, 7, 8, 9, 9, 5]
+        N = 10
+
+        g1 = _fit_dress(N, src, dst)
+
+        perm = [7, 2, 5, 0, 9, 1, 8, 4, 3, 6]
+        ps, pd = _permute_edges(src, dst, perm)
+        g2 = _fit_dress(N, ps, pd)
+
+        _assert_fingerprint_equal(g1, g2, "Petersen relabeled")
+
+    def test_relabel_weighted(self):
+        """Weighted house graph under relabeling."""
+        src = [0, 0, 1, 2, 2, 3]
+        dst = [1, 3, 2, 3, 4, 4]
+        wts = [1.0, 3.0, 2.0, 5.0, 4.0, 7.0]
+        N = 5
+
+        g1 = _fit_dress(N, src, dst, weights=wts)
+
+        perm = [3, 0, 4, 1, 2]
+        ps, pd = _permute_edges(src, dst, perm)
+        g2 = _fit_dress(N, ps, pd, weights=wts)
+
+        _assert_fingerprint_equal(g1, g2, "weighted house relabeled")
+
+    def test_edge_reorder(self):
+        """Same graph with edges in reversed order."""
+        src1 = [0, 1, 2, 3, 1]
+        dst1 = [1, 2, 3, 4, 3]
+        src2 = [1, 3, 2, 1, 0]
+        dst2 = [3, 4, 3, 2, 1]
+        N = 5
+
+        g1 = _fit_dress(N, src1, dst1)
+        g2 = _fit_dress(N, src2, dst2)
+
+        _assert_fingerprint_equal(g1, g2, "edge reorder")
+
+    def test_relabel_directed(self):
+        """Directed cycle under relabeling for all directed variants."""
+        src = [0, 1, 2]
+        dst = [1, 2, 0]
+        N = 3
+        perm = [2, 0, 1]
+
+        for v in (DIRECTED, FORWARD, BACKWARD):
+            g1 = _fit_dress(N, src, dst, variant=v)
+
+            ps, pd = _permute_edges(src, dst, perm)
+            g2 = _fit_dress(N, ps, pd, variant=v)
+
+            _assert_fingerprint_equal(g1, g2, f"directed variant={v}")
+
+
+# ── dress_get tests ──────────────────────────────────────────────
+
+class TestDressGet:
+    """Test the DRESS.get() query API."""
+
+    def test_existing_edge_returns_edge_dress(self):
+        """get(u,v) for an existing edge should return the fitted value."""
+        g = _fit_dress(4, [0, 0, 0, 1, 1, 2], [1, 2, 3, 2, 3, 3])  # K4
+        for e in range(6):
+            u, v = g._U[e], g._V[e]
+            assert g.get(u, v) == g._edge_dress[e]
+            assert g.get(v, u) == g._edge_dress[e]
+
+    def test_virtual_edge_positive(self):
+        """Virtual edge in a path should have positive dress."""
+        g = _fit_dress(4, [0, 1, 2], [1, 2, 3])
+        d03 = g.get(0, 3)
+        assert d03 > 0.0
+        assert d03 < 2.0
+
+    def test_virtual_edge_symmetric(self):
+        """get(u,v) == get(v,u) for virtual edges."""
+        g = _fit_dress(4, [0, 1, 2], [1, 2, 3])
+        assert g.get(0, 3) == pytest.approx(g.get(3, 0), abs=1e-12)
+
+    def test_virtual_edge_common_neighbor_higher(self):
+        """Virtual edge with a common neighbor should have higher dress."""
+        g = _fit_dress(4, [0, 1, 2], [1, 2, 3])
+        d02 = g.get(0, 2)  # common neighbor: 1
+        d03 = g.get(0, 3)  # no common neighbors
+        assert d02 > d03
+
+    def test_virtual_edge_relabel_invariance(self):
+        """Sorted virtual-edge fingerprint for C5 must be bitwise identical."""
+        src = [0, 1, 2, 3, 4]
+        dst = [1, 2, 3, 4, 0]
+        N, E = 5, 5
+
+        g1 = _fit_dress(N, src, dst)
+
+        perm = [4, 3, 2, 1, 0]
+        ps, pd = _permute_edges(src, dst, perm)
+        g2 = _fit_dress(N, ps, pd)
+
+        # Collect all virtual-edge dress values, sort, memcmp
+        v1, v2 = [], []
+        for u in range(N):
+            for v in range(u + 1, N):
+                diff = v - u
+                if diff == 1 or diff == N - 1:
+                    continue  # skip existing edges in C5
+                v1.append(g1.get(u, v))
+                v2.append(g2.get(u, v))
+
+        assert _sorted_fingerprint(v1) == _sorted_fingerprint(v2), \
+            "virtual edge sorted fingerprint must be bitwise identical"

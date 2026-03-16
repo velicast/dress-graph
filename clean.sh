@@ -31,7 +31,7 @@ rm -f tests/cpp/test_dress
 rm -f tests/cpp/test_delta_dress
 
 # CUDA build artifacts (in-tree Makefile build)
-rm -f  libdress/src/cuda/Makefile
+# Keep libdress/src/cuda/Makefile — it is a source file, not a build artifact.
 rm -f  libdress/src/cuda/test_dress_cuda
 rm -f  libdress/src/cuda/libdress_cuda.a
 rm -f  libdress/src/cuda/libdress_cuda.so

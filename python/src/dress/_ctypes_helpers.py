@@ -14,6 +14,7 @@ class _DressGraph(ctypes.Structure):
         ("adj_offset",             ctypes.POINTER(ctypes.c_int)),
         ("adj_target",             ctypes.POINTER(ctypes.c_int)),
         ("adj_edge_idx",           ctypes.POINTER(ctypes.c_int)),
+        ("max_degree",             ctypes.c_int),
         ("W",                      ctypes.POINTER(ctypes.c_double)),
         ("edge_weight",            ctypes.POINTER(ctypes.c_double)),
         ("edge_dress",             ctypes.POINTER(ctypes.c_double)),

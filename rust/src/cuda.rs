@@ -211,9 +211,9 @@ impl DRESSBuilder {
 
             let base = g as *const u8;
 
-            let ew_ptr = *(base.add(64) as *const *const f64);
-            let ed_ptr = *(base.add(72) as *const *const f64);
-            let nd_ptr = *(base.add(88) as *const *const f64);
+            let ew_ptr = *(base.add(72) as *const *const f64);
+            let ed_ptr = *(base.add(80) as *const *const f64);
+            let nd_ptr = *(base.add(96) as *const *const f64);
 
             let edge_weight = std::slice::from_raw_parts(ew_ptr, e).to_vec();
             let edge_dress  = std::slice::from_raw_parts(ed_ptr, e).to_vec();
@@ -292,9 +292,9 @@ impl DRESS {
         let n = self.n as usize;
         unsafe {
             let base = self.g as *const u8;
-            let ew_ptr = *(base.add(64) as *const *const f64);
-            let ed_ptr = *(base.add(72) as *const *const f64);
-            let nd_ptr = *(base.add(88) as *const *const f64);
+            let ew_ptr = *(base.add(72) as *const *const f64);
+            let ed_ptr = *(base.add(80) as *const *const f64);
+            let nd_ptr = *(base.add(96) as *const *const f64);
             DressResult {
                 sources:     self.sources.clone(),
                 targets:     self.targets.clone(),

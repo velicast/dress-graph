@@ -321,9 +321,9 @@ func (dg *DRESS) Result() (*Result, error) {
 
 	uwPtr := *(*(*C.int))(unsafe.Pointer(base + 16))
 	uvPtr := *(*(*C.int))(unsafe.Pointer(base + 24))
-	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 64))
-	edPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
-	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 88))
+	ewPtr := *(*(*C.double))(unsafe.Pointer(base + 72))
+	edPtr := *(*(*C.double))(unsafe.Pointer(base + 80))
+	ndPtr := *(*(*C.double))(unsafe.Pointer(base + 96))
 
 	uSlice := unsafe.Slice(uwPtr, dg.e)
 	vSlice := unsafe.Slice(uvPtr, dg.e)

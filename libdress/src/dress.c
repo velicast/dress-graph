@@ -29,6 +29,42 @@ static int edge_cmp(const void *a, const void *b)
     return (ea->x > eb->x) - (ea->x < eb->x);
 }
 
+// Comparator for sorting doubles (ascending) — used for KBN summation.
+static int dbl_cmp(const void *a, const void *b)
+{
+    double da = *(const double *)a;
+    double db = *(const double *)b;
+    return (da > db) - (da < db);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Label-independent summation: sort + Kahan-Babuška-Neumaier (KBN)   */
+/* ------------------------------------------------------------------ */
+
+// Maximum degree for stack-allocated buffer.
+// Beyond this, we fall back to heap allocation.
+// 4096 doubles = 32 KB — safe even for OMP thread stacks.
+#define KBN_STACK_LIMIT 4096
+
+// Sort an array of doubles in-place, then sum with KBN compensation.
+// Returns the compensated sum.
+static double kbn_sorted_sum(double *buf, int n)
+{
+    if (n == 0) return 0.0;
+    qsort(buf, n, sizeof(double), dbl_cmp);
+    double sum  = buf[0];
+    double comp = 0.0;
+    for (int i = 1; i < n; i++) {
+        double t = sum + buf[i];
+        if (fabs(sum) >= fabs(buf[i]))
+            comp += (sum - t) + buf[i];
+        else
+            comp += (buf[i] - t) + sum;
+        sum = t;
+    }
+    return sum + comp;
+}
+
 // Find edge u->v in raw adjacency (u's segment is sorted by neighbor id).
 // Returns index in raw_data if found, -1 otherwise.
 static int find_raw_edge(int u, int v, const int *raw_offset, const adj_edge_t *raw_data)
@@ -170,13 +206,16 @@ static void build_variant_adjacency(p_dress_graph_t g,
     // Compute CSR offsets for the temporary variant adjacency
     int *tmp_offset = (int *)malloc((N + 1) * sizeof(int));
     tmp_offset[0] = 0;
+    int max_deg = 0;
     for (i = 0; i < N; i++) {
         if (variant == DRESS_VARIANT_DIRECTED) {
             // Merge in-degree into out-degree to get total adjacency size
             node_out_degree[i] = node_out_degree[i] + node_in_degree[i];
         }
+        if (node_out_degree[i] > max_deg) max_deg = node_out_degree[i];
         tmp_offset[i + 1] = tmp_offset[i] + node_out_degree[i];
     }
+    g->max_degree = max_deg;
     S = tmp_offset[N];
 
     free(node_out_degree);
@@ -403,21 +442,35 @@ p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
 static double fit_impl(p_dress_graph_t g, int e)
 {
     int    u = g->U[e], v = g->V[e];
-    double numerator   = 0;
     double denominator = g->node_dress[u] * g->node_dress[v];
 
+    // Collect numerator terms into a buffer, then sort+KBN sum.
+    // Max terms = |N[u]∩N[v]| common-neighbor pairs + 1 self/cross term.
+    int max_terms;
     if (g->precompute_intercepts) {
-        // O(|N[u] ∩ N[v]|) path: iterate only over precomputed common neighbors
+        max_terms = g->intercept_offset[e + 1] - g->intercept_offset[e] + 1;
+    } else {
+        int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
+        int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
+        max_terms = (deg_u < deg_v ? deg_u : deg_v) + 1;
+    }
+
+    double stack_buf[max_terms <= KBN_STACK_LIMIT ? max_terms : 1];
+    double *buf = (max_terms <= KBN_STACK_LIMIT)
+                ? stack_buf
+                : (double *)malloc(max_terms * sizeof(double));
+    int n = 0;
+
+    if (g->precompute_intercepts) {
         int off = g->intercept_offset[e];
         int end = g->intercept_offset[e + 1];
         for (int k = off; k < end; k++) {
             int eu = g->intercept_edge_ux[k];
             int ev = g->intercept_edge_vx[k];
-                numerator += g->edge_weight[eu] * g->edge_dress[eu]
-                           + g->edge_weight[ev] * g->edge_dress[ev];
+            buf[n++] = g->edge_weight[eu] * g->edge_dress[eu]
+                     + g->edge_weight[ev] * g->edge_dress[ev];
         }
     } else {
-        // O(deg_u + deg_v) path: sorted-merge walk to find common neighbors
         int iu = g->adj_offset[u], iu_end = g->adj_offset[u + 1];
         int iv = g->adj_offset[v], iv_end = g->adj_offset[v + 1];
 
@@ -426,8 +479,8 @@ static double fit_impl(p_dress_graph_t g, int e)
             if (x == y) {
                 int eu = g->adj_edge_idx[iu];
                 int ev = g->adj_edge_idx[iv];
-                    numerator += g->edge_weight[eu] * g->edge_dress[eu]
-                               + g->edge_weight[ev] * g->edge_dress[ev];
+                buf[n++] = g->edge_weight[eu] * g->edge_dress[eu]
+                         + g->edge_weight[ev] * g->edge_dress[ev];
                 ++iu; ++iv;
             } else if (x < y) {
                 ++iu;
@@ -437,19 +490,18 @@ static double fit_impl(p_dress_graph_t g, int e)
         }
     }
 
-    // Add self-loop and edge cross-terms for nodes u and v.
-    //
-    // UNDIRECTED/DIRECTED: both u∈N[v] and v∈N[u] always hold, so both
-    // self-loops cross:  (4 + w_vu·d) + (w_uv·d + 4) = 8 + 2·w·d.
-    //
-    // FORWARD/BACKWARD: only v∈N[u] (u→v exists); u∉N[v] in general
-    // (v→u absent), so only v's self-loop crosses: (w_uv·d + 4) = 4 + w·d.
+    // Add self-loop and edge cross-terms
     double uv = g->edge_weight[e] * g->edge_dress[e];
     if (g->variant == DRESS_VARIANT_FORWARD || g->variant == DRESS_VARIANT_BACKWARD) {
-        numerator += 4.0 + uv;
+        buf[n++] = 4.0 + uv;
     } else {
-        numerator += 8.0 + 2.0 * uv;
+        buf[n++] = 8.0 + 2.0 * uv;
     }
+
+    double numerator = kbn_sorted_sum(buf, n);
+
+    if (buf != stack_buf) free(buf);
+
     double dress_uv = denominator > 0.0
                     ? numerator / denominator
                     : 0.0;
@@ -482,19 +534,28 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
         double max_delta = 0.0;
         int u, e;
 
-        // Phase 1: compute per-node dress norm
+        // Phase 1: compute per-node dress norm (sort+KBN for bitwise reproducibility)
 #ifdef _OPENMP
         #pragma omp parallel for
 #endif
         for (u = 0; u < g->N; u++) {
-            double dress_u = 4.0; // self-loop contribution
             int base = g->adj_offset[u];
             int end  = g->adj_offset[u + 1];
-            for (int i = base; i < end; i++) {
-                int ei = g->adj_edge_idx[i];
-                dress_u += g->edge_weight[ei] * g->edge_dress[ei];
+            int deg  = end - base;
+
+            double stack_buf[deg <= KBN_STACK_LIMIT ? deg + 1 : 1];
+            double *buf = (deg <= KBN_STACK_LIMIT)
+                        ? stack_buf
+                        : (double *)malloc((deg + 1) * sizeof(double));
+
+            buf[0] = 4.0; // self-loop contribution
+            for (int i = 0; i < deg; i++) {
+                int ei = g->adj_edge_idx[base + i];
+                buf[i + 1] = g->edge_weight[ei] * g->edge_dress[ei];
             }
-            g->node_dress[u] = sqrt(dress_u);
+            g->node_dress[u] = sqrt(kbn_sorted_sum(buf, deg + 1));
+
+            if (buf != stack_buf) free(buf);
         }
 
         // Phase 2: compute next dress value for every edge
@@ -585,8 +646,15 @@ double dress_get(const p_dress_graph_t g, int u, int v,
     }
 
     // Virtual edge: merge-join neighbour lists to sum common-neighbour
-    // contributions from the frozen steady state.
-    double intercept = 0.0;
+    // contributions from the frozen steady state (sort+KBN for consistency).
+    int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
+    int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
+    int max_cn = (deg_u < deg_v ? deg_u : deg_v) + 1;  // +1 for self-loop
+    double cn_stack[max_cn <= KBN_STACK_LIMIT ? max_cn : 1];
+    double *cn_buf = (max_cn <= KBN_STACK_LIMIT)
+                   ? cn_stack
+                   : (double *)malloc(max_cn * sizeof(double));
+    int cn_n = 0;
     {
         int iu = g->adj_offset[u], iu_end = g->adj_offset[u + 1];
         int iv = g->adj_offset[v], iv_end = g->adj_offset[v + 1];
@@ -595,8 +663,8 @@ double dress_get(const p_dress_graph_t g, int u, int v,
             if (x == y) {
                 int eu = g->adj_edge_idx[iu];
                 int ev = g->adj_edge_idx[iv];
-                intercept += g->edge_weight[eu] * g->edge_dress[eu]
-                           + g->edge_weight[ev] * g->edge_dress[ev];
+                cn_buf[cn_n++] = g->edge_weight[eu] * g->edge_dress[eu]
+                               + g->edge_weight[ev] * g->edge_dress[ev];
                 ++iu; ++iv;
             } else if (x < y) {
                 ++iu;
@@ -611,6 +679,10 @@ double dress_get(const p_dress_graph_t g, int u, int v,
                         g->variant == DRESS_VARIANT_BACKWARD)
                      ? 4.0 : 8.0;
 
+    cn_buf[cn_n++] = self_loop;
+    double intercept = kbn_sorted_sum(cn_buf, cn_n);
+    if (cn_buf != cn_stack) free(cn_buf);
+
     double cross_factor = (g->variant == DRESS_VARIANT_FORWARD ||
                            g->variant == DRESS_VARIANT_BACKWARD)
                         ? 1.0 : 2.0;
@@ -620,7 +692,7 @@ double dress_get(const p_dress_graph_t g, int u, int v,
               ? 2.0 * edge_weight
               : edge_weight;
 
-    double A   = intercept + self_loop;
+    double A   = intercept;
     double Du2 = g->node_dress[u] * g->node_dress[u];
     double Dv2 = g->node_dress[v] * g->node_dress[v];
 

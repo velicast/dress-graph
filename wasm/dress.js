@@ -154,14 +154,15 @@ export async function dressFit(opts) {
     //   offset 20: *adj_offset    (ptr32)
     //   offset 24: *adj_target    (ptr32)
     //   offset 28: *adj_edge_idx  (ptr32)
-    //   offset 32: *W             (ptr32)  raw input weights
-    //   offset 36: *edge_weight   (ptr32)
-    //   offset 40: *edge_dress    (ptr32)
-    //   offset 44: *edge_dress_next (ptr32)
-    //   offset 48: *node_dress    (ptr32)
-    const ewPtr = M.getValue(g + 36, 'i32');  // edge_weight pointer
-    const edPtr = M.getValue(g + 40, 'i32');  // edge_dress pointer
-    const ndPtr = M.getValue(g + 48, 'i32');  // node_dress pointer
+    //   offset 32: max_degree      (i32)
+    //   offset 36: *W             (ptr32)  raw input weights
+    //   offset 40: *edge_weight   (ptr32)
+    //   offset 48: *edge_dress    (ptr32)
+    //   offset 52: *edge_dress_next (ptr32)
+    //   offset 56: *node_dress    (ptr32)
+    const ewPtr = M.getValue(g + 44, 'i32');  // edge_weight pointer
+    const edPtr = M.getValue(g + 48, 'i32');  // edge_dress pointer
+    const ndPtr = M.getValue(g + 56, 'i32');  // node_dress pointer
 
     // Copy results into JS-owned typed arrays
     const edgeWeight = new Float64Array(E);
@@ -316,9 +317,9 @@ export class DRESS {
         const N = this._n;
 
         // WASM32 offsets
-        const ewPtr = M.getValue(this._g + 36, 'i32');
-        const edPtr = M.getValue(this._g + 40, 'i32');
-        const ndPtr = M.getValue(this._g + 48, 'i32');
+        const ewPtr = M.getValue(this._g + 44, 'i32');
+        const edPtr = M.getValue(this._g + 48, 'i32');
+        const ndPtr = M.getValue(this._g + 56, 'i32');
 
         const edgeWeight = new Float64Array(E);
         const edgeDress  = new Float64Array(E);

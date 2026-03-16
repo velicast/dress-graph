@@ -35,5 +35,5 @@ if MPI.COMM_WORLD.Get_rank() == 0:
 
     cr = canonicalize(dr.multisets)
     cs = canonicalize(ds.multisets)
-    ms_same = cr.shape == cs.shape and np.allclose(cr, cs, equal_nan=True)
+    ms_same = cr.shape == cs.shape and np.array_equal(cr, cs)
     print(f"Multisets differ:   {not ms_same}")

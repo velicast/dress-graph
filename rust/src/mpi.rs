@@ -158,7 +158,6 @@ pub fn delta_fit<C: Communicator>(
 #[cfg(feature = "cuda")]
 pub mod cuda {
     use mpi::traits::*;
-    use mpi::ffi::MPI_Comm;
     use crate::{DeltaDressResult, DressError, DressResult, Variant};
 
     /// MPI-distributed Δ^k-DRESS (CUDA backend).
@@ -310,9 +309,9 @@ pub mod cuda {
             let n = self.n as usize;
             unsafe {
                 let base = self.g as *const u8;
-                let ew_ptr = *(base.add(64) as *const *const f64);
-                let ed_ptr = *(base.add(72) as *const *const f64);
-                let nd_ptr = *(base.add(88) as *const *const f64);
+                let ew_ptr = *(base.add(72) as *const *const f64);
+                let ed_ptr = *(base.add(80) as *const *const f64);
+                let nd_ptr = *(base.add(96) as *const *const f64);
                 DressResult {
                     sources:     self.sources.clone(),
                     targets:     self.targets.clone(),
@@ -541,9 +540,9 @@ impl DRESS {
         let n = self.n as usize;
         unsafe {
             let base = self.g as *const u8;
-            let ew_ptr = *(base.add(64) as *const *const f64);
-            let ed_ptr = *(base.add(72) as *const *const f64);
-            let nd_ptr = *(base.add(88) as *const *const f64);
+            let ew_ptr = *(base.add(72) as *const *const f64);
+            let ed_ptr = *(base.add(80) as *const *const f64);
+            let nd_ptr = *(base.add(96) as *const *const f64);
             crate::DressResult {
                 sources:     self.sources.clone(),
                 targets:     self.targets.clone(),

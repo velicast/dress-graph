@@ -236,10 +236,9 @@ build_python() {
         run_step "Python tests (C backend)" $PY -m pytest tests/python/ -v
 
         # Test 2: force pure-Python fallback
-        # Remove the compiled C extension so the fallback is used
         find "$ROOT/python" -name '_core*.so' -delete 2>/dev/null
         find "$ROOT/python" -name '_core*.pyd' -delete 2>/dev/null
-        $PY -m pip install -e python/ --no-build-isolation --quiet 2>&1
+        DRESS_PURE_PYTHON=1 $PY -m pip install -e python/ --no-build-isolation --quiet 2>&1
         if $PY -c "import dress; assert dress._BACKEND == 'python'" 2>/dev/null; then
             run_step "Python tests (pure Python backend)" $PY -m pytest tests/python/ -v
         else
