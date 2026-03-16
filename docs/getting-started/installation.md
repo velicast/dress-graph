@@ -159,6 +159,8 @@ Pkg.develop(path="julia")
 
 ### From CRAN (Remote)
 
+CRAN hosts a stable release. For the latest version, install from GitHub.
+
 ```r
 install.packages("dress.graph")
 ```
@@ -166,8 +168,8 @@ install.packages("dress.graph")
 ### From GitHub (Remote)
 
 ```r
-# install.packages("devtools")
-devtools::install_github("velicast/dress-graph", subdir="r")
+# install.packages("remotes")
+remotes::install_github("velicast/dress-graph", subdir="r")
 ```
 
 ### From Source
