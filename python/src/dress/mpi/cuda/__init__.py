@@ -36,13 +36,36 @@ _cuda_lib = None
 
 # Path constants for auto-build
 _HERE = os.path.dirname(os.path.abspath(__file__))
+_PKG_DIR = os.path.normpath(os.path.join(_HERE, '..', '..'))  # dress/
+_VENDORED = os.path.join(_PKG_DIR, '_vendored')              # dress/_vendored/
 _ROOT = os.path.normpath(os.path.join(_HERE, '..', '..', '..', '..', '..'))
-_LIB_DIR = os.path.join(_ROOT, 'libdress')
-_LOCAL_SO = os.path.join(_ROOT, 'libdress', 'src', 'cuda', 'libdress_cuda.so')
+# Prefer vendored sources (pip install) over repo-relative (editable install)
+if os.path.isdir(_VENDORED):
+    _LIB_DIR = _VENDORED
+else:
+    _LIB_DIR = os.path.join(_ROOT, 'libdress')
+_LOCAL_SO = os.path.join(_LIB_DIR, 'src', 'cuda', 'libdress_mpi_cuda.so')
+
+
+def _sources_newer_than(so_path):
+    """Return True if any vendored source is newer than the .so."""
+    if not os.path.isfile(so_path):
+        return True
+    so_mtime = os.path.getmtime(so_path)
+    src = os.path.join(_LIB_DIR, 'src')
+    inc = os.path.join(_LIB_DIR, 'include')
+    for d in [src, inc]:
+        if not os.path.isdir(d):
+            continue
+        for root, _, files in os.walk(d):
+            for f in files:
+                if os.path.getmtime(os.path.join(root, f)) > so_mtime:
+                    return True
+    return False
 
 
 def _build_cuda_so():
-    """Build a self-contained libdress_cuda.so from source (cudart_static + MPI baked in)."""
+    """Build a self-contained libdress_mpi_cuda.so from source (cudart_static + MPI baked in)."""
     import shutil
     import subprocess
 
@@ -58,10 +81,10 @@ def _build_cuda_so():
     cuda_dir = os.path.join(src, 'cuda')
 
     cuda_cu = os.path.join(cuda_dir, 'dress_cuda.cu')
-    cuda_obj = os.path.join(cuda_dir, 'dress_cuda.o')
+    cuda_obj = os.path.join(cuda_dir, 'dress_mpi_cuda.o')
 
-    # Compile CUDA kernel with nvcc
-    if not os.path.isfile(cuda_obj):
+    # Compile CUDA kernel with nvcc (recompile if sources changed)
+    if not os.path.isfile(cuda_obj) or _sources_newer_than(cuda_obj):
         subprocess.check_call([
             nvcc, '-O2', '-Xcompiler', '-fPIC', f'-I{inc}',
             '-c', cuda_cu, '-o', cuda_obj,
@@ -92,20 +115,35 @@ def _build_cuda_so():
     ])
 
 
+def _has_mpi_symbols(lib):
+    """Check if a loaded .so contains the MPI+CUDA entry point."""
+    try:
+        lib.delta_dress_fit_mpi_cuda_fcomm
+        return True
+    except AttributeError:
+        return False
+
+
 def _get_lib():
-    """Load libdress_cuda.so on first use, auto-building if needed."""
+    """Load libdress_mpi_cuda.so on first use, auto-building if needed."""
     global _lib, _cuda_lib
     if _lib is not None:
         return _lib
 
-    # Try pre-built .so first, then system path
+    # Try pre-built .so first, then system-level libdress_cuda.so
     _cuda_lib = None
-    for path in [_LOCAL_SO, 'libdress_cuda.so']:
+    for path in [_LOCAL_SO, 'libdress_mpi_cuda.so', 'libdress_cuda.so']:
         try:
-            _cuda_lib = ctypes.CDLL(path)
-            break
+            candidate = ctypes.CDLL(path)
+            if _has_mpi_symbols(candidate):
+                _cuda_lib = candidate
+                break
         except OSError:
             continue
+
+    # Stale check: rebuild if sources are newer than .so
+    if _cuda_lib is not None and path == _LOCAL_SO and _sources_newer_than(_LOCAL_SO):
+        _cuda_lib = None
 
     # Auto-build from source if tools available
     if _cuda_lib is None:

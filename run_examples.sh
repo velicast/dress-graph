@@ -294,9 +294,19 @@ run_python() {
     header "Python"
 
     local PY="python3"
-    if [[ -f "$ROOT/.venv/bin/activate" ]]; then
+    local VENV="${VIRTUAL_ENV:-}"
+    if [[ -z "$VENV" ]]; then
+        # Look for venv: project-local first, then parent dir
+        for candidate in "$ROOT/.venv" "$ROOT/../.venv"; do
+            if [[ -f "$candidate/bin/activate" ]]; then
+                VENV="$(cd "$candidate" && pwd)"
+                break
+            fi
+        done
+    fi
+    if [[ -n "$VENV" && -f "$VENV/bin/activate" ]]; then
         # shellcheck disable=SC1091
-        source "$ROOT/.venv/bin/activate"
+        source "$VENV/bin/activate"
         PY=python
     fi
 

@@ -47,9 +47,18 @@ publish_pypi() {
 
     # Use venv if available, otherwise system python3
     local PY="python3"
-    if [[ -f "$ROOT/.venv/bin/activate" ]]; then
+    local VENV="${VIRTUAL_ENV:-}"
+    if [[ -z "$VENV" ]]; then
+        for candidate in "$ROOT/.venv" "$ROOT/../.venv"; do
+            if [[ -f "$candidate/bin/activate" ]]; then
+                VENV="$(cd "$candidate" && pwd)"
+                break
+            fi
+        done
+    fi
+    if [[ -n "$VENV" && -f "$VENV/bin/activate" ]]; then
         # shellcheck disable=SC1091
-        source "$ROOT/.venv/bin/activate"
+        source "$VENV/bin/activate"
         PY=python
     fi
 
@@ -57,7 +66,7 @@ publish_pypi() {
 
     # Vendor libdress C/C++ sources for the native extension + CUDA auto-build
     local VENDOR="src/dress/_vendored"
-    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/src/cuda"
+    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/src/cuda" "$VENDOR/src/mpi"
     cp "$ROOT/libdress/include/dress/dress.h"           "$VENDOR/include/dress/"
     cp "$ROOT/libdress/include/dress/delta_dress.h"     "$VENDOR/include/dress/"
     cp "$ROOT/libdress++/include/dress/dress.hpp"       "$VENDOR/include/dress/"
@@ -68,6 +77,7 @@ publish_pypi() {
     cp "$ROOT/libdress/src/delta_dress_impl.h"          "$VENDOR/src/"
     cp "$ROOT/libdress/src/cuda/dress_cuda.cu"          "$VENDOR/src/cuda/"
     cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"     "$VENDOR/src/cuda/"
+    cp "$ROOT/libdress/src/mpi/dress_mpi.c"             "$VENDOR/src/mpi/"
 
     $PY -m build
     echo "  ✓ wheel built: $(ls dist/*.whl)"
@@ -76,7 +86,10 @@ publish_pypi() {
     rm -rf "$VENDOR"
 
     if [[ $INSTALL_LOCAL -eq 1 ]]; then
-        $PY -m pip install --force-reinstall dist/*.whl
+        # Uninstall first to remove any editable-install .pth files that
+        # would shadow the wheel and redirect imports to the source tree.
+        $PY -m pip uninstall -y dress-graph 2>/dev/null || true
+        $PY -m pip install --no-deps dist/*.whl
         echo "  ✓ installed locally"
     fi
 
