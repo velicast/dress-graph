@@ -91,10 +91,27 @@ publish_pypi() {
         $PY -m pip uninstall -y dress-graph 2>/dev/null || true
         $PY -m pip install --no-deps dist/*.whl
 
-        # Remove stale auto-built artifacts so the CUDA module rebuilds
-        # from the freshly vendored sources on next import.
+        # Refresh the installed vendored sources so local CUDA auto-builds
+        # use the current workspace sources even when pip leaves stale files.
         local site=$($PY -c "import sysconfig; print(sysconfig.get_path('purelib'))")
-        rm -f "$site/dress/_vendored/src/cuda/"*.so "$site/dress/_vendored/src/cuda/"*.o 2>/dev/null || true
+        local site_vendor="$site/dress/_vendored"
+        rm -rf "$site_vendor"
+        mkdir -p "$site_vendor/include/dress/cuda" "$site_vendor/src/cuda" "$site_vendor/src/mpi"
+        cp "$ROOT/libdress/include/dress/dress.h"           "$site_vendor/include/dress/"
+        cp "$ROOT/libdress/include/dress/delta_dress.h"     "$site_vendor/include/dress/"
+        cp "$ROOT/libdress++/include/dress/dress.hpp"       "$site_vendor/include/dress/"
+        cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$site_vendor/include/dress/cuda/"
+        cp "$ROOT/libdress/src/dress.c"                     "$site_vendor/src/"
+        cp "$ROOT/libdress/src/delta_dress.c"               "$site_vendor/src/"
+        cp "$ROOT/libdress/src/delta_dress_impl.c"          "$site_vendor/src/"
+        cp "$ROOT/libdress/src/delta_dress_impl.h"          "$site_vendor/src/"
+        cp "$ROOT/libdress/src/cuda/dress_cuda.cu"          "$site_vendor/src/cuda/"
+        cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"     "$site_vendor/src/cuda/"
+        cp "$ROOT/libdress/src/mpi/dress_mpi.c"             "$site_vendor/src/mpi/"
+
+        # Remove stale auto-built artifacts so the CUDA module rebuilds
+        # from the refreshed vendored sources on next import.
+        rm -f "$site_vendor/src/cuda/"*.so "$site_vendor/src/cuda/"*.o 2>/dev/null || true
         echo "  ✓ installed locally"
     fi
 

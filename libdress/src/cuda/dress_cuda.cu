@@ -49,6 +49,92 @@
     } while (0)
 
 /* ------------------------------------------------------------------ */
+/*  Host-side batch planning                                           */
+/* ------------------------------------------------------------------ */
+
+typedef struct __work_batch_plan_t {
+    int      batch_count;
+    int     *batch_start;
+    int     *batch_size;
+    size_t  *batch_workspace;
+    size_t   max_workspace;
+    size_t  *d_item_offset;
+} work_batch_plan_t;
+
+static void init_work_batch_plan(work_batch_plan_t *plan)
+{
+    memset(plan, 0, sizeof(*plan));
+}
+
+static void free_work_batch_plan(work_batch_plan_t *plan)
+{
+    free(plan->batch_start);
+    free(plan->batch_size);
+    free(plan->batch_workspace);
+    if (plan->d_item_offset) cudaFree(plan->d_item_offset);
+    init_work_batch_plan(plan);
+}
+
+static void build_work_batch_plan(const int *requirement,
+                                  int item_count,
+                                  size_t workspace_budget_doubles,
+                                  work_batch_plan_t *plan)
+{
+    init_work_batch_plan(plan);
+    if (item_count <= 0) return;
+
+    plan->batch_start = (int *)malloc((size_t)item_count * sizeof(int));
+    plan->batch_size = (int *)malloc((size_t)item_count * sizeof(int));
+    plan->batch_workspace = (size_t *)malloc((size_t)item_count * sizeof(size_t));
+    size_t *item_offset = (size_t *)malloc((size_t)item_count * sizeof(size_t));
+    if (!plan->batch_start || !plan->batch_size || !plan->batch_workspace || !item_offset) {
+        fprintf(stderr, "Host allocation failed while planning CUDA work batches\n");
+        exit(EXIT_FAILURE);
+    }
+
+    int batch_idx = 0;
+    int batch_start = 0;
+    size_t batch_used = 0;
+
+    for (int item = 0; item < item_count; item++) {
+        size_t need = (size_t)requirement[item];
+        if (need == 0) need = 1;
+
+        if (need > workspace_budget_doubles) {
+            fprintf(stderr,
+                    "CUDA error: largest per-item workspace (%zu doubles) exceeds the configured batch budget (%zu doubles)\n",
+                    need, workspace_budget_doubles);
+            exit(EXIT_FAILURE);
+        }
+
+        if (batch_used > 0 && batch_used + need > workspace_budget_doubles) {
+            plan->batch_start[batch_idx] = batch_start;
+            plan->batch_size[batch_idx] = item - batch_start;
+            plan->batch_workspace[batch_idx] = batch_used;
+            if (batch_used > plan->max_workspace) plan->max_workspace = batch_used;
+            batch_idx++;
+            batch_start = item;
+            batch_used = 0;
+        }
+
+        item_offset[item] = batch_used;
+        batch_used += need;
+    }
+
+    plan->batch_start[batch_idx] = batch_start;
+    plan->batch_size[batch_idx] = item_count - batch_start;
+    plan->batch_workspace[batch_idx] = batch_used;
+    if (batch_used > plan->max_workspace) plan->max_workspace = batch_used;
+    plan->batch_count = batch_idx + 1;
+
+    CUDA_CHECK(cudaMalloc(&plan->d_item_offset, (size_t)item_count * sizeof(size_t)));
+    CUDA_CHECK(cudaMemcpy(plan->d_item_offset, item_offset,
+                          (size_t)item_count * sizeof(size_t), cudaMemcpyHostToDevice));
+
+    free(item_offset);
+}
+
+/* ------------------------------------------------------------------ */
 /*  Double-precision atomicMax via CAS                                 */
 /* ------------------------------------------------------------------ */
 
@@ -169,28 +255,31 @@ double kbn_sum_d(const double *arr, int n)
 /*  node_dress[u] = sqrt( 4 + Σ edge_weight[ei] * edge_dress[ei] )    */
 /*  where the sum runs over all half-edges in u's CSR row.             */
 /*                                                                     */
-/*  Each thread gets a slice of d_work sized (max_degree+1) doubles    */
-/*  for exact sort+KBN — no fixed buffer limit.                        */
+/*  Each thread gets an exact slice of d_work via work_offset[tid].    */
+/*  Batches are planned on the host so the shared scratch fits VRAM.   */
 /* ------------------------------------------------------------------ */
 
 __global__ void
-kernel_node_dress(const int    N,
-                  const int    max_buf,
+kernel_node_dress(const int    item_start,
+                  const int    item_count,
                   const int   * __restrict__ adj_offset,
                   const int   * __restrict__ adj_edge_idx,
                   const double* __restrict__ edge_weight,
                   const double* __restrict__ edge_dress,
                   double      * __restrict__ node_dress,
+                  const size_t* __restrict__ work_offset,
                   double      * __restrict__ d_work)
 {
-    int u = blockIdx.x * blockDim.x + threadIdx.x;
-    if (u >= N) return;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= item_count) return;
+
+    int u = item_start + tid;
 
     int base = adj_offset[u];
     int end  = adj_offset[u + 1];
     int deg  = end - base;
 
-    double *buf = d_work + (size_t)u * max_buf;
+    double *buf = d_work + work_offset[tid];
 
     buf[0] = 4.0;  /* self-loop contribution */
     for (int i = 0; i < deg; i++) {
@@ -214,9 +303,9 @@ kernel_node_dress(const int    N,
 
 __global__ void
 kernel_edge_dress_intercept(
-        const int     E,
+    const int     item_start,
+    const int     item_count,
         const int     variant,           /* dress_variant_t as int */
-        const int     max_buf,
         const int   * __restrict__ U,
         const int   * __restrict__ V,
         const double* __restrict__ edge_weight,
@@ -227,14 +316,17 @@ kernel_edge_dress_intercept(
         const int   * __restrict__ intercept_edge_vx,
         double      * __restrict__ edge_dress_next,
         unsigned long long * __restrict__ d_max_delta,
+        const size_t* __restrict__ work_offset,
         double      * __restrict__ d_work)
 {
-    int e = blockIdx.x * blockDim.x + threadIdx.x;
-    if (e >= E) return;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= item_count) return;
+
+    int e = item_start + tid;
 
     int u = U[e], v = V[e];
 
-    double *buf = d_work + (size_t)e * max_buf;
+    double *buf = d_work + work_offset[tid];
 
     /* Collect numerator terms into workspace for sort+KBN */
     int off = intercept_offset[e];
@@ -278,9 +370,9 @@ kernel_edge_dress_intercept(
 
 __global__ void
 kernel_edge_dress_merge(
-        const int     E,
+    const int     item_start,
+    const int     item_count,
         const int     variant,
-        const int     max_buf,
         const int   * __restrict__ U,
         const int   * __restrict__ V,
         const double* __restrict__ edge_weight,
@@ -291,14 +383,17 @@ kernel_edge_dress_merge(
         const int   * __restrict__ adj_edge_idx,
         double      * __restrict__ edge_dress_next,
         unsigned long long * __restrict__ d_max_delta,
+        const size_t* __restrict__ work_offset,
         double      * __restrict__ d_work)
 {
-    int e = blockIdx.x * blockDim.x + threadIdx.x;
-    if (e >= E) return;
+    int tid = blockIdx.x * blockDim.x + threadIdx.x;
+    if (tid >= item_count) return;
+
+    int e = item_start + tid;
 
     int u = U[e], v = V[e];
 
-    double *buf = d_work + (size_t)e * max_buf;
+    double *buf = d_work + work_offset[tid];
     int n = 0;
 
     /* Collect numerator terms for sort+KBN */
@@ -416,39 +511,99 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
     unsigned long long *d_max_delta;
     CUDA_CHECK(cudaMalloc(&d_max_delta, sizeof(unsigned long long)));
 
-    /* ── Per-thread workspaces for sort+KBN ─────────────────────── */
+    /* ── Batched per-thread workspaces for sort+KBN ──────────────── */
 
-    /* Phase 1 (node kernel): each of N threads needs (max_degree+1) doubles */
-    const int max_deg = g->max_degree;
-    const int node_buf = max_deg + 1;  /* +1 for self-loop constant */
+    int *node_requirement = (int *)malloc((size_t)N * sizeof(int));
+    int *edge_requirement = (int *)malloc((size_t)E * sizeof(int));
+    if ((N > 0 && !node_requirement) || (E > 0 && !edge_requirement)) {
+        fprintf(stderr, "Host allocation failed while preparing CUDA workspace requirements\n");
+        exit(EXIT_FAILURE);
+    }
 
-    double *d_work_node;
-    CUDA_CHECK(cudaMalloc(&d_work_node, (size_t)N * node_buf * sizeof(double)));
+    size_t max_requirement = 1;
+    for (int u = 0; u < N; u++) {
+        int need = g->adj_offset[u + 1] - g->adj_offset[u] + 1;
+        node_requirement[u] = need;
+        if ((size_t)need > max_requirement) max_requirement = (size_t)need;
+    }
 
-    /* Phase 2 (edge kernel): each of E threads needs at most
-     *   min(deg_u, deg_v) + 1 ≤ max_degree + 1 doubles.
-     * We over-allocate to max_degree + 1 per thread for simplicity. */
-    const int edge_buf = max_deg + 1;
+    for (int e = 0; e < E; e++) {
+        int need;
+        if (use_intercepts) {
+            need = g->intercept_offset[e + 1] - g->intercept_offset[e] + 1;
+        } else {
+            int u = g->U[e];
+            int v = g->V[e];
+            int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
+            int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
+            need = (deg_u < deg_v ? deg_u : deg_v) + 1;
+        }
+        edge_requirement[e] = need;
+        if ((size_t)need > max_requirement) max_requirement = (size_t)need;
+    }
 
-    double *d_work_edge;
-    CUDA_CHECK(cudaMalloc(&d_work_edge, (size_t)E * edge_buf * sizeof(double)));
+    size_t free_mem = 0, total_mem = 0;
+    CUDA_CHECK(cudaMemGetInfo(&free_mem, &total_mem));
+
+    const size_t reserve_bytes = 64ULL * 1024ULL * 1024ULL;
+    const size_t offset_bytes = ((size_t)N + (size_t)E) * sizeof(size_t);
+    const size_t max_requirement_bytes = max_requirement * sizeof(double);
+
+    size_t remaining_bytes = (free_mem > offset_bytes) ? (free_mem - offset_bytes) : 0;
+    size_t workspace_budget_bytes = 0;
+    if (remaining_bytes > reserve_bytes) {
+        workspace_budget_bytes = ((remaining_bytes - reserve_bytes) * 9) / 10;
+    }
+    if (workspace_budget_bytes < max_requirement_bytes) {
+        if (remaining_bytes < max_requirement_bytes) {
+            fprintf(stderr,
+                    "CUDA error: insufficient memory for the largest DRESS neighborhood scratch buffer (%zu bytes required, %zu bytes available after metadata)\n",
+                    max_requirement_bytes, remaining_bytes);
+            exit(EXIT_FAILURE);
+        }
+        workspace_budget_bytes = max_requirement_bytes;
+    }
+
+    size_t workspace_budget_doubles = workspace_budget_bytes / sizeof(double);
+    if (workspace_budget_doubles < max_requirement) {
+        workspace_budget_doubles = max_requirement;
+    }
+
+    work_batch_plan_t node_plan, edge_plan;
+    build_work_batch_plan(node_requirement, N, workspace_budget_doubles, &node_plan);
+    build_work_batch_plan(edge_requirement, E, workspace_budget_doubles, &edge_plan);
+    free(node_requirement);
+    free(edge_requirement);
+
+    double *d_work = NULL;
+    size_t workspace_doubles = node_plan.max_workspace > edge_plan.max_workspace
+                             ? node_plan.max_workspace
+                             : edge_plan.max_workspace;
+    if (workspace_doubles > 0) {
+        CUDA_CHECK(cudaMalloc(&d_work, workspace_doubles * sizeof(double)));
+    }
 
     /* ── Kernel launch config ──────────────────────────────────── */
 
     const int BLOCK = 256;
-    const int grid_N = (N + BLOCK - 1) / BLOCK;
-    const int grid_E = (E + BLOCK - 1) / BLOCK;
 
     /* ── Iteration loop ────────────────────────────────────────── */
 
     for (int iter = 0; iter < max_iterations; iter++) {
 
         /* Phase 1: compute node_dress */
-        kernel_node_dress<<<grid_N, BLOCK>>>(
-            N, node_buf,
-            d_adj_offset, d_adj_edge_idx,
-            d_edge_weight, d_edge_dress,
-            d_node_dress, d_work_node);
+        for (int batch = 0; batch < node_plan.batch_count; batch++) {
+            int item_start = node_plan.batch_start[batch];
+            int item_count = node_plan.batch_size[batch];
+            int grid = (item_count + BLOCK - 1) / BLOCK;
+            kernel_node_dress<<<grid, BLOCK>>>(
+                item_start, item_count,
+                d_adj_offset, d_adj_edge_idx,
+                d_edge_weight, d_edge_dress,
+                d_node_dress,
+                node_plan.d_item_offset + item_start,
+                d_work);
+        }
 
         /* Reset max_delta to 0 */
         unsigned long long zero = 0ULL;
@@ -456,23 +611,32 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
                               sizeof(zero), cudaMemcpyHostToDevice));
 
         /* Phase 2: compute edge_dress_next */
-        if (use_intercepts) {
-            kernel_edge_dress_intercept<<<grid_E, BLOCK>>>(
-                E, variant, edge_buf,
-                d_U, d_V,
-                d_edge_weight, d_edge_dress, d_node_dress,
-                d_intercept_offset,
-                d_intercept_edge_ux, d_intercept_edge_vx,
-                d_edge_dress_next,
-                d_max_delta, d_work_edge);
-        } else {
-            kernel_edge_dress_merge<<<grid_E, BLOCK>>>(
-                E, variant, edge_buf,
-                d_U, d_V,
-                d_edge_weight, d_edge_dress, d_node_dress,
-                d_adj_offset, d_adj_target, d_adj_edge_idx,
-                d_edge_dress_next,
-                d_max_delta, d_work_edge);
+        for (int batch = 0; batch < edge_plan.batch_count; batch++) {
+            int item_start = edge_plan.batch_start[batch];
+            int item_count = edge_plan.batch_size[batch];
+            int grid = (item_count + BLOCK - 1) / BLOCK;
+            if (use_intercepts) {
+                kernel_edge_dress_intercept<<<grid, BLOCK>>>(
+                    item_start, item_count, variant,
+                    d_U, d_V,
+                    d_edge_weight, d_edge_dress, d_node_dress,
+                    d_intercept_offset,
+                    d_intercept_edge_ux, d_intercept_edge_vx,
+                    d_edge_dress_next,
+                    d_max_delta,
+                    edge_plan.d_item_offset + item_start,
+                    d_work);
+            } else {
+                kernel_edge_dress_merge<<<grid, BLOCK>>>(
+                    item_start, item_count, variant,
+                    d_U, d_V,
+                    d_edge_weight, d_edge_dress, d_node_dress,
+                    d_adj_offset, d_adj_target, d_adj_edge_idx,
+                    d_edge_dress_next,
+                    d_max_delta,
+                    edge_plan.d_item_offset + item_start,
+                    d_work);
+            }
         }
 
         /* Phase 3: swap double buffers */
@@ -524,6 +688,7 @@ cleanup:
     cudaFree(d_edge_dress_next);
     cudaFree(d_node_dress);
     cudaFree(d_max_delta);
-    cudaFree(d_work_node);
-    cudaFree(d_work_edge);
+    if (d_work) cudaFree(d_work);
+    free_work_batch_plan(&node_plan);
+    free_work_batch_plan(&edge_plan);
 }

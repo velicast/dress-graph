@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.1] - 2026-03-16
+
+### Fixed
+- **CUDA workspace sizing**: the CUDA DRESS backend no longer allocates temporary scratch space for every node and edge from the graph-wide `max_degree`. It now plans node and edge work in batches using exact per-item scratch requirements and reuses a shared device workspace, which eliminates out-of-memory failures on large skewed graphs while preserving exact bitwise-equal CPU/CUDA results.
+
 ## [0.6.0] - 2026-03-16
 
 ### Added
