@@ -4,22 +4,245 @@
 
 PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph) Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph) NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph) CRAN [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/dress.graph)](https://cran.r-project.org/package=dress.graph)
 
-Quickstart [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/quickstart.ipynb)
-Prism vs K₃,₃ [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/prism_vs_k33.ipynb)
-Rook vs Shrikhande [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/delta_dress_rook_shrikhande.ipynb)
+**Deterministic graph fingerprinting. No training. No parameters. Just math.**
 
-## A Continuous Framework for Structural Graph Refinement
+DRESS assigns every edge in a graph a continuous structural similarity score via a convergent dynamical system. The sorted vector of scores is a canonical fingerprint: isomorphic graphs always get identical fingerprints.
 
-We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a *canonical fingerprint*: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is *isomorphism-invariant* by construction, *numerically stable* (all values lie in [0, 2]), *fast* and *embarrassingly parallel* to compute: each iteration costs O(m · d_max) and convergence is guaranteed by Birkhoff contraction. As a direct consequence of these properties, DRESS is provably at least as expressive as the 2-dimensional Weisfeiler–Leman (2-WL) test, at a fraction of the cost (O(m · d_max) vs. O(n³) per iteration). We generalize the original equation (Castrillo, León, and Gómez, 2018) to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce Δ-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. Δ¹-DRESS empirically separates all 51,816 graphs across 34 hard benchmark families (16 SRG families totaling 51,718 graphs from the complete Spence collection and McKay's additional SRG data, plus 18 constructed hard families), resolving over 576 million within-family non-isomorphic pairs, and is the cheapest known method that strictly exceeds 3-WL. Iterated deletion (Δᵏ-DRESS) climbs the CFI staircase, achieving (k+2)-WL expressiveness at each depth k. The algorithm is embarrassingly parallel in two orthogonal ways - across the vertex-deleted subgraphs and across edge updates within each iteration - enabling distributed/cloud plus multi-core/GPU/SIMD implementations. Successfully applied to a handful of downstream applications.
+```bash
+pip install dress-graph
+```
 
-> **Note on Wrappers:** Please report any bugs you find while using the language wrappers (Python, Rust, JS, etc.). I am moving quickly and relying on AI to speed up the development of the wrappers, but I am directly and carefully maintaining the core C backend.
+```python
+from dress import dress_fit
 
-The arXiv papers is outdated and will be updated next week.
+# Are these two graphs the same structure?
+prism  = dress_fit(6, [0,1,2,0,1,2,3,4,5], [1,2,0,3,4,5,4,5,3])
+k33    = dress_fit(6, [0,0,0,1,1,1,2,2,2], [3,4,5,3,4,5,3,4,5])
 
-For the theory and generalizations (DRESS Family), see the research paper:
-[**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
+print("Prism:", sorted(prism.edge_dress))
+print("K3,3: ", sorted(k33.edge_dress))
+print("Distinguished:", sorted(prism.edge_dress) != sorted(k33.edge_dress))
+# → True (DRESS separates them; 1-WL cannot)
+```
 
-## The equation
+Try it now: [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/quickstart.ipynb)
+
+## Why DRESS?
+
+| | DRESS | WL (color refinement) | GNNs |
+|---|---|---|---|
+| **Output** | Continuous edge vector | Discrete color histogram | Learned embedding |
+| **Parameters** | Zero | Zero | Millions |
+| **Training data** | None | None | Required |
+| **Per-iteration cost** | O(m · d_max) | O(n^(k+1)) for k-WL | Varies |
+| **Deterministic** | Yes | Yes | No |
+| **Expressiveness** | ≥ 2-WL | = k-WL at level k | ≤ 1-WL (standard MPNN) |
+
+## Applications
+
+- **[Graph Isomorphism](https://velicast.github.io/dress-graph/applications/isomorphism/):** Δ¹-DRESS separates **100% of 51,816** hard benchmark graphs (576M+ pairs). Strictly exceeds 3-WL.
+- **[Classification](https://velicast.github.io/dress-graph/applications/classification/):** DRESS fingerprints as features for standard classifiers, matching WL baselines on TU datasets.
+- **[Community Detection](https://velicast.github.io/dress-graph/applications/community-detection/):** Edge values naturally classify intra- vs inter-community edges.
+- **[Graph Retrieval](https://velicast.github.io/dress-graph/applications/retrieval/):** Fingerprint distances correlate with graph edit distance.
+- **[GED Regression](https://velicast.github.io/dress-graph/applications/ged-regression/):** 15× lower MSE than TaGSim on LINUX graphs, no GNN needed.
+- **[Edge Robustness](https://velicast.github.io/dress-graph/applications/edge-robustness/):** O(km) edge-importance ranking beating betweenness centrality.
+- **[DRESS + GNN](https://velicast.github.io/dress-graph/applications/dress-gnns/):** Plug-in features that boost GIN/PNA/GPS on ZINC-12K.
+
+## Δ^k-DRESS (higher-order refinement)
+
+```python
+from dress import delta_dress_fit
+
+result = delta_dress_fit(
+    n_vertices=4,
+    sources=[0, 1, 2, 0],
+    targets=[1, 2, 3, 3],
+    k=1,              # delete 1 vertex at a time
+    epsilon=1e-6,
+)
+print(result.histogram)   # histogram of edge DRESS values across all subgraphs
+print(result.hist_size)   # number of bins
+```
+
+## Examples & experiments
+
+End-to-end examples for every language and backend (CPU, CUDA, MPI, MPI+CUDA) live in **[`examples/`](examples/)**.
+
+Reproducible benchmarks, datasets, and experiment scripts (isomorphism, classification, retrieval, GED regression, and more) live in the dedicated **[dress-experiments](https://github.com/velicast/dress-experiments)** repository.
+
+## Interactive notebooks
+
+| Notebook | Description |
+|----------|-------------|
+| [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/quickstart.ipynb) | Quickstart: DRESS on the Karate Club graph |
+| [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/prism_vs_k33.ipynb) | Prism vs K₃,₃: separates graphs that 1-WL cannot |
+| [![Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/velicast/dress-graph/blob/main/notebooks/delta_dress_rook_shrikhande.ipynb) | Rook vs Shrikhande: Δ¹-DRESS beats 3-WL |
+
+## Language bindings
+
+C · C++ · Python · Rust · Go · Julia · R · MATLAB/Octave · JavaScript/WASM
+
+All backends: **CPU**, **CUDA**, **MPI**, **MPI+CUDA**. Switch by changing the import.
+
+See the [full documentation →](https://velicast.github.io/dress-graph/) for complete API reference.
+
+<details>
+<summary><b>Quick examples (all languages)</b></summary>
+
+<details>
+<summary>C</summary>
+
+```c
+#include "dress/dress.h"            // CPU
+#include "dress/cuda/dress.h"       // CUDA  (replaces CPU header)
+#include "dress/mpi/dress.h"        // MPI   (replaces CPU header)
+#include "dress/mpi/cuda/dress.h"   // MPI + CUDA (single include)
+
+p_dress_graph_t g = init_dress_graph(N, E, U, V, W, DRESS_VARIANT_UNDIRECTED, 0);
+int hs; int64_t ns;
+int64_t *hist = delta_dress_fit(g, /*k=*/1, /*iter=*/100, /*eps=*/1e-6,
+                                &hs, /*keep_multisets=*/0, NULL, &ns);
+free_dress_graph(g);
+```
+
+</details>
+
+<details>
+<summary>C++</summary>
+
+```cpp
+#include "dress/dress.hpp"              // CPU           → ::DRESS
+#include "dress/cuda/dress.hpp"         // CUDA          → cuda::DRESS
+#include "dress/mpi/dress.hpp"          // MPI           → mpi::DRESS
+#include "dress/mpi/cuda/dress.hpp"     // MPI + CUDA    → mpi::cuda::DRESS
+
+DRESS g(N, U, V);                       // (or cuda::DRESS, mpi::DRESS, …)
+auto r = g.deltaFit(/*k=*/1, /*maxIter=*/100, /*eps=*/1e-6);
+// r.histogram, r.hist_size, r.num_subgraphs
+```
+
+</details>
+
+<details>
+<summary>Python</summary>
+
+```python
+from dress import delta_dress_fit            # CPU
+from dress.cuda import delta_dress_fit       # CUDA
+from dress.mpi import delta_dress_fit        # MPI
+from dress.mpi.cuda import delta_dress_fit   # MPI + CUDA
+
+result = delta_dress_fit(
+    n_vertices=6, sources=[0,1,2,0,1,2,3,4,5],
+    targets=[1,2,0,3,4,5,4,5,3], k=1,
+)
+print(result.histogram, result.hist_size)
+```
+
+</details>
+
+<details>
+<summary>Rust</summary>
+
+```rust
+use dress_graph::DRESS;                     // CPU
+use dress_graph::cuda::DRESS;               // CUDA
+use dress_graph::mpi;                       // MPI
+use dress_graph::mpi::cuda;                 // MPI + CUDA
+
+let r = DRESS::delta_fit(
+    6, sources, targets, None,
+    /*k=*/1, /*max_iter=*/100, /*eps=*/1e-6,
+    Variant::Undirected, false, false, 0, 1,
+)?;
+```
+
+</details>
+
+<details>
+<summary>Go</summary>
+
+```go
+import dress "github.com/velicast/dress-graph/go"            // CPU
+import dress "github.com/velicast/dress-graph/go/cuda"        // CUDA
+import dress "github.com/velicast/dress-graph/go/mpi"         // MPI
+import dress "github.com/velicast/dress-graph/go/mpi/cuda"    // MPI + CUDA
+
+r, err := dress.DeltaDressFit(6, sources, targets, nil,
+    1, dress.Undirected, 100, 1e-6, false, false, 0, 1)
+```
+
+</details>
+
+<details>
+<summary>Julia</summary>
+
+```julia
+using DRESS                      # CPU
+using DRESS.CUDA                 # CUDA
+using DRESS; using DRESS.MPI     # MPI
+
+r = delta_dress_fit(6, sources, targets; k=1)
+# r.histogram, r.hist_size, r.num_subgraphs
+```
+
+</details>
+
+<details>
+<summary>R</summary>
+
+```r
+library(dress.graph)
+
+delta_dress_fit(6, sources, targets, k = 1L)         # CPU
+cuda$delta_dress_fit(6, sources, targets, k = 1L)     # CUDA
+mpi$delta_dress_fit(6, sources, targets, k = 1L)      # MPI
+mpi$cuda$delta_dress_fit(6, sources, targets, k = 1L) # MPI + CUDA
+```
+
+</details>
+
+<details>
+<summary>MATLAB / Octave</summary>
+
+```matlab
+result = delta_dress_fit(6, sources, targets, 'K', 1);
+% result.histogram, result.hist_size, result.num_subgraphs
+```
+
+</details>
+
+<details>
+<summary>JavaScript / WASM</summary>
+
+```javascript
+import { deltaDressFit } from './dress.js';
+
+const r = await deltaDressFit({
+    numVertices: 6, sources, targets, k: 1,
+});
+// r.histogram, r.histSize, r.numSubgraphs
+```
+
+</details>
+
+</details>
+
+## Benchmarks
+
+Convergence on real-world graphs (ε = 10⁻⁶):
+
+| Graph | Vertices | Edges | Iterations |
+|-------|----------|-------|------------|
+| Amazon co-purchasing | 548K | 926K | 18 |
+| Wiki-Vote | 8K | 104K | 17 |
+| LiveJournal | 4M | 28M | 30 |
+| Facebook | 59M | 93M | 26 |
+
+Even on graphs with 59M vertices, DRESS converges in fewer than 31 iterations.
+
+<details>
+<summary><b>The equation</b></summary>
 
 Fixed-point form:
 
@@ -45,7 +268,10 @@ $$
 
 and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 
-## Key properties
+</details>
+
+<details>
+<summary><b>Key properties</b></summary>
 
 | Property |
 |----------|
@@ -68,307 +294,49 @@ and $N[u] = N(u) \cup \\{u\\}$ is the closed neighborhood.
 | Provably at least as powerful as 2-WL (>= 2-WL) |
 | [Locally invertible](https://velicast.github.io/dress-graph/theory/properties/#local-invertibility-incremental-edge-query): Any single edge value recoverable from its neighborhood in O(deg) after one global fit |
 
-## Benchmarks
-
-Convergence on real-world graphs (tolerance ε = 10⁻⁶, max 100 iterations):
-
-| Graph | Vertices | Edges | Iterations | Final δ |
-|-------|----------|-------|------------|---------|
-| Amazon product co-purchasing | 548,552 | 925,872 | 18 | 6.35e-7 |
-| Wiki-Vote | 8,298 | 103,689 | 17 | 8.31e-7 |
-| LiveJournal social network | 4,033,138 | 27,933,062 | 30 | 7.09e-7 |
-| Facebook (konect) | 59,216,215 | 92,522,012 | 26 | 6.84e-7 |
-| Facebook (UCI/UNI) | 58,790,783 | 92,208,195 | 26 | 6.84e-7 |
-
-- **Low iteration count.** Even on graphs with tens of millions of vertices and edges, DRESS converges in fewer than 31 iterations - consistent with the contraction-mapping guarantee.
-- **Scale independence.** Iteration count grows very slowly with graph size. A graph with 59 M vertices needs only ~1.5× the iterations of one with 8 K vertices.
-- **Uniform residual.** The final δ is consistently on the order of 10⁻⁷, indicating that convergence quality does not degrade with graph size.
-
-## Current Experimented Applications
-
-- **[Graph Isomorphism](https://velicast.github.io/dress-graph/applications/isomorphism/)**: sorting DRESS edge values produces a canonical fingerprint.
-
-  **Δ¹-DRESS: 51,816 graphs, 34 hard families, 100 % separated** ([paper](https://github.com/velicast/dress-graph/blob/main/research/delta1-dress-hard-families.pdf))
-
-  Plain DRESS (Δ⁰) assigns a single uniform value to every edge in an SRG, producing zero separation. Δ¹-DRESS breaks this symmetry by running DRESS on each vertex-deleted subgraph. Tested on the complete [Spence SRG collection](https://www.maths.gla.ac.uk/~es/srgraphs.php) (12 families, 43,703 graphs on up to 64 vertices), four additional SRG families from [McKay's collections](https://users.cecs.anu.edu.au/~bdm/data/graphs.html) (8,015 graphs), and 18 constructed hard families (102 graphs including Miyazaki, Chang, Paley, Latin square, and Steiner constructions):
-
-  | Category | Families | Graphs | Pairs resolved | Separated |
-  |----------|:--------:|:------:|:--------------:|:---------:|
-  | Spence SRG collection | 12 | 43,703 | 559,974,510 | **100 %** |
-  | Additional SRG families | 4 | 8,015 | 16,132,661 | **100 %** |
-  | Constructed hard families | 18 | 102 | 664 | **100 %** |
-  | **Total (distinct)** | **34** | **51,816** | **576,107,835** | **100 %** |
-
-  Δ¹-DRESS is strictly more powerful than 3-WL: the Rook L₂(4) vs. Shrikhande pair SRG(16,6,2,2), known to defeat 3-WL, is separated. This places Δ¹-DRESS strictly above 3-WL; whether it is bounded above by 4-WL (≡ 3-FWL) remains open.
-
-  **CFI Staircase: Δᵏ-DRESS climbs the WL hierarchy**
-
-  The [CFI construction](https://en.wikipedia.org/wiki/Cai%E2%80%93F%C3%BCrer%E2%80%93Immerman_graph) produces the canonical hard instances for every WL level. Δᵏ-DRESS matches $(k{+}2)$-WL on each:
-
-  | Base graph | \|V(CFI)\| | WL req. | Δ⁰ | Δ¹ | Δ² | Δ³ |
-  |:----------:|:----------:|:-------:|:--:|:--:|:--:|:--:|
-  | $K_3$ | 6 | 2-WL | ✓ | ✓ | ✓ | ✓ |
-  | $K_4$ | 16 | 3-WL | ✗ | ✓ | ✓ | ✓ |
-  | $K_5$ | 40 | 4-WL | ✗ | ✗ | ✓ | ✓ |
-  | $K_6$ | 96 | 5-WL | ✗ | ✗ | ✗ | ✓ |
-  | $K_7$ | 224 | 6-WL | ✗ | ✗ | ✗ | ✗ |
-
-  Each deletion level adds exactly one WL dimension. See [Paper 2](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) for proofs and the full table up to $K_{10}$.
-
-  **Standard benchmarks: Original-DRESS (Δ⁰)**
-
-  | Benchmark | Accuracy |
-  |-----------|----------|
-  | MiVIA database | 100 % |
-  | IsoBench | 100 % |
-- **[Community Detection](https://velicast.github.io/dress-graph/applications/community-detection/)**: DRESS values classify edges as intra- or inter-community, improving SCAN and enabling agglomerative hierarchical clustering.
-- **[Classification](https://velicast.github.io/dress-graph/applications/classification/)**: percentile-based DRESS fingerprints fed to standard classifiers match or exceed Weisfeiler-Leman baselines on TU benchmark datasets.
-- **[Retrieval](https://velicast.github.io/dress-graph/applications/retrieval/)**: DRESS fingerprint distances correlate strongly with graph edit distance, achieving state-of-the-art precision on GED-based retrieval benchmarks.
-- **[GED Regression](https://velicast.github.io/dress-graph/applications/ged-regression/)**: DRESS fingerprint differences fed to a simple regressor predict graph edit distance with 15× lower MSE than TaGSim on LINUX graphs - no GNN required.
-- **[Edge Robustness](https://velicast.github.io/dress-graph/applications/edge-robustness/)**: DRESS edge values double as an O(km) edge-importance ranking that outperforms O(nm) betweenness centrality and four other baselines (65–97% win rates, p < 0.0001 across 224 graphs).
-- **[DRESS + GNN](https://velicast.github.io/dress-graph/applications/dress-gnns/)**: DRESS node/edge values injected as plug-in features into GIN, PNA, GPS, and custom DRESSNet architectures on ZINC-12K molecular property prediction. GIN+bond+DRESS drops MAE from 0.526 → 0.235; PNA+bond+DRESS achieves 0.212 MAE, competitive with the published PNA baseline (0.188).
-
-Full experimental setups, datasets, and scripts are available in the **[dress-experiments](https://github.com/velicast/dress-experiments)** repository.
-
-## Experiments
-
-All benchmarks, datasets, and reproducible scripts live in a dedicated repository:
-
-**[dress-experiments](https://github.com/velicast/dress-experiments)** - isomorphism (SRG, CFI, constructed families), classification, retrieval, GED regression, and more.
-
-## Quick start (Python)
-
-```bash
-pip install dress-graph
-```
-
-```python
-from dress import dress_fit
-
-result = dress_fit(
-    n_vertices=4,
-    sources=[0, 1, 2, 0],
-    targets=[1, 2, 3, 3],
-)
-print(result.edge_dress)  # DRESS value for each edge
-```
-
-### Δ^k-DRESS (higher-order refinement)
-
-```python
-from dress import delta_dress_fit
-
-result = delta_dress_fit(
-    n_vertices=4,
-    sources=[0, 1, 2, 0],
-    targets=[1, 2, 3, 3],
-    k=1,              # delete 1 vertex at a time
-    epsilon=1e-6,
-)
-print(result.histogram)   # histogram of edge DRESS values across all subgraphs
-print(result.hist_size)   # number of bins
-```
-
-```python
-#------------------------
-# pip install dress-graph
-#------------------------
-
-"""Prism vs K3,3 (both 3-regular on 6 nodes). Confound 1-WL."""
-
-from dress import dress_fit
-
-# Prism (C3 □ K2): triangles 0-1-2 and 3-4-5, spokes 0-3 1-4 2-5
-prism_s = [0, 1, 2, 0, 1, 2, 3, 4, 5]
-prism_t = [1, 2, 0, 3, 4, 5, 4, 5, 3]
-
-# K3,3: bipartite {0,1,2} ↔ {3,4,5}
-k33_s = [0, 0, 0, 1, 1, 1, 2, 2, 2]
-k33_t = [3, 4, 5, 3, 4, 5, 3, 4, 5]
-
-r1 = dress_fit(6, prism_s, prism_t)
-r2 = dress_fit(6, k33_s, k33_t)
-
-print("Prism edge_dress:", sorted(r1.edge_dress))
-print("K3,3  edge_dress:", sorted(r2.edge_dress))
-fp1 = sorted(r1.edge_dress)
-fp2 = sorted(r2.edge_dress)
-print("Distinguished:", fp1 != fp2)
-```
-
-## Interactive notebooks
-
-| Notebook | Description |
-|----------|-------------|
-| [Quickstart](notebooks/quickstart.ipynb) | Compute DRESS on the Karate Club graph and visualize edge roles |
-| [Prism vs K₃,₃](notebooks/prism_vs_k33.ipynb) | DRESS distinguishes two 3-regular graphs that confound 1-WL |
-| [Rook vs Shrikhande](notebooks/delta_dress_rook_shrikhande.ipynb) | Δ¹-DRESS distinguishes two cospectral SRG(16,6,2,2) mates |
-
-## Language bindings
-
-DRESS is implemented in C with bindings for:
-
-- **C / C++**: static and shared libraries ([Homebrew](https://github.com/velicast/homebrew-dress-graph), [vcpkg](vcpkg/), or build from source)
-- **Python**: pybind11 (`pip install dress-graph`)
-- **Rust**: `dress-graph` crate
-- **Go**: CGo bindings
-- **Julia**: native FFI module
-- **R**: `.Call` interface
-- **MATLAB / Octave**: MEX gateway
-- **JavaScript / WASM**: browser and Node.js (CPU only)
-
-All backends (**CPU**, **CUDA** (GPU), **MPI** (distributed), and **MPI+CUDA**) are supported across all native language bindings.
-An **igraph** C wrapper (`libdress-igraph`) is also available with the same CPU / CUDA / MPI / MPI+CUDA backend matrix.
-JavaScript / WASM is CPU-only (browser).
-
-Every binding exposes the same `delta_dress_fit` function. Switching between CPU, CUDA,
-MPI, and MPI+CUDA is done purely by changing the import / include:
+</details>
 
 <details>
-<summary><b>C</b></summary>
+<summary><b>Isomorphism results (SRG & CFI)</b></summary>
 
-```c
-#include "dress/dress.h"            // CPU
-#include "dress/cuda/dress.h"       // CUDA  (replaces CPU header)
-#include "dress/mpi/dress.h"        // MPI   (replaces CPU header)
-#include "dress/mpi/cuda/dress.h"   // MPI + CUDA (single include)
+**Δ¹-DRESS: 51,816 graphs, 34 hard families, 100 % separated** ([paper](https://github.com/velicast/dress-graph/blob/main/research/delta1-dress-hard-families.pdf))
 
-p_dress_graph_t g = init_dress_graph(N, E, U, V, W, DRESS_VARIANT_UNDIRECTED, 0);
-int hs; int64_t ns;
-int64_t *hist = delta_dress_fit(g, /*k=*/1, /*iter=*/100, /*eps=*/1e-6,
-                                &hs, /*keep_multisets=*/0, NULL, &ns);
-free_dress_graph(g);
-```
+Plain DRESS (Δ⁰) assigns a single uniform value to every edge in an SRG, producing zero separation. Δ¹-DRESS breaks this symmetry by running DRESS on each vertex-deleted subgraph. Tested on the complete [Spence SRG collection](https://www.maths.gla.ac.uk/~es/srgraphs.php) (12 families, 43,703 graphs on up to 64 vertices), four additional SRG families from [McKay's collections](https://users.cecs.anu.edu.au/~bdm/data/graphs.html) (8,015 graphs), and 18 constructed hard families (102 graphs including Miyazaki, Chang, Paley, Latin square, and Steiner constructions):
+
+| Category | Families | Graphs | Pairs resolved | Separated |
+|----------|:--------:|:------:|:--------------:|:---------:|
+| Spence SRG collection | 12 | 43,703 | 559,974,510 | **100 %** |
+| Additional SRG families | 4 | 8,015 | 16,132,661 | **100 %** |
+| Constructed hard families | 18 | 102 | 664 | **100 %** |
+| **Total (distinct)** | **34** | **51,816** | **576,107,835** | **100 %** |
+
+Δ¹-DRESS is strictly more powerful than 3-WL: the Rook L₂(4) vs. Shrikhande pair SRG(16,6,2,2), known to defeat 3-WL, is separated.
+
+**CFI Staircase: Δᵏ-DRESS climbs the WL hierarchy**
+
+The [CFI construction](https://en.wikipedia.org/wiki/Cai%E2%80%93F%C3%BCrer%E2%80%93Immerman_graph) produces the canonical hard instances for every WL level. Δᵏ-DRESS matches $(k{+}2)$-WL on each:
+
+| Base graph | \|V(CFI)\| | WL req. | Δ⁰ | Δ¹ | Δ² | Δ³ |
+|:----------:|:----------:|:-------:|:--:|:--:|:--:|:--:|
+| $K_3$ | 6 | 2-WL | ✓ | ✓ | ✓ | ✓ |
+| $K_4$ | 16 | 3-WL | ✗ | ✓ | ✓ | ✓ |
+| $K_5$ | 40 | 4-WL | ✗ | ✗ | ✓ | ✓ |
+| $K_6$ | 96 | 5-WL | ✗ | ✗ | ✗ | ✓ |
+| $K_7$ | 224 | 6-WL | ✗ | ✗ | ✗ | ✗ |
+
+Each deletion level adds exactly one WL dimension. See [Paper 2](https://github.com/velicast/dress-graph/blob/main/research/vertex-k-DRESS.pdf) for proofs and the full table up to $K_{10}$.
+
+**Standard benchmarks: Original-DRESS (Δ⁰)**
+
+| Benchmark | Accuracy |
+|-----------|----------|
+| MiVIA database | 100 % |
+| IsoBench | 100 % |
 
 </details>
 
 <details>
-<summary><b>C++</b></summary>
-
-```cpp
-#include "dress/dress.hpp"              // CPU           → ::DRESS
-#include "dress/cuda/dress.hpp"         // CUDA          → cuda::DRESS
-#include "dress/mpi/dress.hpp"          // MPI           → mpi::DRESS
-#include "dress/mpi/cuda/dress.hpp"     // MPI + CUDA    → mpi::cuda::DRESS
-
-DRESS g(N, U, V);                       // (or cuda::DRESS, mpi::DRESS, …)
-auto r = g.deltaFit(/*k=*/1, /*maxIter=*/100, /*eps=*/1e-6);
-// r.histogram, r.hist_size, r.num_subgraphs
-```
-
-</details>
-
-<details>
-<summary><b>Python</b></summary>
-
-```python
-from dress import delta_dress_fit            # CPU
-from dress.cuda import delta_dress_fit       # CUDA
-from dress.mpi import delta_dress_fit        # MPI
-from dress.mpi.cuda import delta_dress_fit   # MPI + CUDA
-
-result = delta_dress_fit(
-    n_vertices=6, sources=[0,1,2,0,1,2,3,4,5],
-    targets=[1,2,0,3,4,5,4,5,3], k=1,
-)
-print(result.histogram, result.hist_size)
-```
-
-</details>
-
-<details>
-<summary><b>Rust</b></summary>
-
-```rust
-use dress_graph::DRESS;                     // CPU
-use dress_graph::cuda::DRESS;               // CUDA
-
-// MPI / MPI + CUDA
-use dress_graph::mpi;
-use dress_graph::mpi::cuda;
-
-let r = DRESS::delta_fit(
-    6, sources, targets, None,
-    /*k=*/1, /*max_iter=*/100, /*eps=*/1e-6,
-    Variant::Undirected, false, false, 0, 1,
-)?;
-// MPI variant:
-let r = mpi::delta_fit(6, sources, targets, None,
-    1, 100, 1e-6, Variant::Undirected, false, false, &comm)?;
-```
-
-</details>
-
-<details>
-<summary><b>Go</b></summary>
-
-```go
-import dress "github.com/velicast/dress-graph/go"            // CPU
-import dress "github.com/velicast/dress-graph/go/cuda"        // CUDA
-import dress "github.com/velicast/dress-graph/go/mpi"         // MPI
-import dress "github.com/velicast/dress-graph/go/mpi/cuda"    // MPI + CUDA
-
-r, err := dress.DeltaDressFit(6, sources, targets, nil,
-    1, dress.Undirected, 100, 1e-6, false, false, 0, 1)
-// r.Histogram, r.HistSize, r.NumSubgraphs
-```
-
-</details>
-
-<details>
-<summary><b>Julia</b></summary>
-
-```julia
-using DRESS                      # CPU
-using DRESS.CUDA                 # CUDA
-using DRESS; using DRESS.MPI     # MPI
-using DRESS; using DRESS.MPI.CUDA  # MPI + CUDA
-
-r = delta_dress_fit(6, sources, targets; k=1)
-# r.histogram, r.hist_size, r.num_subgraphs
-```
-
-</details>
-
-<details>
-<summary><b>R</b></summary>
-
-```r
-library(dress.graph)
-
-delta_dress_fit(6, sources, targets, k = 1L)         # CPU
-cuda$delta_dress_fit(6, sources, targets, k = 1L)     # CUDA
-mpi$delta_dress_fit(6, sources, targets, k = 1L)      # MPI
-mpi$cuda$delta_dress_fit(6, sources, targets, k = 1L) # MPI + CUDA
-```
-
-</details>
-
-<details>
-<summary><b>MATLAB / Octave</b></summary>
-
-```matlab
-result = delta_dress_fit(6, sources, targets, 'K', 1);
-% result.histogram, result.hist_size, result.num_subgraphs
-```
-
-</details>
-
-<details>
-<summary><b>JavaScript / WASM</b></summary>
-
-```javascript
-import { deltaDressFit } from './dress.js';
-
-const r = await deltaDressFit({
-    numVertices: 6, sources, targets, k: 1,
-});
-// r.histogram, r.histSize, r.numSubgraphs
-```
-
-</details>
-
-## API Reference
+<summary><b>Full API reference (all languages × backends)</b></summary>
 
 End-to-end examples for every language × backend live in [`examples/`](examples/).
 Each example compares **Prism vs K₃,₃** (Δ⁰-DRESS, CPU/CUDA) or
@@ -643,6 +611,8 @@ const d = g.get(u, v);   // query edge similarity
 g.free();
 ```
 
+</details>
+
 ## Building from source
 
 ```bash
@@ -657,11 +627,14 @@ cd python && pip install .
 Full documentation (theory, applications, API reference):
 [https://velicast.github.io/dress-graph/](https://velicast.github.io/dress-graph/)
 
+For the theory and generalizations (DRESS Family), see the research paper:
+[**arXiv:2602.20833**](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
+
 ## Publications
 
-The arXiv papers is outdated and will be updated next week.
-
 - E. Castrillo. *DRESS: A Continuous Framework for Structural Graph Refinement.* [arXiv:2602.20833](https://github.com/velicast/dress-graph/blob/main/research/k-DRESS.pdf)
+- E. Castrillo. *DRESS and the WL Hierarchy: Climbing One Deletion at a Time.* [arXiv:2602.21557](https://arxiv.org/abs/2602.21557)
+- E. Castrillo. *Breaking Hard Isomorphism Benchmarks with DRESS.* [arXiv:2603.18582](https://arxiv.org/abs/2603.18582)
 - E. Castrillo, E. León, J. Gómez. *Dynamic Structural Similarity on Graphs.* [arXiv:1805.01419](https://arxiv.org/abs/1805.01419)
 - E. Castrillo, E. León, J. Gómez. *Fast Heuristic Algorithm for Multi-Scale Hierarchical Community Detection.* [ASONAM 2017](https://dl.acm.org/citation.cfm?doid=3110025.3110125)
 - E. Castrillo, E. León, J. Gómez. *High-Quality Disjoint and Overlapping Community Structure in Large-Scale Complex Networks.* [arXiv:1805.12238](https://arxiv.org/abs/1805.12238)
@@ -694,10 +667,8 @@ If you use DRESS in your research, please cite:
 }
 ```
 
----
-
 > **Why "DRESS"?** DRESS computes an edge labeling that reveals the graph's hidden
-> structural identity - it *dresses* the bare skeleton (adjacency) with
+> structural identity; it *dresses* the bare skeleton (adjacency) with
 > meaningful values.  A graph without DRESS is "naked" topology; after DRESS,
 > every edge wears the structural role that fits it best.  And `dress_fit()`
 > is literally fitting the dress to the graph: few iterations give a loose fit,

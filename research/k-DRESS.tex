@@ -13,6 +13,7 @@
 \newtheorem{lemma}[theorem]{Lemma}
 \newtheorem{proposition}[theorem]{Proposition}
 \newtheorem{definition}[theorem]{Definition}
+\newtheorem{conjecture}[theorem]{Conjecture}
 \newtheorem{remark}[theorem]{Remark}
 
 \begin{document}
@@ -20,7 +21,7 @@
 \maketitle
 
 \begin{abstract}
-We introduce DRESS, a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a \emph{canonical fingerprint}: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is \emph{isomorphism-invariant} by construction, \emph{numerically stable} (strictly bounded, precision-preserving, and mathematically well-posed), \emph{fast} and \emph{embarrassingly parallel} to compute: DRESS total runtime is $\mathcal{O}(I \cdot m \cdot d_{\max})$ for $I$ iterations to convergence, and convergence is guaranteed by Birkhoff contraction. We generalize the original equation to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce $\Delta$-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. $\Delta$-DRESS empirically separates all 7{,}983 graphs in a comprehensive Strongly Regular Graph benchmark, and on the tested CFI instances ($k = 0,1,2,3$), $k$-deletion ($\Delta^k$-DRESS) empirically matches the $(k{+}2)$-WL boundary.
+We develop DRESS, a deterministic, parameter-free framework for structural graph refinement, building on the Original-DRESS equation first introduced in 2018 by Castrillo, Le\'on, and G\'omez. DRESS iteratively refines the structural similarity of edges in a graph to produce a \emph{canonical fingerprint}: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is \emph{isomorphism-invariant} by construction, \emph{numerically stable} (strictly bounded, precision-preserving, and mathematically well-posed), \emph{fast} and \emph{embarrassingly parallel} to compute: DRESS total runtime is $\mathcal{O}(I \cdot m \cdot d_{\max})$ for $I$ iterations to convergence, and convergence is guaranteed by Birkhoff contraction. We generalize the original equation to Motif-DRESS (arbitrary structural motifs) and Generalized-DRESS (abstract aggregation template), and introduce $\Delta$-DRESS, which runs DRESS on each vertex-deleted subgraph to boost expressiveness. $\Delta$-DRESS empirically separates all 7{,}983 graphs in a comprehensive Strongly Regular Graph benchmark, and on the tested CFI instances ($k = 0,1,2,3$), $k$-deletion ($\Delta^k$-DRESS) empirically matches the $(k{+}2)$-WL boundary.
 \end{abstract}
 
 \section{Introduction}
@@ -28,11 +29,11 @@ A fundamental task in graph analysis is to assign to each graph a compact descri
 
 We use the WL hierarchy as a standard expressiveness scale for refinement-based graph invariants; our comparison is relative to that scale and does not presuppose a complete characterization of the graphs distinguished by either WL or DRESS.
 
-DRESS is a parameter-free, continuous dynamical system on \emph{edges} that converges to a unique fixed point of real-valued structural similarities, producing a canonical fingerprint vector for any graph. The Original-DRESS equation \cite{castrillo2018dynamicstructuralsimilaritygraphs} achieves this deterministically at $\mathcal{O}(m \cdot d_{\max})$ per iteration and $\mathcal{O}(I \cdot m \cdot d_{\max})$ total runtime after convergence, with numerical stability (all values in $[0,2]$) and no learnable parameters. The expressiveness comparison with WL is discussed in Section~4 and the runtime comparison in Section~\ref{sec:complexity}.
+DRESS is a parameter-free, continuous dynamical system on \emph{edges} that converges to a unique fixed point of real-valued structural similarities, producing a canonical fingerprint vector for any graph. The Original-DRESS equation, first introduced in 2018 \cite{castrillo2018dynamicstructuralsimilaritygraphs}, achieves this deterministically at $\mathcal{O}(m \cdot d_{\max})$ per iteration and $\mathcal{O}(I \cdot m \cdot d_{\max})$ total runtime after convergence, with numerical stability (all values in $[0,2]$) and no learnable parameters. The present paper systematizes that original equation into the broader DRESS framework and extends it with WL comparisons, generalized variants, and deletion-based refinements. The expressiveness comparison with WL is discussed in Section~4 and the runtime comparison in Section~\ref{sec:complexity}.
 
 We present a hierarchy of DRESS variants, building from the concrete to the general:
 \begin{enumerate}
-    \item \textbf{Original-DRESS} (Section~2): The foundational equation, a parameter-free dynamical system on edges that converges to a canonical fingerprint vector.
+    \item \textbf{Original-DRESS} (Section~2): The foundational equation, first introduced in 2018, a parameter-free dynamical system on edges that converges to a canonical fingerprint vector.
     \item \textbf{Expressiveness beyond 1-WL} (Section~3): Original-DRESS distinguishes graphs that 1-WL cannot, including the prism graph from $K_{3,3}$.
     \item \textbf{Empirical Equivalence to 2-WL} (Section~4): Original-DRESS acts as a continuous empirical equivalent to the 2-dimensional Weisfeiler--Leman test.
     \item \textbf{Motif-DRESS} (Section~5): A generalization replacing triangle neighborhoods with arbitrary structural motifs; Original-DRESS is the $M = K_3$ special case.
@@ -77,7 +78,7 @@ The argument proceeds in three steps:
     \item \textbf{Boundedness:} For any uniform positive initialization $\mathbf{d}^{(0)} = c\mathbf{1}$ ($c>0$), the scale invariance of $F$ implies that the first iterate reduces to the unit case: $F(c\mathbf{1}) = F(\mathbf{1})$. Specifically, $F(\mathbf{1})_{uv} = \frac{2|N[u] \cap N[v]|}{\sqrt{\deg(u)\deg(v)}}$. Since $|N[u] \cap N[v]| \le \sqrt{\deg(u)\deg(v)}$ (Cauchy-Schwarz), $F(c\mathbf{1})_{uv} \le 2$. The scale invariance and the topological structure of the operator ensure $[0, 2]^{|E|}$ is a forward-invariant set for this orbit, meaning all subsequent iterates remain bounded in this interval.
     \item \textbf{Contraction on the Hilbert Projective Metric:} $F$ is a positive, degree-0 homogeneous map on the cone $\mathbb{R}_{>0}^{|E|}$. By Birkhoff's contraction theorem, $F$ is a strict contraction under the Hilbert projective metric $d_H(x, y) = \log\!\bigl(\max_e \frac{x_e}{y_e} \cdot \max_e \frac{y_e}{x_e}\bigr)$, provided $F$ maps a bounded part of the cone into a strictly smaller part, which follows from the boundedness above. By the Banach fixed-point theorem on $(\mathbb{R}_{>0}^{|E|}/{\sim},\, d_H)$, the iteration converges to a unique ray, and the forward-invariant boundedness from the $\mathbf{d}^{(0)} = \mathbf{1}$ initialization pins the limit to a finite vector $d^* \in [0, 2]^{|E|}$.
 \end{enumerate}
-A complete formal verification of the contraction constant is deferred to future work; all empirical tests confirm convergence within 20 iterations.
+The contraction constant is graph-dependent (it is determined by the combinatorial structure of each input graph, likely related to the diameter) and therefore does not admit a single universal bound; all empirical tests in this work confirm convergence within 30 iterations.
 \end{proof}
 
 \section{Original-DRESS Distinguishes Graphs That 1-WL Cannot}
@@ -341,10 +342,10 @@ For the tested depths $k = 0,1,2,3$, the pattern is exact: each deletion level a
 
 The experimental evidence above, together with the established practical equivalence to 2-WL (Theorem~\ref{thm:dress-2wl-bound}) and the CFI staircase results, motivates the following:
 
-\begin{remark}[DRESS--WL Continuous Dominance Conjecture]
+\begin{conjecture}[DRESS--WL Continuous Dominance]
 \label{conj:dress-wl}
 In practical continuous computation, $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k+2)$-WL for all $k \geq 0$.
-\end{remark}
+\end{conjecture}
 
 For each fixed depth $k$, $\Delta^k$-DRESS defines a precise graph invariant and hence a precise indistinguishability relation, just as $k$-WL does. The unresolved issue is the comparison theorem between these two equivalence notions.
 
