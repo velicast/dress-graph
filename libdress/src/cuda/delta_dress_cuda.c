@@ -33,3 +33,6 @@ int64_t *delta_dress_fit_cuda_strided(p_dress_graph_t g, int k,
 }
 
 #endif /* DRESS_CUDA */
+
+/* Prevent -Wempty-translation-unit when CUDA is unavailable. */
+typedef int delta_dress_cuda_unused_t;

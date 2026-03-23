@@ -236,3 +236,6 @@ SEXP C_dress_fit_cuda_obj(SEXP ptr_,
 }
 
 #endif /* DRESS_CUDA */
+
+/* Prevent -Wempty-translation-unit when CUDA is unavailable. */
+typedef int dress_cuda_r_unused_t;

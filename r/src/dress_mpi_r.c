@@ -223,3 +223,6 @@ SEXP C_delta_dress_fit_mpi_cuda(SEXP n_vertices_,
 
 #endif /* DRESS_CUDA */
 #endif /* DRESS_MPI */
+
+/* Prevent -Wempty-translation-unit when MPI/CUDA is unavailable. */
+typedef int dress_mpi_r_unused_t;
