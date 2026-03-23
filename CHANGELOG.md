@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.6.2] - 2026-03-22
+
+### Fixed
+- **CUDA wheel packaging**: CI vendoring step now copies CUDA and MPI sources (`dress_cuda.cu`, `dress_cuda.h`, `delta_dress_cuda.c`, `dress_mpi.c`) into wheels, matching `publish.sh` — users with `nvcc` can auto-build the CUDA backend from PyPI installs
+- **CUDA stale-check false positive**: `_sources_newer_than()` in `cuda/__init__.py` and `mpi/cuda/__init__.py` now skips the stale check when `dress_cuda.cu` is absent (pre-built wheel), preventing a spurious rebuild attempt that failed because the `.cu` source wasn't shipped
+
 ## [0.6.1] - 2026-03-16
 
 ### Fixed

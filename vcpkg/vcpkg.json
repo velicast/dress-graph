@@ -1,6 +1,6 @@
 {
   "name": "dress-graph",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "DRESS edge similarity for graphs — C/C++ library",
   "homepage": "https://github.com/velicast/dress-graph",
   "license": "MIT",

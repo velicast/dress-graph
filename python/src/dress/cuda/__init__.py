@@ -53,6 +53,10 @@ def _sources_newer_than(so_path):
     """Return True if any vendored source is newer than the .so."""
     if not os.path.isfile(so_path):
         return True
+    # If dress_cuda.cu is absent we are in a pre-built wheel; skip stale check
+    cuda_cu = os.path.join(_LIB_DIR, 'src', 'cuda', 'dress_cuda.cu')
+    if not os.path.isfile(cuda_cu):
+        return False
     so_mtime = os.path.getmtime(so_path)
     src = os.path.join(_LIB_DIR, 'src')
     inc = os.path.join(_LIB_DIR, 'include')

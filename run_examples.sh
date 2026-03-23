@@ -789,7 +789,7 @@ run_octave() {
     fi
 
     # Install octave package locally
-    local tarball="$ROOT/dress-graph-0.6.1.tar.gz"
+    local tarball="$ROOT/dress-graph-0.6.2.tar.gz"
     if [[ ! -f "$tarball" ]]; then
         echo "  Building Octave tarball ..."
         bash "$ROOT/build.sh" octave 2>&1 | tail -1
