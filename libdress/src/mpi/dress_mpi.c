@@ -4,9 +4,12 @@
  * Provides linkable (non-inline) versions of the MPI distribution
  * functions so every language binding can call them through FFI.
  *
- * Build: compile with -DDRESS_CUDA to include the GPU+MPI variants.
+ * Build: compile with -DDRESS_MPI  to enable this file.
+ *        compile with -DDRESS_CUDA to include the GPU+MPI variants.
  *        Link against libmpi (or equivalent).
  */
+
+#ifdef DRESS_MPI
 
 #include "dress/dress.h"
 #include <mpi.h>
@@ -183,3 +186,8 @@ int64_t *delta_dress_fit_mpi_cuda_world(
                                     MPI_COMM_WORLD);
 }
 #endif /* DRESS_CUDA */
+
+#endif /* DRESS_MPI */
+
+/* Prevent -Wempty-translation-unit when MPI is unavailable. */
+typedef int dress_mpi_unused_t;

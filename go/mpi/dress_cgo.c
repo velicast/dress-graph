@@ -6,6 +6,9 @@
  *   - vendor/src/  (standalone / published module)
  *   - ../../libdress/src/  (monorepo development)
  */
+#ifndef DRESS_MPI
+#define DRESS_MPI
+#endif
 #if __has_include("vendor/src/dress.c")
 #include "vendor/src/dress.c"
 #include "vendor/src/delta_dress_impl.c"

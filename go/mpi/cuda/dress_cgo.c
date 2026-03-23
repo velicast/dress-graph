@@ -7,6 +7,9 @@
  *   - vendor/src/  (standalone / published module)
  *   - ../../../libdress/src/  (monorepo development)
  */
+#ifndef DRESS_MPI
+#define DRESS_MPI
+#endif
 #ifndef DRESS_CUDA
 #define DRESS_CUDA
 #endif

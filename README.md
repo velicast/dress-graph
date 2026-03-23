@@ -4,9 +4,9 @@
 
 PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/dress-graph) Crates [![crates.io downloads](https://img.shields.io/crates/d/dress-graph)](https://crates.io/crates/dress-graph) NPM [![npm downloads](https://img.shields.io/npm/dt/dress-graph)](https://www.npmjs.com/package/dress-graph) CRAN [![CRAN downloads](https://cranlogs.r-pkg.org/badges/grand-total/dress.graph)](https://cran.r-project.org/package=dress.graph)
 
-**A deterministic, parameter-free framework for continuous graph fingerprinting.**
+### A Continuous Framework for Structural Graph Refinement
 
-DRESS assigns every edge in a graph a continuous structural similarity score via a convergent dynamical system. The sorted vector of scores is a canonical fingerprint: isomorphic graphs always get identical fingerprints.
+DRESS is a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a canonical fingerprint: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is isomorphism-invariant by construction, guaranteed bitwise-equal across any vertex labeling, numerically stable (no overflow, no error amplification, no undefined behavior), fast and embarrassingly parallel to compute.
 
 ```bash
 pip install dress-graph

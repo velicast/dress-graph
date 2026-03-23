@@ -109,7 +109,7 @@ def _build_cuda_so():
         os.path.join(src, 'mpi', 'dress_mpi.c'),
     ]
     subprocess.check_call([
-        cc, '-shared', '-fPIC', '-O3', '-fopenmp', '-DDRESS_CUDA',
+        cc, '-shared', '-fPIC', '-O3', '-fopenmp', '-DDRESS_MPI', '-DDRESS_CUDA',
         f'-I{inc}', f'-I{src}',
         *mpi_cflags,
         '-o', _LOCAL_SO,

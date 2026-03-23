@@ -33,7 +33,7 @@ delta_dress_impl_cuda.o: ../delta_dress_impl.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 dress_mpi_cuda.o: ../mpi/dress_mpi.c
-	mpicc $(CFLAGS) -c -o $@ $<
+	mpicc $(CFLAGS) -DDRESS_MPI -c -o $@ $<
 
 LIBDIR  = ../../../build/libdress
 

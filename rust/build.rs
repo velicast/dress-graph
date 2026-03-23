@@ -15,7 +15,8 @@ fn main() {
 
     // MPI feature: compile dress_mpi.c (needs system MPI headers)
     if std::env::var("CARGO_FEATURE_MPI").is_ok() {
-        build.file(vendor.join("mpi/dress_mpi.c"));
+        build.file(vendor.join("mpi/dress_mpi.c"))
+             .define("DRESS_MPI", None);
 
         // Find MPI include path via mpicc --showme:compile or pkg-config
         if let Ok(output) = std::process::Command::new("mpicc")
