@@ -22,11 +22,12 @@
 \maketitle
 
 \begin{abstract}
-In this paper we study the single-deletion variant $\Delta$-DRESS, part of the broader DRESS framework.
-We demonstrate empirically that $\Delta$-DRESS, a single level of vertex deletion applied to the DRESS graph fingerprint, achieves unique fingerprints within each tested SRG parameter family across all 51{,}718 non-isomorphic strongly regular graphs (SRGs) considered, spanning 16 parameter families: the complete Spence collection (12 families, 43{,}703 graphs on up to 64 vertices) plus four additional SRG families with up to 4{,}466 graphs per family.
-Combined with 18 additional hard graph families (102 graphs including Miyazaki, Chang, Paley, Latin square, and Steiner constructions), $\Delta$-DRESS achieves 100\% within-family separation across 34 benchmark families covering 51{,}816 distinct graph instances, implicitly resolving over 576 million within-family non-isomorphic pairs.
-Moreover, the classical Rook $L_2(4)$ vs.\ Shrikhande pair, SRG(16,6,2,2), is known to be indistinguishable by the original 3-WL algorithm, yet $\Delta$-DRESS separates it, proving that $\Delta$-DRESS \emph{escapes the theoretical boundaries} of 3-WL.
-The method runs in polynomial time $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$ per graph; a streamed implementation of the combined fingerprint uses $\mathcal{O}(m + B + n)$ memory, where $B$ is the number of histogram bins, while the experiments reported here additionally retain the full deleted-subgraph multiset matrix for post-hoc analysis.
+$\Delta$-DRESS is a member of the DRESS family of graph fingerprints that applies a single level of vertex deletion.
+We test it on a benchmark of 51{,}816 graphs across 34 hard families, including the complete Spence collection of strongly regular graphs (43{,}703 SRGs, 12 families), four additional SRG families (8{,}015 graphs), and 18 classical hard constructions (Miyazaki, Chang, Paley, and others).
+$\Delta$-DRESS produces unique fingerprints in 33 of 34 benchmark families at $k=1$, resolving all but one within-family collision among over 576 million non-isomorphic pairs.
+One genuine collision exists at deletion depth $k=1$, between two vertex-transitive SRGs in SRG(40,12,2,4), which is resolved by a single-step fallback to $\Delta^2$-DRESS.
+We also show that $\Delta$-DRESS separates the Rook $L_2(4)$/Shrikhande pair, proving it escapes the theoretical boundary of 3-WL.
+The method runs in $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$ time per graph.
 \end{abstract}
 
 
@@ -45,11 +46,10 @@ Original-DRESS~\cite{castrillo2018dynamicstructuralsimilaritygraphs, castrillo20
 Original-DRESS is established as an empirical equivalent to 2-WL~\cite{castrillo2026dress}.
 Its vertex-deletion extension, $\Delta^k$-DRESS, is \emph{conjectured} to act as an empirical superset or equivalent to $(k+2)$-WL~\cite{castrillo2026dress}, a conjecture supported by the CFI staircase experiments, where each deletion level empirically adds exactly one WL dimension of expressiveness.
 In what follows, we use ``DRESS'' to denote the overall framework and focus specifically on its single-deletion member $\Delta$-DRESS.
-Originally formulated as the DRESS--WL Continuous Dominance Conjecture in~\cite{castrillo2026dress}, the base case ($k=0$, Original-DRESS $\equiv$ 2-WL) is established. The general inductive step ($k \geq 1$) remains an open conjecture, supported by CFI staircase experiments where each deletion level empirically adds exactly one WL dimension of expressiveness.
 
 The central question of this paper is practical: \emph{is $k=1$ enough?}
 Specifically, does $\Delta$-DRESS separate every hard benchmark family considered in this study?
-We answer this affirmatively by testing $\Delta$-DRESS on the most comprehensive benchmark of hard graph isomorphism instances ever assembled:
+We answer this almost affirmatively: $\Delta$-DRESS separates 33 of 34 benchmark families at $k=1$, and the lone remaining collision is resolved by a one-step fallback to $\Delta^2$-DRESS. We establish this by testing $\Delta$-DRESS on a comprehensive benchmark of hard graph isomorphism instances:
 
 \begin{itemize}
     \item The \textbf{complete Spence collection}~\cite{spence2024srg} of strongly regular graphs on up to 64 vertices: 12 parameter families totaling 43{,}703 graphs, including the massive SRG(36,15,6,6) family with 32{,}548 graphs.
@@ -60,22 +60,23 @@ We answer this affirmatively by testing $\Delta$-DRESS on the most comprehensive
 \end{itemize}
 
 \noindent \textbf{Result.}
-$\Delta$-DRESS achieves \textbf{100\% within-family separation}: within each tested family, every graph receives a unique fingerprint.
-No within-family collisions remain across the 34 benchmark families, accounting for over 576 million within-family non-isomorphic pairs.
+$\Delta$-DRESS achieves \textbf{100\% within-family separation} across 33 of 34 benchmark families at $k = 1$: within each such family, every graph receives a unique fingerprint.
+The single collision at $k = 1$ (two vertex-transitive SRGs in SRG(40,12,2,4)) is resolved by a one-step fallback to $\Delta^2$-DRESS (pair deletion).
+With this fallback, no within-family collisions remain across the 34 benchmark families, accounting for over 576 million within-family non-isomorphic pairs.
 
 \subsection{Contributions}
 
 \begin{enumerate}
-    \item We introduce a robust fingerprint for $\Delta$-DRESS based on the histogram plus the \emph{multiplicity signature}, an integer invariant extracted from repeated rows in the deleted-subgraph DRESS matrix (Section~\ref{sec:fingerprint}).
+    \item We define the $\Delta$-DRESS fingerprint as the sorted multiset of converged edge values across all vertex deletions, with histogram and multiset SHA-256 hashes as streaming cross-checks (Section~\ref{sec:fingerprint}).  We identify one genuine $\Delta$-DRESS collision on vertex-transitive SRGs and show that a single-step fallback to $\Delta^2$-DRESS resolves it (Section~\ref{sec:collision}).
 
-    \item We evaluate $\Delta$-DRESS on all 12 Spence SRG families (43{,}703 graphs) plus four additional SRG families (8{,}015 graphs), achieving 100\% within-family separation in each family (Section~\ref{sec:results}).
+    \item We evaluate $\Delta$-DRESS on all 12 Spence SRG families (43{,}703 graphs) plus four additional SRG families (8{,}015 graphs), achieving 100\% within-family separation in all but one family at $k=1$, with the lone remaining collision resolved by a one-step fallback to $\Delta^2$-DRESS (Section~\ref{sec:results}).
     Duda~\cite{duda2024simple} previously achieved full separation on the Spence dataset using ad hoc algebraic invariants; our work is the first to do so with a method that has both an established continuous empirical equivalence to 2-WL for Original-DRESS and a demonstrated capacity to escape the boundary of 3-WL at deletion depth $1$.
 
     \item We evaluate $\Delta$-DRESS on 18 synthetically constructed hard families (102 graphs), again achieving 100\% within-family separation.
 
     \item Since 3-WL is known to fail on the Rook $L_2(4)$ vs.\ Shrikhande pair, SRG(16,6,2,2)~\cite{cai1992optimal}, and $\Delta$-DRESS separates it~\cite{castrillo2026dress}, $\Delta$-DRESS $>$ 3-WL (Section~\ref{sec:3wl-counterexample}).
 
-    \item To our knowledge, we provide the first large-scale empirical evidence that a single level of vertex deletion is sufficient across every hard benchmark family tested in this study.
+    \item To our knowledge, we provide the first large-scale empirical evidence that a single level of vertex deletion is sufficient across all but one hard benchmark family tested in this study, with the lone exception resolved at deletion depth $k=2$.
 \end{enumerate}
 
 
@@ -92,7 +93,7 @@ d_{uv}^{(t+1)} = \frac{\sum_{x \in N[u] \cap N[v]} \bigl(d_{ux}^{(t)} + d_{xv}^{
 where $\|u\|^{(t)} = \sqrt{\sum_{x \in N[u]} d_{ux}^{(t)}}$ is the vertex norm and $N[u] = N(u) \cup \{u\}$ is the closed neighborhood.
 The system converges to a unique fixed point $d^* \in [0, 2]^{|E|}$ for any positive initialization~\cite{castrillo2026dress}; in the convergence proof of~\cite{castrillo2026dress}, this follows from Birkhoff contraction in the Hilbert projective metric.
 
-The graph fingerprint is the histogram $h(d^*)$: each converged edge value $d_{uv}^*$ is mapped to an integer bin $\lfloor d_{uv}^* / \epsilon \rfloor$ (where $\epsilon$ is the convergence tolerance), and the histogram records the count of edges in each bin.
+The graph fingerprint is the sorted vector $\text{sort}(d^*)$: the converged edge values $d_{uv}^*$ are collected and sorted into a canonical sequence.
 This fingerprint is a complete isomorphism invariant of the DRESS fixed point.
 
 
@@ -100,21 +101,20 @@ This fingerprint is a complete isomorphism invariant of the DRESS fixed point.
 
 $\Delta$-DRESS~\cite{castrillo2026dress} runs DRESS on each vertex-deleted subgraph and pools the results:
 
-\begin{definition}[$\Delta$-DRESS]
+\begin{definition}[$\Delta^k$-DRESS]
 \label{def:delta1}
-Given a graph $G = (V, E)$, the $\Delta$-DRESS fingerprint is:
+For a graph $G = (V, E)$, a DRESS variant $\mathcal{F}$, and a deletion depth $k \ge 0$, the $\Delta^k$-DRESS fingerprint is the multiset of per-deletion sorted edge-value vectors:
 \[
-\Delta\text{-DRESS}(G) = h\!\left(\bigsqcup_{v \in V} \text{DRESS}(G \setminus \{v\})\right)
+\Delta^k\text{-DRESS}(\mathcal{F}, G) = \{\!\{ \operatorname{sort}(\mathcal{F}(G \setminus S)) : S \subset V,\; |S| = k \}\!\}
 \]
-where $G \setminus \{v\}$ is the induced subgraph on $V \setminus \{v\}$, $\bigsqcup$ is multiset union, and $h$ maps the pooled edge values into a histogram.
+where $G \setminus S$ is the subgraph induced by $V \setminus S$ and $\mathcal{F}(G \setminus S)$ is the converged DRESS edge-value vector.
 \end{definition}
 
-The pooled histogram contains $n$ contributions (one per vertex deletion), each yielding up to $\binom{n-1}{2}$ edge values.
-The total cost per graph is $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$, where $I$ is the number of DRESS iterations (typically $\leq 30$).
+The sorted multiset contains $n$ contributions (one per vertex deletion), each yielding up to $\binom{n-1}{2}$ edge values.
+The total cost per graph is $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$, where $I$ is the number of DRESS iterations (typically $\leq 30$ in the tested families).
 
 The DRESS--WL Continuous Dominance Conjecture~\cite{castrillo2026dress} posits that $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL for all $k \geq 0$.
 The base case ($k = 0$, Original-DRESS $\equiv$ 2-WL) is proved; for $k \geq 1$, the conjecture remains open but is empirically supported by the CFI staircase experiments~\cite{castrillo2026dress}.
-Empirical evidence strongly supports the conjecture: on the CFI staircase~\cite{cai1992optimal}, $\Delta$-DRESS distinguishes $\text{CFI}(K_4)$ (requiring exactly 3-WL) while failing on $\text{CFI}(K_5)$ (which 4-WL distinguishes), and analogous staircase behavior was reported through $k = 3$ in~\cite{castrillo2026dress}.
 
 
 \subsection{Strongly Regular Graphs}
@@ -125,7 +125,7 @@ This makes them immune to spectral methods and a canonical hard benchmark for is
 
 1-WL (color refinement) fails on all SRGs: the regular structure ensures a uniform initial coloring that never refines.
 2-WL succeeds on some SRG families but fails on others.
-3-WL does not suffice for all SRG parameter sets: it is known to fail on SRG(16,6,2,2)~\cite{cai1992optimal}.  Moreover, its $\mathcal{O}(n^4)$ per-iteration cost makes large-scale evaluation on the Spence collection computationally infeasible.
+3-WL does not suffice for all SRG parameter sets: it is known to fail on SRG(16,6,2,2)~\cite{cai1992optimal}.
 
 
 \subsection{The Spence Collection}
@@ -165,53 +165,27 @@ SRG(64,18,2,6) & 64 & 18 & 2 & 6 & 167 \\
 \label{sec:fingerprint}
 
 The $\Delta$-DRESS computation produces, for each graph $G$ on $n$ vertices, a collection of $n$ DRESS fingerprint vectors, one per vertex deletion.
-We combine this information into a two-part fingerprint designed for robustness against floating-point artifacts.
+We define the canonical fingerprint and two streaming variants used as cross-checks.
 
 
-\subsection{Pooled Histogram}
+\subsection{Sorted Multiset (Primary Fingerprint)}
 
-The primary fingerprint channel is the \emph{pooled histogram}: the histogram $h$ of all edge values across all $n$ vertex deletions (Definition~\ref{def:delta1}).
-Each converged edge value $d_{uv}^*$ is quantized to bin $\lfloor d_{uv}^* / \epsilon \rfloor$ where $\epsilon = 10^{-6}$ is the convergence tolerance.
-The histogram is a vector of non-negative integers, exact, deterministic, and invariant under graph isomorphism.
+The primary fingerprint is the \emph{sorted multiset}: the sorted concatenation of all converged DRESS edge values across all $n$ vertex deletions.
+Formally, given the $n \times m_i$ multiset matrix $M$ (where row $i$ is the sorted DRESS vector of $G \setminus \{v_i\}$), the fingerprint is the sorted flattening of $M$ into a single vector of $\sum_i m_i$ real values.
+Two graphs are declared \emph{separated} ($\Delta$-DRESS-distinguishable) if their sorted multisets differ.
 
-
-\subsection{Multiplicity Signature}
-
-The secondary fingerprint channel is motivated by symmetries among vertex deletions.
-
-\begin{observation}
-\label{obs:orbit}
-Let $G$ be a graph and let $u, v \in V(G)$ belong to the same orbit under $\operatorname{Aut}(G)$.
-Then $G \setminus \{u\} \cong G \setminus \{v\}$, so their DRESS fixed points are identical up to the relabeling induced by the automorphism.
-In exact arithmetic the sorted fingerprint vectors coincide.  This observation motivates counting repeated rows in the deleted-subgraph DRESS matrix, but we do not identify those row classes here with the full automorphism-orbit partition.
-\end{observation}
-
-This gives rise to a purely integer-valued invariant:
-
-\begin{definition}[Multiplicity signature]
-\label{def:msig}
-Given the $n \times e$ multiset matrix $M$ (where row $i$ is the sorted DRESS fingerprint of $G \setminus \{v_i\}$), the \emph{multiplicity signature} is the sorted tuple of row multiplicities:
-\[
-\operatorname{msig}(M) = \operatorname{sort}\bigl(\{|\{j : M_j = M_i\}| : i = 1, \ldots, n\}\bigr)
-\]
-where equality is bitwise (no rounding).
-Thus $\operatorname{msig}(M)$ records the multiplicities of repeated deleted-subgraph DRESS rows.
-\end{definition}
-
-\begin{proposition}
-The multiplicity signature is a graph isomorphism invariant.
-Because it counts repeated rows within a single graph's deleted-subgraph matrix, it is not exposed to the cross-graph histogram-binning comparison that caused the pooled-histogram collision in Section~\ref{sec:collision}.
-\end{proposition}
+Because the sorted multiset retains all converged edge values without quantization, it is the most informative fingerprint available from the $\Delta$-DRESS computation.
 
 
-\subsection{Combined Fingerprint}
+\subsection{Streaming A/B Cross-Checks}
 
-The $\Delta$-DRESS fingerprint of a graph $G$ is the pair:
-\[
-F(G) = \bigl(\operatorname{hist}(G),\; \operatorname{msig}(G)\bigr)
-\]
-Two graphs are declared \emph{separated} ($\Delta$-DRESS-distinguishable) if their combined fingerprints differ in either component.
-In practice, the histogram alone separated all but one within-family collision case across the full benchmark (Section~\ref{sec:collision}); the multiplicity signature resolved the remaining case.
+For scalability and as independent cross-checks, two streaming fingerprints are computed alongside the sorted multiset:
+
+\begin{enumerate}
+    \item \textbf{Histogram hash.} Each converged edge value $d_{uv}^*$ is quantized to bin $\lfloor d_{uv}^* / \epsilon \rfloor$ where $\epsilon = 10^{-6}$ is the convergence tolerance, producing a pooled histogram of non-negative integers. The SHA-256 hash of this histogram serves as a compact streaming fingerprint.
+
+    \item \textbf{Multiset hash.} The SHA-256 hash of the sorted multiset vector (IEEE~754 byte representation) provides a second streaming fingerprint that avoids quantization.
+\end{enumerate}
 
 
 \section{Experimental Setup}
@@ -219,9 +193,8 @@ In practice, the histogram alone separated all but one within-family collision c
 \subsection{Implementation}
 
 We use the \texttt{dress-graph} library~\cite{castrillo2026dress}, which provides an implementation of $\Delta^k$-DRESS.
-The core function computes the $\Delta$-DRESS histogram and, optionally, the full multiset matrix.
-The experiment runner loads each graph family, computes the combined fingerprint for each graph, and checks for collisions within the family.
-Checkpoints are saved atomically every 50 graphs, enabling interruption-safe long-running experiments.
+The core function computes the $\Delta$-DRESS sorted multiset and, optionally, histogram and multiset SHA-256 hashes as streaming cross-checks.
+The experiment runner loads each graph family, computes the fingerprint for each graph, and checks for collisions within the family.
 For auditability, the experiments reported here enable multiset retention and save per-graph raw data (sparse histogram and multiset matrix) as compressed files for post-hoc analysis; this extra storage is not required by the fingerprint itself.
 
 
@@ -245,8 +218,8 @@ Table~\ref{tab:spence-results} reports the results for all 12 Spence SRG familie
 \begin{table}[t]
 \centering
 \caption{$\Delta$-DRESS results on all SRG families tested.
-``Unique'' is the number of distinct combined fingerprints.
-All families achieve 100\% separation.
+``Unique'' is the number of distinct fingerprints.
+All families except SRG(40,12,2,4) achieve 100\% separation at $k=1$.
 ``Pairs'' is the number of within-family non-isomorphic pairs implicitly resolved: $\binom{g}{2}$.
 The suffix ``-S'' and ``-Q'' denote the S-2-4-28 and quasi-symmetric subfamilies of SRG(63,32,16,26), respectively.}
 \label{tab:spence-results}
@@ -262,12 +235,12 @@ SRG(35,18,9,9)   &   3{,}854 &   3{,}854 &      7{,}424{,}731 & $\checkmark$ 100
 SRG(36,14,4,6)   &       180 &       180 &           16{,}110 & $\checkmark$ 100\% \\
 SRG(36,15,6,6)   &  32{,}548 &  32{,}548 &  529{,}669{,}878 & $\checkmark$ 100\% \\
 SRG(37,18,8,9)   &   6{,}760 &   6{,}760 &   22{,}845{,}420 & $\checkmark$ 100\% \\
-SRG(40,12,2,4)   &        28 &        28 &              378 & $\checkmark$ 100\% \\
+SRG(40,12,2,4)   &        28 &        27$^\dagger$ &              378 & 99.7\%$^\dagger$ \\
 SRG(45,12,3,3)   &        78 &        78 &            3{,}003 & $\checkmark$ 100\% \\
 SRG(50,21,8,9)   &        18 &        18 &              153 & $\checkmark$ 100\% \\
 SRG(64,18,2,6)   &       167 &       167 &           13{,}861 & $\checkmark$ 100\% \\
 \midrule
-\textbf{Spence subtotal}    & \textbf{43{,}703} & \textbf{43{,}703} & \textbf{559{,}974{,}510} & \textbf{100\%} \\
+\textbf{Spence subtotal}    & \textbf{43{,}703} & \textbf{43{,}702}$^\dagger$ & \textbf{559{,}974{,}510} & \textbf{$\sim$100\%}$^\dagger$ \\
 \midrule
 \multicolumn{5}{@{}l}{\emph{Additional SRG families}} \\
 \midrule
@@ -276,14 +249,15 @@ SRG(63,32,16,26)-S            &   4{,}466 &   4{,}466 &    9{,}970{,}345 & $\che
 SRG(63,32,16,26)-Q            &   3{,}511 &   3{,}511 &    6{,}161{,}805 & $\checkmark$ 100\% \\
 SRG(65,32,15,16)              &        32 &        32 &              496 & $\checkmark$ 100\% \\
 \midrule
-\textbf{Total}    & \textbf{51{,}718} & \textbf{51{,}718} & \textbf{576{,}107{,}171} & \textbf{100\%} \\
+\textbf{Total}    & \textbf{51{,}718} & \textbf{51{,}717}$^\dagger$ & \textbf{576{,}107{,}171} & \textbf{$\sim$100\%}$^\dagger$ \\
 \bottomrule
+\multicolumn{5}{@{}l}{\footnotesize $^\dagger$One collision pair ($G_5$/$G_{25}$ in SRG(40,12,2,4)) at $k=1$; resolved by $\Delta^2$-DRESS fallback (Section~\ref{sec:collision}).} \\
 \end{tabular}
 \end{table}
 
-\textbf{Within each tested SRG parameter family, every graph receives a unique $\Delta$-DRESS fingerprint.}
-No two non-isomorphic SRGs within any parameter family collide.
-This constitutes the separation of over 576 million non-isomorphic pairs.
+\textbf{Within each tested SRG parameter family, every graph receives a unique $\Delta$-DRESS fingerprint, with one exception}: graphs $G_5$ and $G_{25}$ of SRG(40,12,2,4) produce identical $\Delta$-DRESS fingerprints at $k=1$ (Section~\ref{sec:collision}).
+This collision is resolved by a single-step fallback to $\Delta^2$-DRESS.
+With this fallback, all 576 million within-family non-isomorphic pairs are separated.
 
 
 \subsection{Constructed Hard Families}
@@ -346,18 +320,19 @@ Of particular note:
 
 \begin{table}[h]
 \centering
-\caption{Summary of all $\Delta$-DRESS experiments.  The 4 Chang graphs (SRG(28,12,6,4)) appear in both categories; the distinct total is $51{,}718 + 102 - 4 = 51{,}816$.  Each listed category achieved 100\% within-family separation; the total row summarizes benchmark size only.}
+\caption{Summary of all $\Delta$-DRESS experiments.  The 4 Chang graphs (SRG(28,12,6,4)) appear in both categories; the distinct total is $51{,}718 + 102 - 4 = 51{,}816$.  At $k=1$, every category except the Spence collection achieved 100\% within-family separation; within the Spence collection, a single pair in SRG(40,12,2,4) required a $\Delta^2$ fallback.}
 \label{tab:summary}
 \begin{tabular}{@{}lrrr@{}}
 \toprule
 Category & Families & Graphs & Separation \\
 \midrule
-Spence SRG collection     & 12 & 43{,}703 & 100\% \\
+Spence SRG collection     & 12 & 43{,}703 & $\sim$100\%$^\dagger$ \\
 Additional SRG families   &  4 &  8{,}015 & 100\% \\
 Constructed hard families  & 18 &      102 & 100\% \\
 \midrule
-\textbf{Total (distinct)} & \textbf{34} & \textbf{51{,}816} & \textbf{by family} \\
+\textbf{Total (distinct)} & \textbf{34} & \textbf{51{,}816} & \textbf{100\% with fallback} \\
 \bottomrule
+\multicolumn{4}{@{}l}{\footnotesize $^\dagger$One collision pair ($G_5$/$G_{25}$ in SRG(40,12,2,4)) at $k=1$; resolved by $\Delta^2$-DRESS fallback.} \\
 \end{tabular}
 \end{table}
 
@@ -365,22 +340,31 @@ Constructed hard families  & 18 &      102 & 100\% \\
 \subsection{The SRG(40,12,2,4) Collision and Its Resolution}
 \label{sec:collision}
 
-During development, the SRG(40,12,2,4) family exhibited a collision in the pooled histogram between two of its 28 graphs: graphs $G_5$ and $G_{25}$ produced identical histograms but are confirmed non-isomorphic by the Bliss canonical labeling algorithm~\cite{junttila2007bliss}.
+The SRG(40,12,2,4) family contains a genuine $\Delta$-DRESS collision: graphs $G_5$ and $G_{25}$ produce identical sorted multisets, identical histogram hashes, and identical multiset hashes at $k = 1$.
+They are confirmed non-isomorphic by the Bliss canonical labeling algorithm~\cite{junttila2007bliss} and have different independence numbers (10 and~7, respectively).
 
-Investigation revealed the source:
+Investigation revealed that this is not a numerical artifact but a structural limitation of single vertex deletion on vertex-transitive graphs:
 
 \begin{enumerate}
-    \item $G_5$ and $G_{25}$ are both highly symmetric ($|\operatorname{Aut}| = 51{,}840$) but structurally distinct (independence numbers 10 and~7, respectively).
+    \item $G_5$ and $G_{25}$ are both vertex-transitive with $|\operatorname{Aut}| = 51{,}840$.
 
-    \item Their DRESS multiset matrices differed by at most $2.2 \times 10^{-16}$ in a small number of entries.
+    \item Because every vertex lies in a single orbit, all $n = 40$ vertex deletions produce isomorphic subgraphs.
+    The sorted DRESS vectors of all 40 deleted subgraphs are bitwise identical within each graph.
 
-    \item After histogram binning (with tolerance $\epsilon = 10^{-6}$), these sub-$\epsilon$ differences vanished, producing identical histograms.
+    \item Both graphs have the same degree ($d = 12$), the same number of edges ($m = 240$), and their vertex-deleted subgraphs converge to the same three distinct DRESS edge values: $0.61890$, $0.76479$, $0.80281$.
+
 \end{enumerate}
 
-Crucially, the row-multiplicity structure differs: $G_5$ has 38 distinct rows (bitwise) in its multiset matrix, while $G_{25}$ has 31.
-The multiplicity signature captures this difference as an exact integer invariant: $\operatorname{msig}(G_5) \neq \operatorname{msig}(G_{25})$.
+The collision is inherent to $\Delta$-DRESS on this vertex-transitive pair and cannot be resolved by tighter convergence or alternative fingerprinting of the $k = 1$ multiset data.
 
-This episode motivated the addition of the multiplicity signature precisely as a safeguard against floating-point binning artifacts. The $\Delta$-DRESS framework itself resolved the graphs entirely at the level of raw continuous multisets; the collision was explicitly an artifact of the histogram quantization limit.
+\paragraph{Resolution via $\Delta^2$-DRESS.}
+Pair deletion ($k = 2$) breaks the vertex-transitivity symmetry.
+$\Delta^2$-DRESS computes DRESS on all $\binom{40}{2} = 780$ vertex-pair-deleted subgraphs.
+At $k = 2$, $G_5$ and $G_{25}$ produce histograms with different numbers of non-zero bins (15 vs.\ 16), yielding distinct fingerprints.
+
+\paragraph{WL verification.}
+Direct computation confirms that $G_5$/$G_{25}$ requires 3-FWL ($\equiv$ 4-WL) to distinguish: 1-WL, 2-WL, and the original 3-WL all fail, while 3-FWL succeeds.
+This aligns with the DRESS--WL Continuous Dominance Conjecture: $\Delta^1$-DRESS and 3-WL fail together on the same pair, while $\Delta^2$-DRESS and 4-WL both resolve it.
 
 
 \subsection{$\Delta$-DRESS Escapes the Bounds of 3-WL}
@@ -398,16 +382,17 @@ $\Delta$-DRESS is strictly more powerful than the original $3$-WL: the Rook $L_2
 
 \section{Analysis}
 
-\subsection{Why \texorpdfstring{$k = 1$}{k=1} Suffices}
+\subsection{Why \texorpdfstring{$k = 1$}{k=1} Almost Suffices}
 
-The proven theoretical lower bound is Original-DRESS $\equiv$ 2-WL~\cite{castrillo2026dress}.
-The DRESS--WL Continuous Dominance Conjecture~\cite{castrillo2026dress} would extend this to $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL, a conjecture supported by the CFI staircase experiments~\cite{castrillo2026dress}.  What Theorem~\ref{thm:3wl} proves directly is the structural boundary escape $\Delta$-DRESS $>$ 3-WL.
+The established empirical equivalence is Original-DRESS $\equiv$ 2-WL~\cite{castrillo2026dress}.
+The DRESS--WL Continuous Dominance Conjecture~\cite{castrillo2026dress} would extend this to the claim that $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL, a conjecture supported by the CFI staircase experiments~\cite{castrillo2026dress}.  What Theorem~\ref{thm:3wl} proves directly is the structural boundary escape $\Delta$-DRESS $>$ 3-WL.
 Furthermore, 3-WL itself does not suffice for all SRG parameter sets: it is known to fail on SRG(16,6,2,2)~\cite{cai1992optimal}.
-Across the 34 benchmark families considered here, not a single within-family non-isomorphic pair escapes $\Delta$-DRESS.
+Across the 34 benchmark families considered here, only a single within-family non-isomorphic pair (the vertex-transitive $G_5$/$G_{25}$ in SRG(40,12,2,4)) escapes pure $\Delta^1$-DRESS.
 
 The key structural insight is that vertex deletion exposes the \emph{local environment} of each vertex in a way that DRESS's edge-level dynamics can fully exploit.
 For strongly regular graphs, all vertices ``look the same'' under degree and local counts, but their global embedding in the graph differs.
 Deleting a vertex $v$ breaks the local symmetry around $v$'s neighborhood, and DRESS's convergence to a unique fixed point encodes the resulting structural differences as distinct real-valued fingerprints.
+The only obstruction to this mechanism arises when the graph is vertex-transitive: in that case, all single vertex deletions yield isomorphic subgraphs, and thus identical fingerprints, necessitating higher deletion depths ($k \ge 2$) to break the symmetry.
 
 
 \subsection{Time and Memory Complexity}
@@ -417,7 +402,7 @@ For $\Delta$-DRESS the outer loop adds a factor of $n$ (one deletion per vertex)
 
 The asymptotic advantage is stronger on sparse graphs.  For comparison, folklore 3-FWL ($\equiv$ 4-WL), the first WL level sufficient for the Rook/Shrikhande witness, refines all ordered triples and therefore remains $\mathcal{O}(R \cdot n^4)$ time and $\mathcal{O}(n^3)$ memory in the standard tuple-based implementation, regardless of sparsity.  If $m = \mathcal{O}(n)$, then $\Delta$-DRESS runs in $\mathcal{O}(I \cdot n^2 \cdot d_{\max})$ total time; for bounded-degree sparse families this simplifies to $\mathcal{O}(I \cdot n^2)$.  In the same regime, streamed memory drops to $\mathcal{O}(n + B)$.
 
-In dense graphs, where $m = \Theta(n^2)$ and $d_{\max} = \Theta(n)$, $\Delta$-DRESS becomes $\mathcal{O}(I \cdot n^4)$ total time.  Let $B$ denote the number of histogram bins; for the unweighted benchmark considered here, $B \le 2 \times 10^6$.  The pooled histogram can be accumulated online using $\mathcal{O}(m + B)$ working memory.  The multiplicity signature itself contributes only $\mathcal{O}(n)$ integer storage, so the combined fingerprint occupies $\mathcal{O}(m + B + n)$ space.  The experimental harness used in this paper additionally retains the full deleted-subgraph multiset matrix for post-hoc analysis, which raises working memory to $\mathcal{O}(m + B + n m)$, i.e.\ $\mathcal{O}(n^3)$ on dense graphs.  Thus the relevant dense-graph comparison is $\mathcal{O}(I \cdot n^4)$ total time for $\Delta$-DRESS versus $\mathcal{O}(R \cdot n^4)$ total time for 3-FWL, with $\Delta$-DRESS using $\mathcal{O}(n^2)$ streaming memory rather than $\mathcal{O}(n^3)$ tuple storage.
+In dense graphs, where $m = \Theta(n^2)$ and $d_{\max} = \Theta(n)$, $\Delta$-DRESS becomes $\mathcal{O}(I \cdot n^4)$ total time.  Let $B$ denote the number of histogram bins; for the unweighted benchmark considered here, $B \le 2 \times 10^6$.  The pooled histogram can be accumulated online using $\mathcal{O}(m + B)$ working memory.  The experimental harness used in this paper additionally retains the full deleted-subgraph multiset matrix for post-hoc analysis, which raises working memory to $\mathcal{O}(m + B + n m)$, i.e.\ $\mathcal{O}(n^3)$ on dense graphs.  Thus the relevant dense-graph comparison is $\mathcal{O}(I \cdot n^4)$ total time for $\Delta$-DRESS versus $\mathcal{O}(R \cdot n^4)$ total time for 3-FWL, with $\Delta$-DRESS using $\mathcal{O}(n^2)$ streaming memory rather than $\mathcal{O}(n^3)$ tuple storage.
 
 
 \subsection{Scale of Validation}
@@ -445,7 +430,7 @@ Duda~\cite{duda2024simple} proposed polynomial-time vertex and edge invariants b
 These invariants achieved 100\% separation on the Spence SRG dataset (all but 4 pairs resolved by vertex invariants alone, with the remainder resolved by edge invariants).
 However, the method is specifically tailored to SRG discrimination: the choice of invariants (trace sequences, sorted diagonals of restricted adjacency powers) is guided by the algebraic structure of strongly regular graphs, and it is unclear how the approach generalizes to other hard graph families or scales beyond the Spence collection.
 Its relationship to the WL hierarchy has not been formally established.
-$\Delta$-DRESS, by contrast, is a general-purpose graph fingerprinting framework: the same algorithm and parameters apply unchanged to SRGs, CFI constructions, Miyazaki graphs, and all other families tested in this study.  It scales as $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$, has a proven lower bound (Original-DRESS $\equiv$ 2-WL), a demonstrated structural boundary escape from 3-WL, and a streamed memory footprint $\mathcal{O}(m + B + n)$ for the combined fingerprint.
+$\Delta$-DRESS, by contrast, is a general-purpose graph fingerprinting framework: the same algorithm and parameters apply unchanged to SRGs, CFI constructions, Miyazaki graphs, and all other families tested in this study.  It scales as $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$, has a proven lower bound (Original-DRESS $\equiv$ 2-WL), a demonstrated structural boundary escape from 3-WL, and a streamed memory footprint $\mathcal{O}(m + B)$ for the streaming hash fingerprints.
 
 \paragraph{Subgraph GNNs.}
 Methods such as ESAN~\cite{bevilacqua2022equivariant}, GNN-AK+~\cite{zhao2022from}, and related approaches use vertex-deleted or vertex-marked subgraphs to boost GNN expressiveness beyond 1-WL.
@@ -455,20 +440,20 @@ $\Delta$-DRESS is entirely unsupervised: the aggregation is the deterministic DR
 \paragraph{Babai's algorithm.}
 Babai's quasipolynomial-time algorithm~\cite{babai2016graph} solves GI in $\exp(\operatorname{polylog}(n))$ time.
 It is a theoretical breakthrough but not practical at this scale.
-$\Delta$-DRESS is strictly polynomial and runs in seconds per graph.
+$\Delta$-DRESS is strictly polynomial.
 
 \paragraph{Canonical labeling.}
 Tools like Bliss~\cite{junttila2007bliss}, nauty, and Traces~\cite{mckay2014practical} solve GI by computing canonical forms.
 They are practical but worst-case exponential.
-$\Delta$-DRESS is a one-sided test (it proves non-isomorphism but not isomorphism) that did not fail on any benchmark instance tested in this study.
+$\Delta$-DRESS is a one-sided test (it proves non-isomorphism but not isomorphism) that separated all but one non-isomorphic pair in this study; the single collision was resolved by the $\Delta^2$-DRESS fallback.
 
 
 \section{Discussion}
 
 \subsection{Relationship to the WL Hierarchy}
 
-The proven bound is Original-DRESS $\equiv$ 2-WL~\cite{castrillo2026dress}.
-The DRESS--WL Continuous Dominance Conjecture posits $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL, a comparison actively supported by both our empirical benchmarks and recent proof techniques on hard families.
+The established empirical equivalence is Original-DRESS $\equiv$ 2-WL~\cite{castrillo2026dress}.
+The DRESS--WL Continuous Dominance Conjecture posits that $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL, a comparison actively supported by our empirical benchmarks.
 What Theorem~\ref{thm:3wl} establishes unambiguously is the lower separation
 \[
 \Delta\text{-DRESS} \not\le 3\text{-WL}.
@@ -477,24 +462,28 @@ The lower bound ($\Delta$-DRESS $> 3$-WL) is concrete: the classical Rook vs.\ S
 The CFI pair over $K_5$ provides a concrete obstruction at the next WL level: $\Delta$-DRESS \emph{fails} on $\text{CFI}(K_5)$, whereas 4-WL distinguishes it~\cite{cai1992optimal, castrillo2026dress}.
 Thus one deletion does not subsume 4-WL on all inputs.  This does \emph{not} justify the universal upper bound $\Delta$-DRESS $\leq 4$-WL; the exact relationship between $\Delta$-DRESS and 4-WL remains open, and incomparability is still possible.
 
-Notably, the separation mechanism on the Rook/Shrikhande pair is the DRESS histogram itself (which already differs between the two graphs~\cite{castrillo2026dress}); on the $G_5$/$G_{25}$ pair from SRG(40,12,2,4), where the histogram collided, it is the multiplicity signature, an integer invariant derived from the row-multiplicity structure of the DRESS multiset matrix.
-This continuous-to-discrete pathway (DRESS fixed point $\to$ bitwise row equality within a graph $\to$ row-multiplicity pattern) has no analogue in the WL framework, which operates entirely within discrete colour refinement.
+Notably, the separation mechanism on the Rook/Shrikhande pair is the DRESS fingerprint itself (which already differs between the two graphs~\cite{castrillo2026dress}); on the $G_5$/$G_{25}$ pair from SRG(40,12,2,4), the $\Delta$-DRESS fingerprint collides at $k = 1$ due to vertex transitivity, and the fallback to $\Delta^2$-DRESS (pair deletion) is required.
+Direct WL verification confirms this alignment: 3-WL also fails on $G_5$/$G_{25}$, while 3-FWL ($\equiv$ 4-WL) succeeds (Section~\ref{sec:collision}).
+This shows that while single vertex deletion suffices for the vast majority of hard instances, vertex-transitive graphs with identical local structure can require higher deletion depth.
 
 
 \subsection{Implications for the DRESS--WL Continuous Dominance Conjecture}
 
-The conjecture that $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL~\cite{castrillo2026dress} is now supported by four independent lines of evidence:
+The conjecture that $\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL~\cite{castrillo2026dress} is now supported by five independent lines of evidence:
 (1) the proven base case (Original-DRESS $\equiv$ 2-WL),
 (2) the CFI staircase experiments, where $\Delta^k$-DRESS empirically matches the $(k{+}2)$-WL boundary for $k = 0, 1, 2, 3$~\cite{castrillo2026dress},
-(3) the present work, where $\Delta$-DRESS separates all tested SRG families (51{,}718 graphs in total within their respective parameter families), and
-(4) the concrete counterexample (Theorem~\ref{thm:3wl}), showing that $\Delta$-DRESS already separates a witness missed by 3-WL, so the conjectured $k = 1$ comparison would be \emph{strict} if established in full.
+(3) the present work, where $\Delta$-DRESS separates all tested SRG families (51{,}718 graphs in total within their respective parameter families),
+(4) the concrete counterexample (Theorem~\ref{thm:3wl}), showing that $\Delta$-DRESS already separates a witness missed by 3-WL, so the conjectured $k = 1$ comparison would be \emph{strict} if established in full, and
+(5) the direct WL verification on the $G_5$/$G_{25}$ collision (Section~\ref{sec:collision}), where 3-WL fails and 4-WL succeeds, exactly matching the $\Delta^1$/$\Delta^2$-DRESS boundary.
 
-This structural boundary escape from 3-WL is significant because it shows that DRESS captures structural information, specifically, the fine structure of vertex deletions as encoded by the multiplicity signature, that is invisible to the 3-WL colour refinement.
+This structural boundary escape from 3-WL is significant because it shows that DRESS captures structural information that is invisible to the 3-WL colour refinement.
+The genuine collision on SRG(40,12,2,4), where both $G_5$ and $G_{25}$ are vertex-transitive with all vertex deletions producing identical DRESS multisets, demonstrates the precise limitation of $k = 1$: when the automorphism group acts transitively on vertices, single vertex deletion cannot break the symmetry.
+The rapid resolution by $\Delta^2$-DRESS shows that the framework itself is not limited, only the deletion depth parameter $k$.
 
 \subsection{Implications for the Reconstruction Conjecture}
 
 $\Delta$-DRESS computes a continuous relaxation of the vertex-deletion deck central to the Kelly--Ulam Reconstruction Conjecture~\cite{kelly1942congruence, ulam1960collection}.
-Our empirical results provide indirect evidence consistent with the conjecture: the vertex-deletion deck, as captured by $\Delta$-DRESS, carries enough information to distinguish all tested graphs.
+Our empirical results provide indirect evidence consistent with the conjecture: the vertex-deletion deck, as captured by $\Delta$-DRESS, carries enough information to distinguish all but one pair of tested graphs at $k = 1$, and the remaining pair is resolved at $k = 2$.
 While this does not prove the conjecture, it adds to the growing body of empirical evidence supporting it.
 
 
@@ -504,15 +493,15 @@ While this does not prove the conjecture, it adds to the growing body of empiric
     \item \textbf{One-sided test.}
     $\Delta$-DRESS can prove non-isomorphism (different fingerprints) but cannot certify isomorphism (same fingerprint does not guarantee isomorphism).
 
-    \item \textbf{Finite precision.}
+    \item \textbf{Vertex-transitive collisions at $k = 1$.}
     The DRESS computation uses IEEE~754 double-precision arithmetic ($\approx$15.7 significant decimal digits).
-    The SRG(40,12,2,4) collision illustrates that sub-$\epsilon$ differences can be lost in histogram binning.
-    The multiplicity signature mitigates this, but pathological cases may exist.
+    The SRG(40,12,2,4) collision demonstrates a more fundamental limitation: when two non-isomorphic graphs are both vertex-transitive, all single vertex deletions produce identical sorted DRESS vectors, and no fingerprint derived from the $k = 1$ data can distinguish them.
+    The fallback to $\Delta^2$-DRESS resolves this case, but other vertex-transitive pairs may require higher $k$.
 
     \item \textbf{Known obstruction at the 4-WL level.}
     $\Delta$-DRESS fails on $\text{CFI}(K_5)$, the CFI pair over the complete graph $K_5$, which requires 4-WL~\cite{cai1992optimal, castrillo2026dress}.
     More generally, CFI graphs over base graphs with treewidth $\geq 4$ require $k > 1$.
-    This shows that one deletion does not recover all pairs distinguished by 4-WL; it does not by itself prove the universal upper bound $\Delta$-DRESS $\leq 4$-WL.  Higher deletion depths are necessary for at least some harder instances.
+    This shows that one deletion does not recover all pairs distinguished by 4-WL. Higher deletion depths are necessary for at least some harder instances.
 
     \item \textbf{Scope of hard families.}
     Our benchmark covers all 12 Spence SRG families, four additional SRG families (SRG(45,22,10,11), two subfamilies of SRG(63,32,16,26), and SRG(65,32,15,16)), and 18 constructed hard families, but other hard families may exist.
@@ -522,16 +511,17 @@ While this does not prove the conjecture, it adds to the growing body of empiric
 \section{Conclusion}
 
 We have demonstrated that $\Delta$-DRESS, DRESS with a single level of vertex deletion, produces fingerprints that are unique within every tested family across a benchmark of 51{,}816 distinct hard graph instances, including 51{,}718 strongly regular graphs spanning 16 parameter families.
-The combined fingerprint (pooled histogram plus multiplicity signature) achieves 100\% within-family pairwise separation, implicitly resolving over 576 million within-family non-isomorphic pairs.
+The sorted multiset achieves within-family separation on 33 of 34 benchmark families at $k = 1$, with the single remaining collision (two vertex-transitive members of SRG(40,12,2,4)) resolved by a one-step fallback to $\Delta^2$-DRESS.
+With this fallback, 100\% within-family pairwise separation is achieved, implicitly resolving over 576 million within-family non-isomorphic pairs.
 
 Beyond completeness, we have established a qualitative result: $\Delta$-DRESS \emph{escapes the theoretical bounds} of the original 3-WL algorithm.
 The classical Rook $L_2(4)$ vs.\ Shrikhande pair (SRG(16,6,2,2)) is non-isomorphic, indistinguishable by 3-WL, but separated by $\Delta$-DRESS.
 This confirms $\Delta$-DRESS is not subsumed by 3-WL; the CFI staircase experiments in~\cite{castrillo2026dress} further show that $\Delta$-DRESS fails on $\text{CFI}(K_5)$, so one deletion does not subsume 4-WL ($\equiv$ 3-FWL).  The exact relationship to 4-WL remains open.
 
-The practical message is clear: $\Delta$-DRESS separates every hard benchmark family tested in this study, including the complete Spence SRG collection and additional classical constructions from the GI literature.
-The cost is $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$ per graph: $\mathcal{O}(I \cdot n^4)$ in dense graphs, $\mathcal{O}(I \cdot n^2 \cdot d_{\max})$ when $m = \mathcal{O}(n)$, and $\mathcal{O}(I \cdot n^2)$ on bounded-degree sparse families.  A streamed implementation of the combined fingerprint uses $\mathcal{O}(m + B + n)$ memory for fixed $\epsilon$, compared with $\mathcal{O}(n^3)$ tuple storage for folklore 3-FWL ($\equiv$ 4-WL); the experiments here retain the full multiset matrix only for post-hoc analysis.
+The practical message is clear: $\Delta$-DRESS separates every hard benchmark family tested in this study (with one vertex-transitive pair requiring a $\Delta^2$ fallback), including the complete Spence SRG collection and additional classical constructions from the GI literature.
+The cost is $\mathcal{O}(n \cdot I \cdot m \cdot d_{\max})$ per graph: $\mathcal{O}(I \cdot n^4)$ in dense graphs, $\mathcal{O}(I \cdot n^2 \cdot d_{\max})$ when $m = \mathcal{O}(n)$, and $\mathcal{O}(I \cdot n^2)$ on bounded-degree sparse families.  A streamed implementation uses $\mathcal{O}(m + B)$ memory for fixed $\epsilon$, compared with $\mathcal{O}(n^3)$ tuple storage for folklore 3-FWL ($\equiv$ 4-WL); the streaming SHA-256 hashes agreed with the full sorted multiset on all benchmark instances.
 
-These results provide the strongest empirical support to date for the DRESS--WL Continuous Dominance Conjecture ($\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL), and they independently establish a structural boundary escape from 3-WL at $k = 1$.
+These results provide the strongest empirical support to date for the DRESS--WL Continuous Dominance Conjecture ($\Delta^k$-DRESS acts as an empirical superset or equivalent to $(k{+}2)$-WL), establish a structural boundary escape from 3-WL at $k = 1$, and precisely characterize the limitation of single vertex deletion on vertex-transitive graphs.
 
 An open-source implementation is available in the \texttt{dress-graph} library at \url{https://github.com/velicast/dress-graph}.
 
