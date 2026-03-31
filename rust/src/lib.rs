@@ -8,14 +8,12 @@
 //! let sources = vec![0, 1, 2, 0];
 //! let targets = vec![1, 2, 3, 3];
 //!
-//! let result = DRESS::builder(4, sources, targets)
-//!     .variant(Variant::Undirected)
-//!     .max_iterations(100)
-//!     .epsilon(1e-6)
-//!     .build_and_fit()
-//!     .unwrap();
+//! let mut g = DRESS::new(4, sources, targets,
+//!                        None, None, Variant::Undirected, false).unwrap();
+//! let (iters, delta) = g.fit(100, 1e-6);
+//! let result = g.result();
 //!
-//! println!("iterations: {}", result.iterations);
+//! println!("iterations: {}", iters);
 //! for (i, d) in result.edge_dress.iter().enumerate() {
 //!     println!("  edge {}: dress = {:.6}", i, d);
 //! }

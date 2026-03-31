@@ -149,10 +149,21 @@ int64_t dress_delta_binom(int n, int k)
 
 /* ── Sampling helpers ─────────────────────────────────────────────── */
 
+/* Portable rand_r: MSVC lacks POSIX rand_r. */
+#ifdef _MSC_VER
+static int dress_rand_r(unsigned int *seed)
+{
+    *seed = *seed * 1103515245u + 12345u;
+    return (int)((*seed >> 16) & 0x7fff);
+}
+#else
+#define dress_rand_r rand_r
+#endif
+
 /* 64-bit random from two rand_r calls. */
 static int64_t delta_rand64(unsigned int *seed, int64_t bound)
 {
-    int64_t r = ((int64_t)rand_r(seed) << 31) | (int64_t)rand_r(seed);
+    int64_t r = ((int64_t)dress_rand_r(seed) << 31) | (int64_t)dress_rand_r(seed);
     return (r & 0x7FFFFFFFFFFFFFFFLL) % bound;
 }
 

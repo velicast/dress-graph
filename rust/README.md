@@ -12,10 +12,10 @@ use dress_graph::{DRESS, Variant};
 let sources = vec![0, 1, 2, 0];
 let targets = vec![1, 2, 3, 3];
 
-let result = DRESS::builder(4, sources, targets)
-    .variant(Variant::Undirected)
-    .build_and_fit()
-    .unwrap();
+let mut g = DRESS::new(4, sources, targets,
+                       None, None, Variant::Undirected, false).unwrap();
+g.fit(100, 1e-6);
+let result = g.result();
 println!("{:?}", result.edge_dress);
 ```
 
