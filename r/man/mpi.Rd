@@ -6,18 +6,27 @@
 \title{MPI-distributed DRESS functions.}
 \description{
 An environment containing MPI-distributed versions of
-\code{delta_dress_fit}.  Switch from CPU to MPI by prefixing calls
+\code{delta_fit} and \code{nabla_fit}.  Switch from CPU to MPI by prefixing calls
 with \code{mpi$}.
 }
 \details{
 The \code{mpi} environment provides:
 \describe{
-  \item{\code{mpi$delta_dress_fit(...)}}{MPI-distributed
-        \code{\link{delta_dress_fit}} (CPU backend).
+  \item{\code{mpi$delta_fit(...)}}{MPI-distributed
+        \code{\link{delta_fit}} (CPU backend).
         Same arguments plus \code{comm_f}.}
-  \item{\code{mpi$cuda$delta_dress_fit(...)}}{MPI-distributed
-        \code{\link{delta_dress_fit}} (CUDA backend).
+  \item{\code{mpi$nabla_fit(...)}}{MPI-distributed
+        \code{\link{nabla_fit}} (CPU backend).
+        Same arguments plus \code{comm_f}.}
+  \item{\code{mpi$cuda$delta_fit(...)}}{MPI-distributed
+        \code{\link{delta_fit}} (CUDA backend).
         Each rank runs GPU-accelerated DRESS.}
+  \item{\code{mpi$cuda$nabla_fit(...)}}{MPI-distributed
+        \code{\link{nabla_fit}} (CUDA backend).}
+  \item{\code{mpi$omp$delta_fit(...)}}{MPI-distributed
+        \code{\link{delta_fit}} (OpenMP backend).}
+  \item{\code{mpi$omp$nabla_fit(...)}}{MPI-distributed
+        \code{\link{nabla_fit}} (OpenMP backend).}
 }
 
 MPI support requires rebuilding the package with \code{DRESS_MPI}
@@ -26,12 +35,12 @@ MPI support requires rebuilding the package with \code{DRESS_MPI}
 \examples{
 \dontrun{
   # CPU
-  r1 <- delta_dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
+  r1 <- delta_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
 
   # MPI -- same signature, distributed
-  r2 <- mpi$delta_dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
+  r2 <- mpi$delta_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
 
   # MPI + CUDA
-  r3 <- mpi$cuda$delta_dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
+  r3 <- mpi$cuda$delta_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
 }
 }

@@ -12,6 +12,7 @@ which backend is active — including hardware-accelerated methods
 from dress.core import (
     DRESSResult,
     DeltaDRESSResult,
+    NablaDRESSResult,
     FitResult,
     Variant,
     UNDIRECTED,
@@ -75,6 +76,7 @@ class DRESS:
         precompute_intercepts=False,
         *,
         weights=None,
+        node_weights=None,
         variant=None,
     ):
         # Resolve the flexible positional / keyword calling conventions:
@@ -102,6 +104,7 @@ class DRESS:
         self._src = list(sources)
         self._tgt = list(targets)
         self._wgt = list(_weights) if _weights is not None else None
+        self._nwgt = list(node_weights) if node_weights is not None else None
         self._var = Variant(int(_variant))
         self._precompute = bool(precompute_intercepts)
 
@@ -110,10 +113,10 @@ class DRESS:
         # hardware fit results can be written back for get() to work.
         if _BACKEND == "c" and not self._force_python_impl:
             cv = _core.Variant(int(self._var))
-            if self._wgt is not None:
+            if self._wgt is not None or self._nwgt is not None:
                 self._impl = _core.DRESS(
                     self._n_v, self._src, self._tgt,
-                    self._wgt, cv, self._precompute,
+                    self._wgt or [], self._nwgt or [], cv, self._precompute,
                 )
             else:
                 self._impl = _core.DRESS(
@@ -124,7 +127,8 @@ class DRESS:
             from dress.core import DRESS as _PyDRESS
             self._impl = _PyDRESS(
                 self._n_v, self._src, self._tgt,
-                weights=self._wgt, variant=self._var,
+                weights=self._wgt, node_weights=self._nwgt,
+                variant=self._var,
                 precompute_intercepts=self._precompute,
             )
 
@@ -217,7 +221,8 @@ class DRESS:
         return fr
 
     def delta_fit(self, k=0, max_iterations=100, epsilon=1e-6,
-                  keep_multisets=False, offset=0, stride=1):
+                  n_samples=0, seed=0,
+                  keep_multisets=False, compute_histogram=True):
         """Compute the Δ^k-DRESS histogram.
 
         Exhaustively removes all k-vertex subsets, runs DRESS on each
@@ -233,10 +238,6 @@ class DRESS:
             Convergence threshold and histogram bin width (default 1e-6).
         keep_multisets : bool
             If True, return per-subgraph DRESS values (default False).
-        offset : int
-            Process only subgraphs where ``index % stride == offset``.
-        stride : int
-            Total number of strides (default 1 = all).
 
         Returns
         -------
@@ -245,7 +246,9 @@ class DRESS:
         if _BACKEND == "c":
             dr = self._impl.delta_fit(
                 k, max_iterations, epsilon,
-                keep_multisets, offset, stride,
+                n_samples=n_samples, seed=seed,
+                keep_multisets=keep_multisets,
+                compute_histogram=compute_histogram,
             )
             ms = None
             ns = 0
@@ -254,14 +257,62 @@ class DRESS:
                 ns = dr.num_subgraphs
             return DeltaDRESSResult(
                 histogram=list(dr.histogram),
-                hist_size=dr.hist_size,
                 multisets=ms,
                 num_subgraphs=ns,
             )
         else:
             return self._impl.delta_fit(
                 k=k, max_iterations=max_iterations, epsilon=epsilon,
-                keep_multisets=keep_multisets, offset=offset, stride=stride,
+                n_samples=n_samples, seed=seed,
+                keep_multisets=keep_multisets, compute_histogram=compute_histogram,
+            )
+
+    def nabla_fit(self, k=0, max_iterations=100, epsilon=1e-6,
+                  n_samples=0, seed=0,
+                  keep_multisets=False, compute_histogram=True):
+        """Compute the nabla^k-DRESS histogram.
+
+        Enumerates all P(N,k) ordered k-tuples, marks each with
+        generic injective node weights, runs DRESS on each marked
+        graph, and accumulates edge values into a histogram.
+
+        Parameters
+        ----------
+        k : int
+            Individualization depth (default 0 = original graph).
+        max_iterations : int
+            Max DRESS iterations per marked graph (default 100).
+        epsilon : float
+            Convergence threshold (default 1e-6).
+        keep_multisets : bool
+            If True, return per-tuple DRESS values (default False).
+
+        Returns
+        -------
+        NablaDRESSResult
+        """
+        if _BACKEND == "c":
+            nr = self._impl.nabla_fit(
+                k, max_iterations, epsilon,
+                n_samples=n_samples, seed=seed,
+                keep_multisets=keep_multisets,
+                compute_histogram=compute_histogram,
+            )
+            ms = None
+            nt = 0
+            if keep_multisets and nr.multisets is not None:
+                ms = nr.multisets
+                nt = nr.num_tuples
+            return NablaDRESSResult(
+                histogram=list(nr.histogram),
+                multisets=ms,
+                num_tuples=nt,
+            )
+        else:
+            return self._impl.nabla_fit(
+                k=k, max_iterations=max_iterations, epsilon=epsilon,
+                n_samples=n_samples, seed=seed,
+                keep_multisets=keep_multisets, compute_histogram=compute_histogram,
             )
 
     def get(self, u, v, max_iterations=100, epsilon=1e-6, edge_weight=1.0):
@@ -305,10 +356,11 @@ class DRESS:
 
     def fit_cuda(self, max_iterations=100, epsilon=1e-6):
         """Run DRESS fitting on the GPU.  Requires ``libdress_cuda.so``."""
-        from dress.cuda import dress_fit as _cuda_fit
+        from dress.cuda import fit as _cuda_fit
         result = _cuda_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
         )
         if self._force_python_impl or _BACKEND == "python":
@@ -316,37 +368,113 @@ class DRESS:
         return FitResult(iterations=result.iterations, delta=result.delta)
 
     def delta_fit_cuda(self, k=0, max_iterations=100, epsilon=1e-6,
-                       keep_multisets=False, offset=0, stride=1):
+                       n_samples=0, seed=0,
+                       keep_multisets=False, compute_histogram=True):
         """Δ^k-DRESS histogram on the GPU."""
-        from dress.cuda import delta_dress_fit as _cuda_delta
+        from dress.cuda import delta_fit as _cuda_delta
         return _cuda_delta(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, k=k, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets,
-            offset=offset, stride=stride,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
         )
 
     def delta_fit_mpi(self, k=0, max_iterations=100, epsilon=1e-6,
-                      keep_multisets=False, comm=None):
+                      n_samples=0, seed=0,
+                      keep_multisets=False, compute_histogram=True,
+                      comm=None):
         """Δ^k-DRESS histogram distributed over MPI (CPU)."""
-        from dress.mpi import delta_dress_fit as _mpi_delta
+        from dress.mpi import delta_fit as _mpi_delta
         return _mpi_delta(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, k=k, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
         )
 
     def delta_fit_mpi_cuda(self, k=0, max_iterations=100, epsilon=1e-6,
-                           keep_multisets=False, comm=None):
+                           n_samples=0, seed=0,
+                           keep_multisets=False, compute_histogram=True,
+                           comm=None):
         """Δ^k-DRESS histogram distributed over MPI with GPU acceleration."""
-        from dress.mpi.cuda import delta_dress_fit as _mpi_cuda_delta
+        from dress.mpi.cuda import delta_fit as _mpi_cuda_delta
         return _mpi_cuda_delta(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, k=k, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
+        )
+
+    def nabla_fit_cuda(self, k=0, max_iterations=100, epsilon=1e-6,
+                       n_samples=0, seed=0,
+                       keep_multisets=False, compute_histogram=True):
+        """∇^k-DRESS histogram on the GPU."""
+        from dress.cuda import nabla_fit as _cuda_nabla
+        return _cuda_nabla(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
+        )
+
+    def nabla_fit_mpi(self, k=0, max_iterations=100, epsilon=1e-6,
+                      n_samples=0, seed=0,
+                      keep_multisets=False, compute_histogram=True,
+                      comm=None):
+        """∇^k-DRESS histogram distributed over MPI (CPU)."""
+        from dress.mpi import nabla_fit as _mpi_nabla
+        return _mpi_nabla(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, comm=comm,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
+        )
+
+    def nabla_fit_mpi_cuda(self, k=0, max_iterations=100, epsilon=1e-6,
+                           n_samples=0, seed=0,
+                           keep_multisets=False, compute_histogram=True,
+                           comm=None):
+        """∇^k-DRESS histogram distributed over MPI with GPU acceleration."""
+        from dress.mpi.cuda import nabla_fit as _mpi_cuda_nabla
+        return _mpi_cuda_nabla(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, comm=comm,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
+        )
+
+    def nabla_fit_mpi_omp(self, k=0, max_iterations=100, epsilon=1e-6,
+                          n_samples=0, seed=0,
+                          keep_multisets=False, compute_histogram=True,
+                          comm=None):
+        """∇^k-DRESS histogram distributed over MPI+OMP."""
+        from dress.mpi.omp import nabla_fit as _mpi_omp_nabla
+        return _mpi_omp_nabla(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, comm=comm,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
         )
 
     # -- repr --------------------------------------------------------------
@@ -362,11 +490,12 @@ class DRESS:
 #  Module-level convenience functions
 # ---------------------------------------------------------------------------
 
-def dress_fit(
+def fit(
     n_vertices,
     sources,
     targets,
     weights=None,
+    node_weights=None,
     variant=UNDIRECTED,
     max_iterations=100,
     epsilon=1e-6,
@@ -382,6 +511,8 @@ def dress_fit(
         Edge endpoint arrays (same length).
     weights : sequence of float, optional
         Per-edge weights (``None`` for unweighted).
+    node_weights : sequence of float, optional
+        Per-vertex weights (``None`` for unit weights).
     variant : Variant
         ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
     max_iterations : int
@@ -396,6 +527,7 @@ def dress_fit(
     DRESSResult
     """
     g = DRESS(n_vertices, sources, targets, weights=weights,
+              node_weights=node_weights,
               variant=variant, precompute_intercepts=precompute_intercepts)
     fr = g.fit(max_iterations=max_iterations, epsilon=epsilon)
     E = g.n_edges
@@ -410,19 +542,21 @@ def dress_fit(
     )
 
 
-def delta_dress_fit(
+def delta_fit(
     n_vertices,
     sources,
     targets,
     weights=None,
+    node_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
     epsilon=1e-6,
     precompute=False,
     keep_multisets=False,
-    offset=0,
-    stride=1,
+    n_samples=0,
+    seed=0,
+    compute_histogram=True,
 ):
     """Compute the Δ^k-DRESS histogram.
 
@@ -434,6 +568,8 @@ def delta_dress_fit(
         Edge endpoint arrays (same length).
     weights : sequence of float, optional
         Per-edge weights (``None`` for unweighted).
+    node_weights : sequence of float, optional
+        Per-vertex weights (``None`` for unit weights).
     k : int
         Deletion depth (default 0).
     variant : Variant
@@ -446,18 +582,71 @@ def delta_dress_fit(
         Pre-compute common-neighbour index (default ``False``).
     keep_multisets : bool
         If True, return per-subgraph DRESS values (default ``False``).
-    offset : int
-        Process only subgraphs where ``index % stride == offset``.
-    stride : int
-        Total number of strides (default 1 = all).
 
     Returns
     -------
     DeltaDRESSResult
     """
     g = DRESS(n_vertices, sources, targets, weights=weights,
+              node_weights=node_weights,
               variant=variant, precompute_intercepts=precompute)
     return g.delta_fit(
         k=k, max_iterations=max_iterations, epsilon=epsilon,
-        keep_multisets=keep_multisets, offset=offset, stride=stride,
+        n_samples=n_samples, seed=seed,
+        keep_multisets=keep_multisets, compute_histogram=compute_histogram,
+    )
+
+
+def nabla_fit(
+    n_vertices,
+    sources,
+    targets,
+    weights=None,
+    node_weights=None,
+    k=0,
+    variant=UNDIRECTED,
+    max_iterations=100,
+    epsilon=1e-6,
+    precompute=False,
+    keep_multisets=False,
+    n_samples=0,
+    seed=0,
+    compute_histogram=True,
+):
+    """Compute the nabla^k-DRESS histogram.
+
+    Parameters
+    ----------
+    n_vertices : int
+        Number of vertices (0-indexed).
+    sources, targets : sequence of int
+        Edge endpoint arrays (same length).
+    weights : sequence of float, optional
+        Per-edge weights (``None`` for unweighted).
+    node_weights : sequence of float, optional
+        Per-vertex weights (``None`` for unit weights).
+    k : int
+        Individualization depth (default 0).
+    variant : Variant
+        ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
+    max_iterations : int
+        Max DRESS iterations per marked graph (default 100).
+    epsilon : float
+        Convergence threshold (default 1e-6).
+    precompute : bool
+        Pre-compute common-neighbour index (default ``False``).
+    keep_multisets : bool
+        If True, return per-tuple DRESS values (default ``False``).
+
+    Returns
+    -------
+    NablaDRESSResult
+    """
+    g = DRESS(n_vertices, sources, targets, weights=weights,
+              node_weights=node_weights,
+              variant=variant, precompute_intercepts=precompute)
+    return g.nabla_fit(
+        k=k, max_iterations=max_iterations, epsilon=epsilon,
+        n_samples=n_samples, seed=seed,
+        keep_multisets=keep_multisets, compute_histogram=compute_histogram,
     )

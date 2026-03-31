@@ -2,8 +2,8 @@
 # configure — detect MPI and CUDA for dress.graph R package
 # Generates src/Makevars from src/Makevars.in
 
-PKG_CFLAGS="-I. ${SHLIB_OPENMP_CFLAGS}"
-PKG_LIBS="${SHLIB_OPENMP_CFLAGS} -lm"
+PKG_CFLAGS="-I. ${SHLIB_OPENMP_CFLAGS} -fopenmp"
+PKG_LIBS="${SHLIB_OPENMP_CFLAGS} -fopenmp -lm"
 
 # Auto-detect MPI
 if command -v mpicc >/dev/null 2>&1; then

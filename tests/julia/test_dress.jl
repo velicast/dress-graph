@@ -18,10 +18,10 @@ using Test
 # ── helpers ──────────────────────────────────────────────────────────
 
 """Build a triangle graph: 0-1, 1-2, 0-2"""
-triangle() = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2])
+triangle() = fit(3, Int32[0, 1, 0], Int32[1, 2, 2])
 
 """Build a path graph: 0-1-2-3"""
-path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
+path4() = fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
 
 # ── tests ────────────────────────────────────────────────────────────
 
@@ -39,7 +39,7 @@ path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
         end
 
         @testset "weighted triangle" begin
-            r = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
+            r = fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
                           weights=[1.0, 2.0, 3.0])
             @test length(r.edge_dress) == 3
             # Undirected weighted edges get doubled
@@ -50,24 +50,24 @@ path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
 
         @testset "all variants" begin
             for v in (UNDIRECTED, DIRECTED, FORWARD, BACKWARD)
-                r = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2]; variant=v)
+                r = fit(3, Int32[0, 1, 0], Int32[1, 2, 2]; variant=v)
                 @test length(r.edge_dress) == 3
                 @test r.iterations >= 0
             end
         end
 
         @testset "precompute intercepts" begin
-            r1 = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
+            r1 = fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
                            precompute_intercepts=true)
-            r2 = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
+            r2 = fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
                            precompute_intercepts=false)
             @test length(r1.edge_dress) == 3
             @test length(r2.edge_dress) == 3
         end
 
         @testset "argument validation" begin
-            @test_throws ArgumentError dress_fit(3, Int32[0, 1], Int32[1, 2, 2])
-            @test_throws ArgumentError dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
+            @test_throws ArgumentError fit(3, Int32[0, 1], Int32[1, 2, 2])
+            @test_throws ArgumentError fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
                                                   weights=[1.0, 2.0])
         end
     end
@@ -103,10 +103,10 @@ path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
         end
 
         @testset "intercepts match no-intercepts" begin
-            r1 = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
+            r1 = fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
                            max_iterations=100, epsilon=1e-10,
                            precompute_intercepts=true)
-            r2 = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
+            r2 = fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
                            max_iterations=100, epsilon=1e-10,
                            precompute_intercepts=false)
             for e in 1:3
@@ -125,7 +125,7 @@ path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
         end
 
         @testset "weighted fit" begin
-            r = dress_fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
+            r = fit(3, Int32[0, 1, 0], Int32[1, 2, 2];
                           weights=[1.0, 2.0, 3.0])
             @test r.iterations > 0
             # Asymmetric weights → different dress values
@@ -138,13 +138,13 @@ path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
     # ── edge cases ───────────────────────────────────────────────────
     @testset "edge cases" begin
         @testset "single edge" begin
-            r = dress_fit(2, Int32[0], Int32[1])
+            r = fit(2, Int32[0], Int32[1])
             @test length(r.edge_dress) == 1
             @test r.edge_dress[1] > 0.0
         end
 
         @testset "complete K4" begin
-            r = dress_fit(4,
+            r = fit(4,
                 Int32[0, 0, 0, 1, 1, 2],
                 Int32[1, 2, 3, 2, 3, 3];
                 max_iterations=200, epsilon=1e-10)
@@ -159,7 +159,7 @@ path4() = dress_fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
         end
 
         @testset "star graph" begin
-            r = dress_fit(5,
+            r = fit(5,
                 Int32[0, 0, 0, 0],
                 Int32[1, 2, 3, 4])
             d0 = r.edge_dress[1]

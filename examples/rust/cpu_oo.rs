@@ -21,15 +21,9 @@ fn main() {
     let k33_t = vec![3,0,4,0,5,0,3,1,4,1,5,1,3,2,4,2,5,2];
 
     // Build persistent graph objects
-    let mut prism = DRESS::builder(6, prism_s, prism_t)
-        .variant(Variant::Undirected)
-        .build()
-        .unwrap();
+    let mut prism = DRESS::new(6, prism_s, prism_t, None, None, Variant::Undirected, false).unwrap();
 
-    let mut k33 = DRESS::builder(6, k33_s, k33_t)
-        .variant(Variant::Undirected)
-        .build()
-        .unwrap();
+    let mut k33 = DRESS::new(6, k33_s, k33_t, None, None, Variant::Undirected, false).unwrap();
 
     // Fit
     prism.fit(100, 1e-6);

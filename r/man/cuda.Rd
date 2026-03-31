@@ -5,17 +5,19 @@
 \alias{cuda}
 \title{CUDA-accelerated DRESS functions.}
 \description{
-An environment containing GPU-accelerated versions of \code{dress_fit}
-and \code{delta_dress_fit} with identical signatures.  Switch from
+An environment containing GPU-accelerated versions of \code{fit},
+\code{delta_fit}, and \code{nabla_fit} with identical signatures.  Switch from
 CPU to GPU by prefixing calls with \code{cuda$}.
 }
 \details{
 The \code{cuda} environment provides:
 \describe{
-  \item{\code{cuda$dress_fit(...)}}{GPU-accelerated \code{\link{dress_fit}}.
+  \item{\code{cuda$fit(...)}}{GPU-accelerated \code{\link{fit}}.
         Same arguments and return value.}
-  \item{\code{cuda$delta_dress_fit(...)}}{GPU-accelerated
-        \code{\link{delta_dress_fit}}.  Same arguments and return value.}
+  \item{\code{cuda$delta_fit(...)}}{GPU-accelerated
+        \code{\link{delta_fit}}.  Same arguments and return value.}
+  \item{\code{cuda$nabla_fit(...)}}{GPU-accelerated
+        \code{\link{nabla_fit}}.  Same arguments and return value.}
 }
 
 CUDA support requires rebuilding the package with \code{DRESS_CUDA=1}.
@@ -24,10 +26,10 @@ If CUDA is not available, calling either function raises an error.
 \examples{
 \dontrun{
   # CPU
-  r1 <- dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
+  r1 <- fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
 
   # CUDA -- same signature
-  r2 <- cuda$dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
+  r2 <- cuda$fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
 }
 }
 \keyword{datasets}

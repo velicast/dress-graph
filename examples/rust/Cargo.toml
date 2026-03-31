@@ -10,6 +10,7 @@ mpi = { version = "0.8", optional = true }
 
 [features]
 cuda = ["dress-graph/cuda"]
+omp  = ["dress-graph/omp"]
 mpi  = ["dep:mpi", "dress-graph/mpi"]
 
 [[example]]
@@ -49,3 +50,23 @@ required-features = ["mpi"]
 name = "mpi_cuda_oo"
 path = "mpi_cuda_oo.rs"
 required-features = ["mpi", "cuda"]
+
+[[example]]
+name = "omp"
+path = "omp.rs"
+required-features = ["omp"]
+
+[[example]]
+name = "omp_oo"
+path = "omp_oo.rs"
+required-features = ["omp"]
+
+[[example]]
+name = "mpi_omp"
+path = "mpi_omp.rs"
+required-features = ["mpi", "omp"]
+
+[[example]]
+name = "mpi_omp_oo"
+path = "mpi_omp_oo.rs"
+required-features = ["mpi", "omp"]

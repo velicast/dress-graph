@@ -16,9 +16,9 @@
 #include "dress/dress.h"
 
 /* Undo convenience macros — this file implements the igraph wrapper
-   and calls the core dress_fit() / delta_dress_fit() directly. */
+   and calls the core dress_fit() / dress_delta_fit() directly. */
 #undef dress_fit
-#undef delta_dress_fit
+#undef dress_delta_fit
 
 #include <igraph/igraph.h>
 #include <stdint.h>
@@ -31,6 +31,7 @@
 
 int dress_fit_igraph(const igraph_t *graph,
                          const char *weight_attr,
+                         const char *node_weight_attr,
                          dress_variant_t variant,
                          int max_iters,
                          double epsilon,
@@ -82,13 +83,29 @@ int dress_fit_igraph(const igraph_t *graph,
         }
     }
 
+    /* ----- Extract node weights (optional) ----- */
+
+    double *NW = NULL;
+    if (node_weight_attr != NULL &&
+        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, node_weight_attr))
+    {
+        NW = (double *)malloc(N * sizeof(double));
+        if (!NW) {
+            free(U); free(V); free(W);
+            return -1;
+        }
+        for (int v = 0; v < N; v++) {
+            NW[v] = igraph_cattribute_VAN(graph, node_weight_attr, v);
+        }
+    }
+
     /* ----- Build DRESS graph and fit ----- */
     /*
-     * init_dress_graph takes ownership of U, V, W.
-     * They will be freed by free_dress_graph.
+     * dress_init_graph takes ownership of U, V, W, NW.
+     * They will be freed by dress_free_graph.
      */
 
-    p_dress_graph_t dg = init_dress_graph(N, E, U, V, W,
+    p_dress_graph_t dg = dress_init_graph(N, E, U, V, W, NW,
                                           variant, precompute);
     if (!dg)
         return -1;
@@ -102,7 +119,7 @@ int dress_fit_igraph(const igraph_t *graph,
     /*
      * The dress_graph_t owns all the arrays.  We keep it alive inside
      * the result struct and just expose const pointers.  No memcpy.
-     * dress_free_igraph() will call free_dress_graph() later.
+     * dress_free_igraph() will call dress_free_graph() later.
      */
 
     result->N          = N;
@@ -128,7 +145,7 @@ void dress_free_igraph(dress_result_igraph_t *result)
     if (!result) return;
 
     if (result->dg_)
-        free_dress_graph(result->dg_);
+        dress_free_graph(result->dg_);
 
     memset(result, 0, sizeof(*result));
 }
@@ -156,17 +173,22 @@ int dress_to_vector_igraph(const dress_result_igraph_t *result,
 /* ================================================================== */
 
 /* ------------------------------------------------------------------ */
-/*  delta_dress_fit_igraph                                         */
+/*  dress_delta_fit_igraph                                         */
 /* ------------------------------------------------------------------ */
 
-int delta_dress_fit_igraph(const igraph_t *graph,
+int dress_delta_fit_igraph(const igraph_t *graph,
                                const char *weight_attr,
+                               const char *node_weight_attr,
                                dress_variant_t variant,
                                int k,
                                int max_iters,
                                double epsilon,
-                               int precompute,
-                               delta_dress_result_igraph_t *result)
+                           int n_samples,
+                           unsigned int seed,
+                           int precompute,
+                           int keep_multisets,
+                           int compute_histogram,
+                           delta_dress_result_igraph_t *result)
 {
     if (!graph || !result)
         return -1;
@@ -176,15 +198,8 @@ int delta_dress_fit_igraph(const igraph_t *graph,
 
     memset(result, 0, sizeof(*result));
 
-    if (E == 0) {
-        /* No edges — return an empty histogram.
-         * With no edges we cannot build a DRESS graph to call
-         * compute_dmax_bound, so use the unweighted bound (2.0). */
-        int nbins = (int)(2.0 / epsilon) + 1;
-        result->hist_size = nbins;
-        result->histogram = (int64_t *)calloc((size_t)nbins, sizeof(int64_t));
-        return result->histogram ? 0 : -1;
-    }
+    if (E == 0)
+        return 0;
 
     /* ----- Allocate edge arrays (ownership transferred to DRESS) ----- */
 
@@ -219,25 +234,45 @@ int delta_dress_fit_igraph(const igraph_t *graph,
         }
     }
 
+    /* ----- Extract node weights (optional) ----- */
+
+    double *NW = NULL;
+    if (node_weight_attr != NULL &&
+        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, node_weight_attr))
+    {
+        NW = (double *)malloc(N * sizeof(double));
+        if (!NW) {
+            free(U); free(V); free(W);
+            return -1;
+        }
+        for (int v = 0; v < N; v++) {
+            NW[v] = igraph_cattribute_VAN(graph, node_weight_attr, v);
+        }
+    }
+
     /* ----- Build DRESS graph and run delta_fit ----- */
 
-    p_dress_graph_t dg = init_dress_graph(N, E, U, V, W,
+    p_dress_graph_t dg = dress_init_graph(N, E, U, V, W, NW,
                                           variant, precompute);
     if (!dg)
         return -1;
 
     int hist_size = 0;
-    int64_t *histogram = delta_dress_fit(dg, k, max_iters, epsilon,
-                                        &hist_size,
-                                        0, NULL, NULL);
+    double *ms_ptr = NULL;
+    int64_t num_sub = 0;
+    dress_hist_pair_t *histogram = dress_delta_fit(dg, k, max_iters, epsilon,
+                                               n_samples, seed,
+                                               compute_histogram ? &hist_size : NULL,
+                                               keep_multisets,
+                                               keep_multisets ? &ms_ptr : NULL,
+                                               &num_sub);
 
-    free_dress_graph(dg);
-
-    if (!histogram)
-        return -1;
+    dress_free_graph(dg);
 
     result->histogram = histogram;
     result->hist_size = hist_size;
+    result->multisets = ms_ptr;
+    result->num_subgraphs = num_sub;
 
     return 0;
 }
@@ -251,6 +286,7 @@ void delta_dress_free_igraph(delta_dress_result_igraph_t *result)
     if (!result) return;
 
     free(result->histogram);
+    free(result->multisets);
     memset(result, 0, sizeof(*result));
 }
 
@@ -261,13 +297,15 @@ void delta_dress_free_igraph(delta_dress_result_igraph_t *result)
 int delta_dress_to_vector_igraph(const delta_dress_result_igraph_t *result,
                                  igraph_vector_t *out)
 {
-    if (!result || !out || !result->histogram)
+    if (!result || !out)
         return -1;
 
-    igraph_vector_resize(out, result->hist_size);
+    igraph_vector_resize(out, 2 * result->hist_size);
 
-    for (int i = 0; i < result->hist_size; i++)
-        VECTOR(*out)[i] = (double)result->histogram[i];
+    for (int i = 0; i < result->hist_size; i++) {
+        VECTOR(*out)[2 * i] = result->histogram[i].value;
+        VECTOR(*out)[2 * i + 1] = (double)result->histogram[i].count;
+    }
 
     return 0;
 }

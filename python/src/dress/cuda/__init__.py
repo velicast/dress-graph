@@ -13,7 +13,7 @@ Switch to the GPU backend by changing the import::
 
 Module-level functions are also available::
 
-    from dress.cuda import dress_fit, delta_dress_fit
+    from dress.cuda import fit, delta_fit
 
 NetworkX helpers::
 
@@ -28,7 +28,7 @@ import os
 import numpy as np
 from numpy.ctypeslib import ndpointer
 
-from dress._ctypes_helpers import _DressGraph, _p_dress_graph_t, _malloc_array
+from dress._ctypes_helpers import _DressGraph, _DressHistPair, _p_dress_graph_t, _malloc_array
 
 # ---------------------------------------------------------------------------
 #  Lazy-load shared library (so importing dress.cuda never crashes)
@@ -96,8 +96,11 @@ def _build_cuda_so():
     cc = os.environ.get('CC', 'gcc')
     c_srcs = [
         os.path.join(src, 'dress.c'),
+        os.path.join(src, 'dress_histogram.c'),
         os.path.join(src, 'delta_dress.c'),
         os.path.join(src, 'delta_dress_impl.c'),
+        os.path.join(src, 'omp', 'dress_omp.c'),
+        os.path.join(src, 'omp', 'delta_dress_omp.c'),
         os.path.join(cuda_dir, 'delta_dress_cuda.c'),
     ]
     subprocess.check_call([
@@ -134,10 +137,11 @@ def _get_lib():
         lib = ctypes.CDLL(_LOCAL_SO)
 
     # Bind C function signatures
-    lib.init_dress_graph.restype  = _p_dress_graph_t
-    lib.init_dress_graph.argtypes = [
+    lib.dress_init_graph.restype  = _p_dress_graph_t
+    lib.dress_init_graph.argtypes = [
         ctypes.c_int, ctypes.c_int,
         ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.c_int, ctypes.c_int,
     ]
@@ -154,28 +158,48 @@ def _get_lib():
         ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
     ]
 
-    lib.delta_dress_fit_cuda.restype  = ctypes.POINTER(ctypes.c_int64)
-    lib.delta_dress_fit_cuda.argtypes = [
+    lib.dress_delta_fit_cuda.restype  = ctypes.POINTER(_DressHistPair)
+    lib.dress_delta_fit_cuda.argtypes = [
         _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+        ctypes.c_int, ctypes.c_uint,
         ctypes.POINTER(ctypes.c_int), ctypes.c_int,
         ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
         ctypes.POINTER(ctypes.c_int64),
     ]
 
-    lib.delta_dress_fit_cuda_strided.restype  = ctypes.POINTER(ctypes.c_int64)
-    lib.delta_dress_fit_cuda_strided.argtypes = [
+    lib.dress_delta_fit_cuda_strided.restype  = ctypes.POINTER(_DressHistPair)
+    lib.dress_delta_fit_cuda_strided.argtypes = [
         _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+        ctypes.c_int, ctypes.c_uint,
         ctypes.POINTER(ctypes.c_int), ctypes.c_int,
         ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
         ctypes.POINTER(ctypes.c_int64),
         ctypes.c_int, ctypes.c_int,
     ]
 
-    lib.free_dress_graph.restype  = None
-    lib.free_dress_graph.argtypes = [_p_dress_graph_t]
+    lib.dress_nabla_fit_cuda.restype  = ctypes.POINTER(_DressHistPair)
+    lib.dress_nabla_fit_cuda.argtypes = [
+        _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+        ctypes.c_int, ctypes.c_uint,
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
+        ctypes.POINTER(ctypes.c_int64),
+    ]
+
+    lib.dress_free_graph.restype  = None
+    lib.dress_free_graph.argtypes = [_p_dress_graph_t]
 
     _lib = lib
     return _lib
+
+
+def _decode_histogram(hist_ptr, size):
+    if not hist_ptr or size == 0:
+        return []
+    pairs = np.ctypeslib.as_array(hist_ptr, shape=(size,)).copy()
+    lib = _get_lib()
+    lib.free(hist_ptr)
+    return [(float(pair["value"]), int(pair["count"])) for pair in pairs]
 
 
 def is_available():
@@ -200,7 +224,7 @@ BACKWARD   = 3
 
 
 
-def dress_cuda(N, E, U, V, W=None, variant=UNDIRECTED,
+def dress_cuda(N, E, U, V, W=None, NW=None, variant=UNDIRECTED,
                precompute_intercepts=0, max_iterations=100, epsilon=1e-10):
     """
     Compute DRESS edge and node values using GPU acceleration.
@@ -212,6 +236,7 @@ def dress_cuda(N, E, U, V, W=None, variant=UNDIRECTED,
     U : array-like[int] — source node for each edge (length E)
     V : array-like[int] — target node for each edge (length E)
     W : array-like[float] or None — edge weights (None = unweighted)
+    NW : array-like[float] or None — node weights (None = all 1.0)
     variant : int — 0=UNDIRECTED, 1=DIRECTED, 2=FORWARD, 3=BACKWARD
     precompute_intercepts : int — 1 to precompute intercepts (faster for dense)
     max_iterations : int
@@ -224,8 +249,8 @@ def dress_cuda(N, E, U, V, W=None, variant=UNDIRECTED,
     iterations : int
     delta : float
     """
-    # Allocate C arrays with malloc — init_dress_graph takes ownership
-    # and free_dress_graph calls free() on them.
+    # Allocate C arrays with malloc — dress_init_graph takes ownership
+    # and dress_free_graph calls free() on them.
     p_U = _malloc_array([int(x) for x in U], ctypes.c_int)
     p_V = _malloc_array([int(x) for x in V], ctypes.c_int)
 
@@ -234,10 +259,15 @@ def dress_cuda(N, E, U, V, W=None, variant=UNDIRECTED,
     else:
         p_W = ctypes.POINTER(ctypes.c_double)()  # NULL
 
+    if NW is not None:
+        p_NW = _malloc_array([float(x) for x in NW], ctypes.c_double)
+    else:
+        p_NW = ctypes.POINTER(ctypes.c_double)()  # NULL
+
     lib = _get_lib()
 
     # Build graph on CPU
-    g = lib.init_dress_graph(N, E, p_U, p_V, p_W,
+    g = lib.dress_init_graph(N, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(variant),
                              ctypes.c_int(precompute_intercepts))
 
@@ -256,7 +286,7 @@ def dress_cuda(N, E, U, V, W=None, variant=UNDIRECTED,
     delta_val = delta.value
 
     # Free C memory
-    lib.free_dress_graph(g)
+    lib.dress_free_graph(g)
 
     return edge_dress, node_dress, edge_weight, iters, delta_val
 
@@ -284,8 +314,8 @@ def dress_fit_cuda(g_ptr, max_iterations=100, epsilon=1e-10):
     return iterations.value, delta.value
 
 
-def delta_dress_fit_cuda(g_ptr, k, max_iterations=100, epsilon=1e-10,
-                          keep_multisets=False):
+def dress_delta_fit_cuda(g_ptr, k, max_iterations=100, epsilon=1e-10,
+                          n_samples=0, seed=0, keep_multisets=False):
     """
     GPU-accelerated Δ^k-DRESS histogram computation.
 
@@ -307,8 +337,9 @@ def delta_dress_fit_cuda(g_ptr, k, max_iterations=100, epsilon=1e-10,
     num_subgraphs = ctypes.c_int64(0)
     multisets_ptr = ctypes.POINTER(ctypes.c_double)()
 
-    hist_ptr = lib.delta_dress_fit_cuda(
+    hist_ptr = lib.dress_delta_fit_cuda(
         g_ptr, k, max_iterations, ctypes.c_double(epsilon),
+        n_samples, ctypes.c_uint(seed),
         ctypes.byref(hist_size),
         1 if keep_multisets else 0,
         ctypes.byref(multisets_ptr),
@@ -324,21 +355,99 @@ def delta_dress_fit_cuda(g_ptr, k, max_iterations=100, epsilon=1e-10,
     return histogram, num_subgraphs.value
 
 
-# ---------------------------------------------------------------------------
-#  Unified API — same signatures as dress.dress_fit / dress.delta_dress_fit
-# ---------------------------------------------------------------------------
-
-def dress_fit(
+def nabla_fit(
     n_vertices,
     sources,
     targets,
     weights=None,
+    node_weights=None,
+    k=0,
+    variant=UNDIRECTED,
+    max_iterations=100,
+    epsilon=1e-6,
+    precompute=False,
+    keep_multisets=False,
+    n_samples=0,
+    seed=0,
+    compute_histogram=True,
+):
+    """GPU-accelerated ∇^k-DRESS — drop-in replacement for ``dress.nabla_fit``.
+
+    Same parameters and return type as :func:`dress.dress_nabla_fit`, but
+    each tuple fitting runs on the GPU.
+    """
+    from dress.core import NablaDRESSResult
+
+    lib = _get_lib()
+    sources = list(sources)
+    targets = list(targets)
+    E = len(sources)
+
+    p_U = _malloc_array([int(x) for x in sources], ctypes.c_int)
+    p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
+
+    if weights is not None:
+        p_W = _malloc_array([float(x) for x in weights], ctypes.c_double)
+    else:
+        p_W = ctypes.POINTER(ctypes.c_double)()
+
+    if node_weights is not None:
+        p_NW = _malloc_array([float(x) for x in node_weights], ctypes.c_double)
+    else:
+        p_NW = ctypes.POINTER(ctypes.c_double)()
+
+    g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
+                             ctypes.c_int(int(variant)),
+                             ctypes.c_int(int(precompute)))
+
+    hist_size = ctypes.c_int(0)
+    num_tuples = ctypes.c_int64(0)
+    multisets_ptr = ctypes.POINTER(ctypes.c_double)()
+
+    hist_ptr = lib.dress_nabla_fit_cuda(
+        g, k, max_iterations, ctypes.c_double(epsilon),
+        n_samples, ctypes.c_uint(seed),
+        ctypes.byref(hist_size) if compute_histogram else None,
+        1 if keep_multisets else 0,
+        ctypes.byref(multisets_ptr),
+        ctypes.byref(num_tuples))
+
+    size = hist_size.value
+    ns = num_tuples.value
+    histogram = _decode_histogram(hist_ptr, size)
+
+    ms = None
+    if keep_multisets and multisets_ptr and ns > 0:
+        total = ns * E
+        flat = np.ctypeslib.as_array(multisets_ptr, shape=(total,)).copy()
+        ms = flat.reshape(ns, E)
+        lib.free(multisets_ptr)
+
+    lib.dress_free_graph(g)
+
+    return NablaDRESSResult(
+        histogram=histogram,
+        multisets=ms,
+        num_tuples=ns,
+    )
+
+
+# ---------------------------------------------------------------------------
+#  Unified API — same signatures as dress.dress_fit / dress.dress_delta_fit
+# ---------------------------------------------------------------------------
+
+def fit(
+    n_vertices,
+    sources,
+    targets,
+    weights=None,
+    node_weights=None,
     variant=UNDIRECTED,
     max_iterations=100,
     epsilon=1e-6,
     precompute_intercepts=False,
 ):
-    """GPU-accelerated DRESS fitting — drop-in replacement for ``dress.dress_fit``.
+    """GPU-accelerated DRESS fitting — drop-in replacement for ``dress.fit``.
 
     Same parameters and return type as :func:`dress.dress_fit`, but the
     iterative fitting loop runs on the GPU.
@@ -355,6 +464,7 @@ def dress_fit(
         U=sources,
         V=targets,
         W=list(weights) if weights is not None else None,
+        NW=list(node_weights) if node_weights is not None else None,
         variant=int(variant),
         precompute_intercepts=int(precompute_intercepts),
         max_iterations=max_iterations,
@@ -372,11 +482,12 @@ def dress_fit(
     )
 
 
-def delta_dress_fit(
+def delta_fit(
     n_vertices,
     sources,
     targets,
     weights=None,
+    node_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -385,10 +496,13 @@ def delta_dress_fit(
     keep_multisets=False,
     offset=0,
     stride=1,
+    n_samples=0,
+    seed=0,
+    compute_histogram=True,
 ):
-    """GPU-accelerated Δ^k-DRESS — drop-in replacement for ``dress.delta_dress_fit``.
+    """GPU-accelerated Δ^k-DRESS — drop-in replacement for ``dress.delta_fit``.
 
-    Same parameters and return type as :func:`dress.delta_dress_fit`, but
+    Same parameters and return type as :func:`dress.dress_delta_fit`, but
     each subgraph fitting runs on the GPU.
 
     Parameters *offset* and *stride* select a subset of the C(N,k) subgraphs
@@ -401,7 +515,7 @@ def delta_dress_fit(
     targets = list(targets)
     E = len(sources)
 
-    # Build the graph via ctypes — use malloc so free_dress_graph works
+    # Build the graph via ctypes — use malloc so dress_free_graph works
     p_U = _malloc_array([int(x) for x in sources], ctypes.c_int)
     p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
 
@@ -410,7 +524,12 @@ def delta_dress_fit(
     else:
         p_W = ctypes.POINTER(ctypes.c_double)()
 
-    g = lib.init_dress_graph(n_vertices, E, p_U, p_V, p_W,
+    if node_weights is not None:
+        p_NW = _malloc_array([float(x) for x in node_weights], ctypes.c_double)
+    else:
+        p_NW = ctypes.POINTER(ctypes.c_double)()
+
+    g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(int(variant)),
                              ctypes.c_int(int(precompute)))
 
@@ -418,9 +537,10 @@ def delta_dress_fit(
     num_subgraphs = ctypes.c_int64(0)
     multisets_ptr = ctypes.POINTER(ctypes.c_double)()
 
-    hist_ptr = lib.delta_dress_fit_cuda_strided(
+    hist_ptr = lib.dress_delta_fit_cuda_strided(
         g, k, max_iterations, ctypes.c_double(epsilon),
-        ctypes.byref(hist_size),
+        n_samples, ctypes.c_uint(seed),
+        ctypes.byref(hist_size) if compute_histogram else None,
         1 if keep_multisets else 0,
         ctypes.byref(multisets_ptr),
         ctypes.byref(num_subgraphs),
@@ -428,11 +548,7 @@ def delta_dress_fit(
 
     size = hist_size.value
     ns = num_subgraphs.value
-    if not hist_ptr or size == 0:
-        histogram = []
-    else:
-        histogram = np.ctypeslib.as_array(hist_ptr, shape=(size,)).copy().tolist()
-        lib.free(hist_ptr)
+    histogram = _decode_histogram(hist_ptr, size)
 
     ms = None
     if keep_multisets and multisets_ptr and ns > 0:
@@ -441,11 +557,10 @@ def delta_dress_fit(
         ms = flat.reshape(ns, E)
         lib.free(multisets_ptr)
 
-    lib.free_dress_graph(g)
+    lib.dress_free_graph(g)
 
     return DeltaDRESSResult(
         histogram=histogram,
-        hist_size=size,
         multisets=ms,
         num_subgraphs=ns,
     )
@@ -475,21 +590,40 @@ class DRESS(_BaseDRESS):
     _force_python_impl = True
 
     def fit(self, max_iterations=100, epsilon=1e-6):
-        result = dress_fit(
+        result = fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
         )
         self._sync_hardware_fit(result)
         return _FitResult(iterations=result.iterations, delta=result.delta)
 
     def delta_fit(self, k=0, max_iterations=100, epsilon=1e-6,
-                  keep_multisets=False, offset=0, stride=1):
-        return delta_dress_fit(
+                  n_samples=0, seed=0,
+                  keep_multisets=False, compute_histogram=True,
+                  offset=0, stride=1):
+        return delta_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, k=k, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, offset=offset, stride=stride,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
+        )
+
+    def nabla_fit(self, k=0, max_iterations=100, epsilon=1e-6,
+                  n_samples=0, seed=0,
+                  keep_multisets=False, compute_histogram=True):
+        return nabla_fit(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
         )
 
     def __repr__(self):

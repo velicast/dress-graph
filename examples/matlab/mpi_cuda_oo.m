@@ -27,9 +27,11 @@ shri.fit();
 dr = rook.delta_fit('K', 1, 'KeepMultisets', true);
 ds = shri.delta_fit('K', 1, 'KeepMultisets', true);
 
-fprintf('Rook:       %d bins, %d subgraphs\n', dr.hist_size, dr.num_subgraphs);
-fprintf('Shrikhande: %d bins, %d subgraphs\n', ds.hist_size, ds.num_subgraphs);
-fprintf('Histograms differ:  %s\n', mat2str(~isequal(dr.histogram, ds.histogram)));
+fprintf('Rook:       %d entries, %d subgraphs\n', numel(dr.histogram.count), dr.num_subgraphs);
+fprintf('Shrikhande: %d entries, %d subgraphs\n', numel(ds.histogram.count), ds.num_subgraphs);
+hist_same = isequal(dr.histogram.value, ds.histogram.value) && ...
+			isequal(dr.histogram.count, ds.histogram.count);
+fprintf('Histograms differ:  %s\n', mat2str(~hist_same));
 
 % Cleanup
 rook.close();

@@ -6,12 +6,12 @@
  *   #include "dress/dress.h"
  *   #include "dress/cuda/dress_cuda.h"
  *
- *   p_dress_graph_t g = init_dress_graph(N, E, U, V, W, variant, precompute);
+ *   p_dress_graph_t g = dress_init_graph(N, E, U, V, W, variant, precompute);
  *   dress_fit_cuda(g, max_iterations, epsilon, &iterations, &delta);
  *   // g->edge_dress and g->node_dress are now populated
- *   free_dress_graph(g);
+ *   dress_free_graph(g);
  *
- * Graph construction (init_dress_graph) stays on the CPU.
+ * Graph construction (dress_init_graph) stays on the CPU.
  * Only the iterative fitting loop runs on the GPU.
  */
 
@@ -41,26 +41,73 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
 /**
  * GPU-accelerated Δ^k-DRESS histogram computation.
  *
- * Same interface as the CPU delta_dress_fit() in delta_dress.h, but each
+ * Same interface as the CPU dress_delta_fit() in dress.h, but each
  * subgraph is fitted on the GPU via dress_fit_cuda().
  */
-int64_t *delta_dress_fit_cuda(p_dress_graph_t g, int k, int iterations,
-                              double epsilon, int *hist_size,
-                              int keep_multisets, double **multisets,
-                              int64_t *num_subgraphs);
+dress_hist_pair_t *dress_delta_fit_cuda(p_dress_graph_t g, int k, int iterations,
+                                        double epsilon,
+                                        int n_samples, unsigned int seed,
+                                        int *hist_size,
+                                        int keep_multisets, double **multisets,
+                                        int64_t *num_subgraphs);
 
 /**
  * GPU-accelerated strided Δ^k-DRESS for distributed computation.
  *
- * Same as delta_dress_fit_cuda but processes only subgraphs where
+ * Same as dress_delta_fit_cuda but processes only subgraphs where
  * index % stride == offset.  With offset=0, stride=1 processes all.
  */
-int64_t *delta_dress_fit_cuda_strided(p_dress_graph_t g, int k,
-                                      int iterations, double epsilon,
-                                      int *hist_size,
-                                      int keep_multisets, double **multisets,
-                                      int64_t *num_subgraphs,
-                                      int offset, int stride);
+dress_hist_pair_t *dress_delta_fit_cuda_strided(p_dress_graph_t g, int k,
+                                                int iterations, double epsilon,
+                                                int n_samples, unsigned int seed,
+                                                int *hist_size,
+                                                int keep_multisets, double **multisets,
+                                                int64_t *num_subgraphs,
+                                                int offset, int stride);
+
+/**
+ * GPU-accelerated strided Δ^k-DRESS returning flat packed histogram.
+ * Used internally by MPI reduction (returns int64_t* packed array).
+ */
+int64_t *dress_delta_fit_cuda_strided_flat(p_dress_graph_t g, int k,
+                                           int iterations, double epsilon,
+                                           int n_samples, unsigned int seed,
+                                           int *hist_size,
+                                           int keep_multisets, double **multisets,
+                                           int64_t *num_subgraphs,
+                                           int offset, int stride);
+
+/* ── ∇^k-DRESS (Nabla) CUDA variants ───────────────────────────── */
+
+dress_hist_pair_t *dress_nabla_fit_cuda(p_dress_graph_t g, int k, int iterations,
+                                        double epsilon,
+                                        int n_samples, unsigned int seed,
+                                        int *hist_size,
+                                        int keep_multisets, double **multisets,
+                                        int64_t *num_tuples);
+
+dress_hist_pair_t *dress_nabla_fit_cuda_strided(p_dress_graph_t g, int k,
+                                                int iterations, double epsilon,
+                                                int n_samples, unsigned int seed,
+                                                int *hist_size,
+                                                int keep_multisets, double **multisets,
+                                                int64_t *num_tuples,
+                                                int offset, int stride);
+
+int64_t *dress_nabla_fit_cuda_flat(p_dress_graph_t g, int k, int iterations,
+                                   double epsilon,
+                                   int n_samples, unsigned int seed,
+                                   int *hist_size,
+                                   int keep_multisets, double **multisets,
+                                   int64_t *num_tuples);
+
+int64_t *dress_nabla_fit_cuda_strided_flat(p_dress_graph_t g, int k,
+                                           int iterations, double epsilon,
+                                           int n_samples, unsigned int seed,
+                                           int *hist_size,
+                                           int keep_multisets, double **multisets,
+                                           int64_t *num_tuples,
+                                           int offset, int stride);
 
 #ifdef __cplusplus
 }

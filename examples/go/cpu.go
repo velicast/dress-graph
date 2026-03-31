@@ -21,8 +21,8 @@ func main() {
 	k33S := []int32{0, 3, 0, 4, 0, 5, 1, 3, 1, 4, 1, 5, 2, 3, 2, 4, 2, 5}
 	k33T := []int32{3, 0, 4, 0, 5, 0, 3, 1, 4, 1, 5, 1, 3, 2, 4, 2, 5, 2}
 
-	rp, _ := dress.DressFit(6, prismS, prismT, nil, dress.Undirected, 100, 1e-6, false)
-	rk, _ := dress.DressFit(6, k33S, k33T, nil, dress.Undirected, 100, 1e-6, false)
+	rp, _ := dress.Fit(6, prismS, prismT, nil, nil, dress.Undirected, 100, 1e-6, false)
+	rk, _ := dress.Fit(6, k33S, k33T, nil, nil, dress.Undirected, 100, 1e-6, false)
 
 	fp := make([]float64, len(rp.EdgeDress))
 	fk := make([]float64, len(rk.EdgeDress))

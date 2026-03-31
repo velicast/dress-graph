@@ -12,6 +12,7 @@
 #include <pybind11/numpy.h>
 
 #include "dress/dress.hpp"
+using namespace dress;
 
 namespace py = pybind11;
 
@@ -61,17 +62,11 @@ PYBIND11_MODULE(_core, m) {
 
     py::class_<DRESS::DeltaFitResult>(m, "DeltaFitResult",
             "Result returned by DRESS.delta_fit()")
-        .def_readonly("hist_size",  &DRESS::DeltaFitResult::hist_size,
-                      "Number of histogram bins (floor(dmax/epsilon) + 1; dmax=2 unweighted)")
         .def_readonly("num_subgraphs", &DRESS::DeltaFitResult::num_subgraphs,
                       "Number of subgraphs (rows in multisets), 0 if not requested")
         .def_property_readonly("histogram", [](const DRESS::DeltaFitResult& r) {
-            return py::array_t<int64_t>(
-                {static_cast<py::ssize_t>(r.histogram.size())},
-                {sizeof(int64_t)},
-                r.histogram.data()
-            );
-        }, "Histogram as NumPy int64 array (copy)")
+            return py::cast(r.histogram);
+        }, "Histogram as a list of (value, count) tuples.")
         .def_property_readonly("multisets", [](const DRESS::DeltaFitResult& r)
                 -> py::object {
             if (r.multisets.empty())
@@ -91,9 +86,39 @@ PYBIND11_MODULE(_core, m) {
         }, "Per-subgraph DRESS values as 2D NumPy array (C(N,k) x E), or None")
         .def("__repr__", [](const DRESS::DeltaFitResult& r) {
             int64_t total = 0;
-            for (auto v : r.histogram) total += v;
-            return "DeltaFitResult(hist_size=" + std::to_string(r.hist_size)
-                 + ", total_values=" + std::to_string(total) + ")";
+            for (const auto& kv : r.histogram) total += kv.second;
+            return "DeltaFitResult(total_values=" + std::to_string(total) + ")";
+        });
+
+    // ---- NablaFitResult ----
+
+    py::class_<DRESS::NablaFitResult>(m, "NablaFitResult",
+            "Result returned by DRESS.nabla_fit()")
+        .def_readonly("num_tuples", &DRESS::NablaFitResult::num_tuples,
+                      "Number of tuples (rows in multisets), 0 if not requested")
+        .def_property_readonly("histogram", [](const DRESS::NablaFitResult& r) {
+            return py::cast(r.histogram);
+        }, "Histogram as a list of (value, count) tuples.")
+        .def_property_readonly("multisets", [](const DRESS::NablaFitResult& r)
+                -> py::object {
+            if (r.multisets.empty())
+                return py::none();
+            py::ssize_t nrows = r.num_tuples;
+            py::ssize_t ncols = nrows > 0
+                ? static_cast<py::ssize_t>(r.multisets.size()) / nrows
+                : 0;
+            py::array_t<double> arr(
+                {nrows, ncols},
+                {static_cast<py::ssize_t>(ncols * sizeof(double)),
+                 static_cast<py::ssize_t>(sizeof(double))},
+                r.multisets.data()
+            );
+            return std::move(arr);
+        }, "Per-tuple DRESS values as 2D NumPy array (P(N,k) x E), or None")
+        .def("__repr__", [](const DRESS::NablaFitResult& r) {
+            int64_t total = 0;
+            for (const auto& kv : r.histogram) total += kv.second;
+            return "NablaFitResult(total_values=" + std::to_string(total) + ")";
         });
 
     // ---- DRESS graph class ----
@@ -112,6 +137,8 @@ sources, targets : array-like of int
     Edge endpoint arrays (same length).
 weights : array-like of float, optional
     Per-edge weights. Omit or pass an empty list for unweighted.
+node_weights : array-like of float, optional
+    Per-vertex weights. Omit or pass an empty list for unit weights.
 variant : Variant
     UNDIRECTED (default), DIRECTED, FORWARD, or BACKWARD.
 precompute_intercepts : bool
@@ -125,12 +152,14 @@ precompute_intercepts : bool
                        const std::vector<int>&,
                        const std::vector<int>&,
                        const std::vector<double>&,
+                       const std::vector<double>&,
                        dress_variant_t,
                        bool>(),
              py::arg("n_vertices"),
              py::arg("sources"),
              py::arg("targets"),
              py::arg("weights"),
+               py::arg("node_weights")           = std::vector<double>{},
              py::arg("variant")               = DRESS_VARIANT_UNDIRECTED,
              py::arg("precompute_intercepts")  = false)
 
@@ -171,67 +200,37 @@ FitResult
              py::arg("k"),
              py::arg("max_iterations"),
              py::arg("epsilon"),
+             py::arg("n_samples") = 0,
+             py::arg("seed") = 0u,
              py::arg("keep_multisets") = false,
-             py::arg("offset") = 0,
-             py::arg("stride") = 1,
+             py::arg("compute_histogram") = true,
              R"doc(
 Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS
 on each subgraph, and accumulate edge values into a histogram.
 
-Parameters
-----------
-k : int
-    Deletion depth (0 = original graph, 1 = single-node deletion, etc.)
-max_iterations : int
-    Maximum DRESS iterations per subgraph.
-epsilon : float
-    Convergence tolerance and histogram bin width.
-keep_multisets : bool
-    If True, also return per-subgraph edge DRESS values in a
-    2D array of shape (C(N,k), E).  NaN marks removed edges.
-offset : int
-    Process only subgraphs where index % stride == offset (default 0).
-stride : int
-    Total number of strides (default 1 = process all).
-
 Returns
 -------
 DeltaFitResult
-    Result with `histogram`, `hist_size`, and optionally `multisets`.
+    Result with `histogram` and optionally `multisets`.
 )doc")
 
-        .def("get", &DRESS::get,
-             py::arg("u"),
-             py::arg("v"),
-             py::arg("max_iterations") = 100,
-             py::arg("epsilon")        = 1e-6,
-             py::arg("edge_weight")    = 1.0,
+        .def("nabla_fit", &DRESS::nablaFit,
+             py::arg("k"),
+             py::arg("max_iterations"),
+             py::arg("epsilon"),
+             py::arg("n_samples") = 0,
+             py::arg("seed") = 0u,
+             py::arg("keep_multisets") = false,
+             py::arg("compute_histogram") = true,
              R"doc(
-Query the DRESS value for any vertex pair (u, v).
-
-If edge (u,v) exists in the graph, returns its converged dress value.
-If the edge does not exist (virtual edge), estimates the value using
-a local fixed-point iteration against the frozen steady state.
-Useful for link prediction.
-
-The graph must have been fitted (call `fit()` first).
-
-Parameters
-----------
-u, v : int
-    Vertex ids (0-based).
-max_iterations : int
-    Max local iterations for virtual edges (default 100).
-epsilon : float
-    Convergence threshold for local iteration (default 1e-6).
-edge_weight : float
-    Hypothetical weight of the virtual edge (ignored when the edge
-    already exists).  Pass 1.0 for unweighted graphs (default 1.0).
+Run ∇^k-DRESS: enumerate all P(N,k) ordered k-tuples, mark each with
+generic injective node weights, fit DRESS on each marked graph, and
+accumulate edge values into a histogram.
 
 Returns
 -------
-float
-    DRESS similarity value for the (u, v) pair.
+NablaFitResult
+    Result with `histogram` and optionally `multisets`.
 )doc")
 
         // --- scalar accessors ---
@@ -255,6 +254,23 @@ float
              "dress value of edge e")
         .def("node_dress",  &DRESS::nodeDress,  py::arg("u"),
              "dress norm of vertex u")
+
+           .def("get", &DRESS::get,
+               py::arg("u"),
+               py::arg("v"),
+               py::arg("max_iterations") = 100,
+               py::arg("epsilon") = 1e-6,
+               py::arg("edge_weight") = 1.0,
+               R"doc(
+    Query the DRESS value for any vertex pair *(u, v)*.
+
+    If the edge exists, returns its converged value. Otherwise estimates it
+    via local fixed-point iteration for the corresponding virtual edge.
+
+    Returns
+    -------
+    float
+    )doc")
 
         // --- bulk NumPy views (zero-copy) ---
 

@@ -29,7 +29,8 @@ def _find_sources():
         inc = os.path.join(vendored, "include")
         src_dir = os.path.join(vendored, "src")
         c_srcs = [os.path.join(src_dir, f) for f in
-                  ("dress.c", "delta_dress.c", "delta_dress_impl.c")
+                  ("dress.c", "dress_histogram.c", "delta_dress.c", "delta_dress_impl.c",
+                   "nabla_dress.c", "nabla_dress_impl.c")
                   if os.path.isfile(os.path.join(src_dir, f))]
         # Make relative to setup.py directory for setuptools
         c_srcs = [os.path.relpath(p, HERE) for p in c_srcs]
@@ -45,7 +46,8 @@ def _find_sources():
         ]
         src_dir = os.path.join(ROOT, "libdress", "src")
         c_srcs = [os.path.relpath(os.path.join(src_dir, f), HERE) for f in
-                  ("dress.c", "delta_dress.c", "delta_dress_impl.c")
+                  ("dress.c", "dress_histogram.c", "delta_dress.c", "delta_dress_impl.c",
+                   "nabla_dress.c", "nabla_dress_impl.c")
                   if os.path.isfile(os.path.join(src_dir, f))]
         return incs, c_srcs
 

@@ -35,6 +35,8 @@ DRESS_BACKWARD   <- 3L
 #' @param targets Integer vector of length E — edge target endpoints (0-based).
 #' @param weights Optional numeric vector of length E — per-edge weights.
 #'   \code{NULL} (default) gives every edge weight 1.
+#' @param node_weights Optional numeric vector of length N — per-node weights.
+#'   \code{NULL} (default) gives every node weight 1.
 #' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
 #'   One of \code{DRESS_UNDIRECTED} (0), \code{DRESS_DIRECTED} (1),
 #'   \code{DRESS_FORWARD} (2), \code{DRESS_BACKWARD} (3).
@@ -48,29 +50,31 @@ DRESS_BACKWARD   <- 3L
 #' \describe{
 #'   \item{\code{sources}}{Integer vector [E] — edge source endpoints (0-based).}
 #'   \item{\code{targets}}{Integer vector [E] — edge target endpoints (0-based).}
-#'   \item{\code{edge_dress}}{Numeric vector [E] — DRESS similarity per edge.}
-#'   \item{\code{edge_weight}}{Numeric vector [E] — variant-specific weight.}
-#'   \item{\code{node_dress}}{Numeric vector [N] — per-node norm.}
-#'   \item{\code{iterations}}{Integer — number of iterations performed.}
-#'   \item{\code{delta}}{Numeric — final max per-edge change.}
+#'   \item{\code{edge_dress}}{Numeric vector [E] — fitted DRESS values.}
+#'   \item{\code{edge_weight}}{Numeric vector [E] — variant-adjusted edge weights.}
+#'   \item{\code{node_dress}}{Numeric vector [N] — aggregated node DRESS norms.}
+#'   \item{\code{iterations}}{Integer — iterations until convergence.}
+#'   \item{\code{delta}}{Numeric — final maximum change.}
+#'   \item{\code{node_weights}}{Numeric vector [N] — node weights (if provided).}
 #' }
 #'
 #' @examples
 #' # Triangle + pendant: 0-1, 1-2, 2-0, 2-3
-#' res <- dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
+#' res <- fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
 #' res$edge_dress
 #'
 #' # Weighted, directed variant
-#' res2 <- dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L),
+#' res2 <- fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L),
 #'                   weights = c(1.0, 2.0, 1.0, 0.5),
 #'                   variant = DRESS_DIRECTED)
 #'
 #' @useDynLib dress.graph, .registration = TRUE
 #' @export
-dress_fit <- function(n_vertices,
+fit <- function(n_vertices,
                       sources,
                       targets,
                       weights              = NULL,
+                      node_weights         = NULL,
                       variant              = DRESS_UNDIRECTED,
                       max_iterations       = 100L,
                       epsilon              = 1e-6,
@@ -96,11 +100,17 @@ dress_fit <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
+  if (!is.null(node_weights)) {
+    node_weights <- as.double(node_weights)
+    stopifnot(length(node_weights) == n_vertices)
+  }
+
   .Call(C_dress_fit,
         n_vertices,
         sources,
         targets,
         weights,
+        node_weights,
         variant,
         max_iterations,
         epsilon,
@@ -120,6 +130,8 @@ dress_fit <- function(n_vertices,
 #' @param targets Integer vector of length E — edge target endpoints (0-based).
 #' @param weights Numeric vector of length E — per-edge weights, or NULL for
 #'   unweighted (all weights = 1). Default NULL.
+#' @param node_weights Numeric vector of length N — per-node weights, or NULL
+#'   (all weights = 1). Default NULL.
 #' @param k Integer. Number of vertices to remove (0 = original graph).
 #' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
 #' @param max_iterations Maximum fitting iterations (default 100).
@@ -127,14 +139,11 @@ dress_fit <- function(n_vertices,
 #' @param precompute Logical. Pre-compute intercept index (default FALSE).
 #' @param keep_multisets Logical. If TRUE, return per-subgraph edge DRESS
 #'   values in a C(N,k) x E matrix (NaN for removed edges). Default FALSE.
-#' @param offset Integer. Process only subgraphs where index %% stride == offset
-#'   (default 0L).
-#' @param stride Integer. Total number of strides (default 1L = process all).
 #'
 #' @return A list with components:
 #' \describe{
-#'   \item{\code{histogram}}{Numeric vector — bin counts of edge delta values.}
-#'   \item{\code{hist_size}}{Integer — number of bins (floor(dmax/epsilon) + 1; dmax = 2 unweighted).}
+#'   \item{\code{histogram}}{Data frame with columns \code{value} and \code{count},
+#'     containing the exact sparse histogram entries sorted by \code{value}.}
 #'   \item{\code{multisets}}{Matrix (C(N,k) x E) of per-subgraph edge values
 #'     (only present when \code{keep_multisets = TRUE}; NaN = removed edge).}
 #'   \item{\code{num_subgraphs}}{Integer — C(N,k) (only when \code{keep_multisets = TRUE}).}
@@ -142,60 +151,167 @@ dress_fit <- function(n_vertices,
 #'
 #' @examples
 #' # Triangle K3, delta-1
-#' res <- delta_dress_fit(3L, c(0L,1L,2L), c(1L,2L,0L), k = 1L)
-#' res$hist_size
+#' res <- delta_fit(3L, c(0L,1L,2L), c(1L,2L,0L), k = 1L)
+#' res$histogram
 #'
 #' @useDynLib dress.graph, .registration = TRUE
 #' @export
-delta_dress_fit <- function(n_vertices,
+delta_fit <- function(n_vertices,
                             sources,
                             targets,
                             weights          = NULL,
+                            node_weights     = NULL,
                             k                = 0L,
                             variant          = DRESS_UNDIRECTED,
                             max_iterations   = 100L,
                             epsilon          = 1e-6,
+                            n_samples        = 0L,
+                            seed             = 0L,
                             precompute       = FALSE,
                             keep_multisets   = FALSE,
-                            offset           = 0L,
-                            stride           = 1L) {
+                            compute_histogram = TRUE) {
 
   n_vertices     <- as.integer(n_vertices)
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
   epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
   precompute     <- as.integer(precompute)
   keep_multisets <- as.integer(keep_multisets)
-  offset         <- as.integer(offset)
-  stride         <- as.integer(stride)
+  compute_histogram <- as.integer(compute_histogram)
 
   stopifnot(length(sources) == length(targets))
   if (!is.null(weights)) stopifnot(length(weights) == length(sources))
+  if (!is.null(node_weights)) stopifnot(length(node_weights) == n_vertices)
   stopifnot(n_vertices >= 1L)
   stopifnot(k >= 0L)
   stopifnot(variant >= 0L && variant <= 3L)
   stopifnot(max_iterations >= 1L)
   stopifnot(epsilon > 0)
-  stopifnot(stride >= 1L)
-  stopifnot(offset >= 0L && offset < stride)
 
   .Call(C_delta_dress_fit,
         n_vertices,
         sources,
         targets,
         weights,
+        node_weights,
         k,
         variant,
         max_iterations,
         epsilon,
+        n_samples,
+        seed,
         precompute,
         keep_multisets,
-        offset,
-        stride)
+        compute_histogram,
+        0L,
+        1L)
+}
+
+# ---- Nabla-k-DRESS ---------------------------------------------------
+
+#' Compute Nabla-k-DRESS histogram
+#'
+#' Build a DRESS graph from an edge list and compute the Nabla-k-DRESS
+#' distribution by sampling vertex k-tuples and measuring the change
+#' in edge similarity values.
+#'
+#' @param n_vertices Integer. Number of vertices (vertex ids in 0..N-1).
+#' @param sources Integer vector of length E — edge source endpoints (0-based).
+#' @param targets Integer vector of length E — edge target endpoints (0-based).
+#' @param weights Numeric vector of length E — per-edge weights, or NULL for
+#'   unweighted (all weights = 1). Default NULL.
+#' @param node_weights Numeric vector of length N — per-node weights, or NULL
+#'   (all weights = 1). Default NULL.
+#' @param k Integer. Tuple size (0 = original graph).
+#' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
+#' @param max_iterations Maximum fitting iterations (default 100).
+#' @param epsilon Convergence threshold (default 1e-6).
+#' @param n_samples Integer. Number of random tuples to sample (default 0 = all).
+#' @param seed Integer. Random seed (default 0).
+#' @param precompute Logical. Pre-compute intercept index (default FALSE).
+#' @param keep_multisets Logical. If TRUE, return per-tuple edge DRESS
+#'   values in a matrix. Default FALSE.
+#' @param compute_histogram Logical. If TRUE, compute and return the
+#'   histogram. Default TRUE.
+#'
+#' @return A list with components:
+#' \describe{
+#'   \item{\code{histogram}}{Data frame with columns \code{value} and \code{count},
+#'     containing the exact sparse histogram entries sorted by \code{value}.}
+#'   \item{\code{multisets}}{Matrix of per-tuple edge values
+#'     (only present when \code{keep_multisets = TRUE}).}
+#'   \item{\code{num_tuples}}{Integer — number of tuples
+#'     (only when \code{keep_multisets = TRUE}).}
+#' }
+#'
+#' @examples
+#' # Triangle K3, nabla-1
+#' res <- nabla_fit(3L, c(0L,1L,2L), c(1L,2L,0L), k = 1L)
+#' res$histogram
+#'
+#' @useDynLib dress.graph, .registration = TRUE
+#' @export
+nabla_fit <- function(n_vertices,
+                            sources,
+                            targets,
+                            weights          = NULL,
+                            node_weights     = NULL,
+                            k                = 0L,
+                            variant          = DRESS_UNDIRECTED,
+                            max_iterations   = 100L,
+                            epsilon          = 1e-6,
+                            n_samples        = 0L,
+                            seed             = 0L,
+                            precompute       = FALSE,
+                            keep_multisets   = FALSE,
+                            compute_histogram = TRUE) {
+
+  n_vertices     <- as.integer(n_vertices)
+  sources        <- as.integer(sources)
+  targets        <- as.integer(targets)
+  if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  k              <- as.integer(k)
+  variant        <- as.integer(variant)
+  max_iterations <- as.integer(max_iterations)
+  epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
+  precompute     <- as.integer(precompute)
+  keep_multisets <- as.integer(keep_multisets)
+  compute_histogram <- as.integer(compute_histogram)
+
+  stopifnot(length(sources) == length(targets))
+  if (!is.null(weights)) stopifnot(length(weights) == length(sources))
+  if (!is.null(node_weights)) stopifnot(length(node_weights) == n_vertices)
+  stopifnot(n_vertices >= 1L)
+  stopifnot(k >= 0L)
+  stopifnot(variant >= 0L && variant <= 3L)
+  stopifnot(max_iterations >= 1L)
+  stopifnot(epsilon > 0)
+
+  .Call(C_nabla_dress_fit,
+        n_vertices,
+        sources,
+        targets,
+        weights,
+        node_weights,
+        k,
+        variant,
+        max_iterations,
+        epsilon,
+        n_samples,
+        seed,
+        precompute,
+        keep_multisets,
+        compute_histogram)
 }
 
 # ---- Library version -------------------------------------------------
@@ -247,6 +363,7 @@ DRESS <- function(n_vertices,
                        sources,
                        targets,
                        weights               = NULL,
+                       node_weights          = NULL,
                        variant               = DRESS_UNDIRECTED,
                        precompute_intercepts = FALSE) {
 
@@ -265,8 +382,13 @@ DRESS <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
+  if (!is.null(node_weights)) {
+    node_weights <- as.double(node_weights)
+    stopifnot(length(node_weights) == n_vertices)
+  }
+
   ptr <- .Call(C_dress_init,
-               n_vertices, sources, targets, weights,
+               n_vertices, sources, targets, weights, node_weights,
                variant, precompute)
 
   self <- new.env(parent = emptyenv())
@@ -277,6 +399,48 @@ DRESS <- function(n_vertices,
           self$.ptr,
           as.integer(max_iterations),
           as.double(epsilon))
+  }
+
+  self$delta_fit <- function(k                = 0L,
+                             max_iterations   = 100L,
+                             epsilon          = 1e-6,
+                             n_samples        = 0L,
+                             seed             = 0L,
+                             keep_multisets   = FALSE,
+                             compute_histogram = TRUE) {
+    delta_fit(n_vertices, sources, targets,
+                    weights          = weights,
+                    node_weights     = node_weights,
+                    k                = as.integer(k),
+                    variant          = variant,
+                    max_iterations   = as.integer(max_iterations),
+                    epsilon          = as.double(epsilon),
+                    n_samples        = as.integer(n_samples),
+                    seed             = as.integer(seed),
+                    precompute       = as.logical(precompute),
+                    keep_multisets   = keep_multisets,
+                    compute_histogram = compute_histogram)
+  }
+
+  self$nabla_fit <- function(k                = 0L,
+                             max_iterations   = 100L,
+                             epsilon          = 1e-6,
+                             n_samples        = 0L,
+                             seed             = 0L,
+                             keep_multisets   = FALSE,
+                             compute_histogram = TRUE) {
+    nabla_fit(n_vertices, sources, targets,
+                    weights          = weights,
+                    node_weights     = node_weights,
+                    k                = as.integer(k),
+                    variant          = variant,
+                    max_iterations   = as.integer(max_iterations),
+                    epsilon          = as.double(epsilon),
+                    n_samples        = as.integer(n_samples),
+                    seed             = as.integer(seed),
+                    precompute       = as.logical(precompute),
+                    keep_multisets   = keep_multisets,
+                    compute_histogram = compute_histogram)
   }
 
   self$get <- function(u, v, max_iterations = 100L, epsilon = 1e-6,

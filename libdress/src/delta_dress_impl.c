@@ -3,9 +3,14 @@
  *
  * Parameterised by a fit-function pointer so the same combination-
  * enumeration and histogram logic drives both the CPU and CUDA backends.
+ *
+ * Features:
+ *   - Hash-map histogram (exact double keys, no epsilon binning)
+ *   - Optional random sampling of deletion subsets via DFS pick-filter
  */
 
 #include "delta_dress_impl.h"
+#include "dress_histogram.h"
 #include "dress/dress.h"
 
 #include <math.h>
@@ -73,7 +78,7 @@ static p_dress_graph_t delta_build_subgraph(p_dress_graph_t g,
         }
     }
 
-    /* Allocate edge arrays (init_dress_graph takes ownership). */
+    /* Allocate edge arrays (dress_init_graph takes ownership). */
     int *sub_U = (int *)malloc(sub_E * sizeof(int));
     int *sub_V = (int *)malloc(sub_E * sizeof(int));
     double *sub_W = NULL;
@@ -96,21 +101,17 @@ static p_dress_graph_t delta_build_subgraph(p_dress_graph_t g,
 
     free(node_map);
 
-    return init_dress_graph(sub_N, sub_E, sub_U, sub_V,
-                            sub_W, g->variant,
+    return dress_init_graph(sub_N, sub_E, sub_U, sub_V,
+                            sub_W, NULL, g->variant,
                             g->precompute_intercepts);
 }
 
-/* Accumulate converged edge dress values into histogram. */
+/* Accumulate converged edge dress values into hash-map histogram. */
 static void delta_accumulate_histogram(p_dress_graph_t sub,
-                                       int64_t *hist, int nbins,
-                                       double epsilon)
+                                       dress_histogram_t *hist)
 {
     for (int e = 0; e < sub->E; e++) {
-        int bin = (int)(sub->edge_dress[e] / epsilon);
-        if (bin < 0)      bin = 0;
-        if (bin >= nbins)  bin = nbins - 1;
-        hist[bin]++;
+        dress_hist_add(hist, sub->edge_dress[e]);
     }
 }
 
@@ -140,63 +141,50 @@ static int64_t delta_binom(int n, int k)
     return r;
 }
 
-/* Upper bound on maximum DRESS value.
- * Unweighted: exactly 2.0.
- * Weighted: solve d = r(d) + 1/r(d) by fixed-point iteration. */
-static double delta_compute_dmax_bound(p_dress_graph_t g)
+/* Public binomial — exposed for OMP/MPI wrappers. */
+int64_t dress_delta_binom(int n, int k)
 {
-    if (g->W == NULL)
-        return 2.0;
+    return delta_binom(n, k);
+}
 
-    double Smin = 1e308, Smax = 0.0;
-    for (int u = 0; u < g->N; u++) {
-        double s = 0.0;
-        int base = g->adj_offset[u];
-        int end  = g->adj_offset[u + 1];
-        for (int i = base; i < end; i++) {
-            int ei = g->adj_edge_idx[i];
-            s += g->edge_weight[ei];
-        }
-        if (s < Smin) Smin = s;
-        if (s > Smax) Smax = s;
-    }
+/* ── Sampling helpers ─────────────────────────────────────────────── */
 
-    if (Smin <= 0.0 || Smax == Smin)
-        return 2.0;
+/* 64-bit random from two rand_r calls. */
+static int64_t delta_rand64(unsigned int *seed, int64_t bound)
+{
+    int64_t r = ((int64_t)rand_r(seed) << 31) | (int64_t)rand_r(seed);
+    return (r & 0x7FFFFFFFFFFFFFFFLL) % bound;
+}
 
-    double d = 2.0;
-    for (int i = 0; i < 50; i++) {
-        double r = sqrt((4.0 + Smax * d) / (4.0 + Smin * d));
-        double d_new = r + 1.0 / r;
-        if (fabs(d_new - d) < 1e-12) break;
-        d = d_new;
-    }
-    return d;
+/* qsort comparator for int64_t. */
+static int delta_cmp_i64(const void *a, const void *b)
+{
+    int64_t x = *(const int64_t *)a;
+    int64_t y = *(const int64_t *)b;
+    return (x > y) - (x < y);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Shared Δ^k-DRESS implementation                                    */
 /* ------------------------------------------------------------------ */
 
-int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
-                              int iterations, double epsilon,
-                              int *hist_size,
-                              int keep_multisets,
-                              double **multisets,
-                              int64_t *num_subgraphs,
-                              dress_fit_fn fit_fn,
-                              int offset, int stride)
+int64_t *dress_delta_fit_impl_flat(p_dress_graph_t g, int k,
+                                   int iterations, double epsilon,
+                                   int n_samples, unsigned int seed,
+                                   int *hist_size,
+                                   int keep_multisets,
+                                   double **multisets,
+                                   int64_t *num_subgraphs,
+                                   dress_fit_fn fit_fn,
+                                   int offset, int stride)
 {
     int N = g->N;
     int E = g->E;
-    double dmax = delta_compute_dmax_bound(g);
-    int nbins = (int)(dmax / epsilon) + 1;
+    int do_hist = (hist_size != NULL);
 
-    if (hist_size)
-        *hist_size = nbins;
-
-    int64_t *hist = (int64_t *)calloc(nbins, sizeof(int64_t));
-    if (!hist) return NULL;
+    /* Hash-map histogram (exact double keys) — only when requested. */
+    dress_histogram_t hist;
+    if (do_hist) dress_hist_init(&hist, (size_t)E);
 
     int64_t cnk = (k == 0) ? 1 : delta_binom(N, k);
     if (num_subgraphs) *num_subgraphs = cnk;
@@ -211,36 +199,57 @@ int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
 
     /* ── k = 0: Δ^0 — run DRESS on the full graph ──────────────── */
     if (k == 0) {
-        if (offset != 0) return hist;
-        int *cp_U = (int *)malloc(E * sizeof(int));
-        int *cp_V = (int *)malloc(E * sizeof(int));
-        double *cp_W = NULL;
-        memcpy(cp_U, g->U, E * sizeof(int));
-        memcpy(cp_V, g->V, E * sizeof(int));
-        if (g->W != NULL) {
-            cp_W = (double *)malloc(E * sizeof(double));
-            memcpy(cp_W, g->W, E * sizeof(double));
+        if (offset != 0) {
+            int64_t *flat = do_hist ? dress_hist_flatten(&hist, hist_size) : NULL;
+            if (do_hist) dress_hist_free(&hist);
+            return flat;
         }
 
-        p_dress_graph_t sub = init_dress_graph(
-            N, E, cp_U, cp_V, cp_W, g->variant, g->precompute_intercepts);
-
-        fit_fn(sub, iterations, epsilon, NULL, NULL);
-        delta_accumulate_histogram(sub, hist, nbins, epsilon);
+        /* Fit on the original graph directly — no copy needed. */
+        fit_fn(g, iterations, epsilon, NULL, NULL);
+        if (do_hist) delta_accumulate_histogram(g, &hist);
 
         if (wants_ms) {
             for (int e = 0; e < E; e++)
-                ms[e] = sub->edge_dress[e];
+                ms[e] = g->edge_dress[e];
         }
-
-        free_dress_graph(sub);
-        return hist;
+        int64_t *flat = do_hist ? dress_hist_flatten(&hist, hist_size) : NULL;
+        if (do_hist) dress_hist_free(&hist);
+        return flat;
     }
 
     /* ── k >= N: no valid deletion subsets ───────────────────────── */
     if (k >= N) {
-        return hist;
+        int64_t *flat = do_hist ? dress_hist_flatten(&hist, hist_size) : NULL;
+        if (do_hist) dress_hist_free(&hist);
+        return flat;
     }
+
+    /* ── Sampling setup ─────────────────────────────────────────── */
+    int64_t cnk_per_stride = (cnk + stride - 1 - offset) / stride;
+    int64_t my_limit = (n_samples == 0)
+        ? cnk_per_stride
+        : (n_samples < cnk_per_stride ? n_samples : cnk_per_stride);
+
+    int64_t *picks = NULL;
+    int n_picks = 0;
+    int use_sampling = (n_samples > 0 && my_limit < cnk_per_stride);
+    if (use_sampling) {
+        picks = (int64_t *)malloc((size_t)my_limit * sizeof(int64_t));
+        unsigned int my_seed = seed + (unsigned int)offset;
+        for (int64_t i = 0; i < my_limit; i++)
+            picks[i] = delta_rand64(&my_seed, cnk_per_stride);
+        qsort(picks, (size_t)my_limit, sizeof(int64_t), delta_cmp_i64);
+        /* dedupe in-place */
+        int64_t u = 0;
+        for (int64_t i = 0; i < my_limit; i++)
+            if (i == 0 || picks[i] != picks[i - 1])
+                picks[u++] = picks[i];
+        n_picks = (int)u;
+    }
+
+    int64_t my_s = 0;    /* count within this stride */
+    int pick_idx = 0;
 
     /* ── k >= 1: iterative DFS over C(N, k) combinations ───────── */
 
@@ -261,18 +270,31 @@ int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
 
         if (depth == k - 1) {
             if (s % stride == offset) {
-                p_dress_graph_t sub = delta_build_subgraph(g, combo, k, edge_map);
-                if (sub) {
-                    fit_fn(sub, iterations, epsilon, NULL, NULL);
-                    delta_accumulate_histogram(sub, hist, nbins, epsilon);
-                    if (wants_ms)
-                        delta_fill_multiset_row(sub, edge_map, E,
-                                                ms + s * E);
-                    free_dress_graph(sub);
-                } else if (wants_ms) {
-                    double *row = ms + s * E;
-                    for (int e = 0; e < E; e++) row[e] = NAN;
+                /* Decide whether to process this combo. */
+                int process = !use_sampling
+                    || (pick_idx < n_picks && my_s == picks[pick_idx]);
+                pick_idx += (process & use_sampling);
+
+                if (process) {
+                    p_dress_graph_t sub = delta_build_subgraph(g, combo, k,
+                                                               edge_map);
+                    if (sub) {
+                        fit_fn(sub, iterations, epsilon, NULL, NULL);
+                        if (do_hist) delta_accumulate_histogram(sub, &hist);
+                        if (wants_ms)
+                            delta_fill_multiset_row(sub, edge_map, E,
+                                                    ms + s * E);
+                        dress_free_graph(sub);
+                    } else if (wants_ms) {
+                        double *row = ms + s * E;
+                        for (int e = 0; e < E; e++) row[e] = NAN;
+                    }
                 }
+                my_s++;
+
+                /* Early exit when all picks consumed. */
+                if (use_sampling && pick_idx >= n_picks)
+                    break;
             }
             s++;
         } else {
@@ -281,7 +303,11 @@ int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
         }
     }
 
+    free(picks);
     free(combo);
     free(edge_map);
-    return hist;
+
+    int64_t *flat = do_hist ? dress_hist_flatten(&hist, hist_size) : NULL;
+    if (do_hist) dress_hist_free(&hist);
+    return flat;
 }

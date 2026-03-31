@@ -7,39 +7,45 @@ import (
 	dress "github.com/velicast/dress-graph/go"
 )
 
-func histTotal(h []int64) int64 {
+func histTotal(h []dress.HistogramEntry) int64 {
 	var total int64
-	for _, v := range h {
-		total += v
+	for _, entry := range h {
+		total += entry.Count
 	}
 	return total
 }
 
+func histCountValue(h []dress.HistogramEntry, value float64) int64 {
+	for _, entry := range h {
+		if math.Abs(entry.Value-value) < 1e-9 {
+			return entry.Count
+		}
+	}
+	return 0
+}
+
 func TestDeltaHistSize(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		0, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.HistSize != 2001 {
-		t.Fatalf("expected hist_size=2001, got %d", r.HistSize)
+	if len(r.Histogram) != 1 {
+		t.Fatalf("expected 1 histogram entry, got %d", len(r.Histogram))
 	}
 }
 
 func TestDeltaWeightedHistSize(t *testing.T) {
 	r, err := dress.DeltaFit(3,
 		[]int32{0, 1, 0}, []int32{1, 2, 2},
-		[]float64{1.0, 10.0, 1.0},
-		0, dress.Undirected, 100, 1e-3, false, false)
+		[]float64{1.0, 10.0, 1.0}, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r.HistSize <= 2001 {
-		t.Fatalf("weighted hist_size should be > 2001, got %d", r.HistSize)
-	}
-	if len(r.Histogram) != r.HistSize {
-		t.Fatalf("histogram length %d != hist_size %d", len(r.Histogram), r.HistSize)
+	if len(r.Histogram) <= 1 {
+		t.Fatalf("weighted exact histogram should have multiple entries, got %d", len(r.Histogram))
 	}
 	total := histTotal(r.Histogram)
 	if total != 3 {
@@ -49,8 +55,8 @@ func TestDeltaWeightedHistSize(t *testing.T) {
 
 func TestDeltaDelta0K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		0, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,16 +64,18 @@ func TestDeltaDelta0K3(t *testing.T) {
 	if total != 3 {
 		t.Fatalf("delta0 K3: expected 3 edge values, got %d", total)
 	}
-	// Top bin should hold all 3 edges (dress = 2.0)
-	if r.Histogram[r.HistSize-1] != 3 {
-		t.Errorf("delta0 K3: expected top bin=3, got %d", r.Histogram[r.HistSize-1])
+	if len(r.Histogram) != 1 {
+		t.Fatalf("delta0 K3: expected 1 histogram entry, got %d", len(r.Histogram))
+	}
+	if histCountValue(r.Histogram, 2.0) != 3 {
+		t.Errorf("delta0 K3: expected value 2.0 count=3, got %d", histCountValue(r.Histogram, 2.0))
 	}
 }
 
 func TestDeltaDelta1K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		1, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		1, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,8 +88,8 @@ func TestDeltaDelta1K3(t *testing.T) {
 
 func TestDeltaDelta2K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		2, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		2, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,8 +101,8 @@ func TestDeltaDelta2K3(t *testing.T) {
 
 func TestDeltaDelta0K4(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
-		0, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,15 +110,18 @@ func TestDeltaDelta0K4(t *testing.T) {
 	if total != 6 {
 		t.Fatalf("delta0 K4: expected 6, got %d", total)
 	}
-	if r.Histogram[r.HistSize-1] != 6 {
-		t.Errorf("delta0 K4: expected top bin=6, got %d", r.Histogram[r.HistSize-1])
+	if len(r.Histogram) != 1 {
+		t.Fatalf("delta0 K4: expected 1 histogram entry, got %d", len(r.Histogram))
+	}
+	if histCountValue(r.Histogram, 2.0) != 6 {
+		t.Errorf("delta0 K4: expected value 2.0 count=6, got %d", histCountValue(r.Histogram, 2.0))
 	}
 }
 
 func TestDeltaDelta1K4(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
-		1, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil, nil,
+		1, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,15 +130,18 @@ func TestDeltaDelta1K4(t *testing.T) {
 	if total != 12 {
 		t.Fatalf("delta1 K4: expected 12, got %d", total)
 	}
-	if r.Histogram[r.HistSize-1] != 12 {
-		t.Errorf("delta1 K4: expected top bin=12, got %d", r.Histogram[r.HistSize-1])
+	if len(r.Histogram) != 1 {
+		t.Fatalf("delta1 K4: expected 1 histogram entry, got %d", len(r.Histogram))
+	}
+	if histCountValue(r.Histogram, 2.0) != 12 {
+		t.Errorf("delta1 K4: expected value 2.0 count=12, got %d", histCountValue(r.Histogram, 2.0))
 	}
 }
 
 func TestDeltaDelta2K4(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
-		2, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil, nil,
+		2, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,8 +154,8 @@ func TestDeltaDelta2K4(t *testing.T) {
 
 func TestDeltaKGeN(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		3, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		3, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,8 +165,8 @@ func TestDeltaKGeN(t *testing.T) {
 	}
 
 	r2, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		10, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		10, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,31 +178,31 @@ func TestDeltaKGeN(t *testing.T) {
 
 func TestDeltaPrecompute(t *testing.T) {
 	r1, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
-		1, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil, nil,
+		1, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 	r2, err := dress.DeltaFit(4,
-		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil,
-		1, dress.Undirected, 100, 1e-3, true, false)
+		[]int32{0, 0, 0, 1, 1, 2}, []int32{1, 2, 3, 2, 3, 3}, nil, nil,
+		1, dress.Undirected, 100, 1e-3, 0, 0, true, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if r1.HistSize != r2.HistSize {
-		t.Fatalf("precompute: hist_size mismatch %d vs %d", r1.HistSize, r2.HistSize)
+	if len(r1.Histogram) != len(r2.Histogram) {
+		t.Fatalf("precompute: histogram length mismatch %d vs %d", len(r1.Histogram), len(r2.Histogram))
 	}
-	for i := 0; i < r1.HistSize; i++ {
+	for i := range r1.Histogram {
 		if r1.Histogram[i] != r2.Histogram[i] {
-			t.Fatalf("precompute: histogram mismatch at bin %d", i)
+			t.Fatalf("precompute: histogram mismatch at entry %d", i)
 		}
 	}
 }
 
 func TestDeltaDelta0Path(t *testing.T) {
 	r, err := dress.DeltaFit(4,
-		[]int32{0, 1, 2}, []int32{1, 2, 3}, nil,
-		0, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 2}, []int32{1, 2, 3}, nil, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,22 +210,15 @@ func TestDeltaDelta0Path(t *testing.T) {
 	if total != 3 {
 		t.Fatalf("delta0 P4: expected 3, got %d", total)
 	}
-	// P4 edges not all equal → at least 2 distinct bins
-	nonzero := 0
-	for _, v := range r.Histogram {
-		if v > 0 {
-			nonzero++
-		}
-	}
-	if nonzero < 2 {
-		t.Errorf("delta0 P4: expected ≥2 distinct bins, got %d", nonzero)
+	if len(r.Histogram) < 2 {
+		t.Errorf("delta0 P4: expected at least 2 distinct values, got %d", len(r.Histogram))
 	}
 }
 
 func TestDeltaLengthMismatch(t *testing.T) {
 	_, err := dress.DeltaFit(3,
-		[]int32{0, 1}, []int32{1, 2, 2}, nil,
-		0, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1}, []int32{1, 2, 2}, nil, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err == nil {
 		t.Fatal("expected error for mismatched lengths")
 	}
@@ -221,8 +228,8 @@ func TestDeltaLengthMismatch(t *testing.T) {
 
 func TestMultisetsDisabled(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		0, dress.Undirected, 100, 1e-3, false, false)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,8 +240,8 @@ func TestMultisetsDisabled(t *testing.T) {
 
 func TestMultisetsDelta0K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		0, dress.Undirected, 100, 1e-3, false, true)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		0, dress.Undirected, 100, 1e-3, 0, 0, false, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -254,8 +261,8 @@ func TestMultisetsDelta0K3(t *testing.T) {
 
 func TestMultisetsDelta1K3(t *testing.T) {
 	r, err := dress.DeltaFit(3,
-		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil,
-		1, dress.Undirected, 100, 1e-3, false, true)
+		[]int32{0, 1, 0}, []int32{1, 2, 2}, nil, nil,
+		1, dress.Undirected, 100, 1e-3, 0, 0, false, true, true)
 	if err != nil {
 		t.Fatal(err)
 	}

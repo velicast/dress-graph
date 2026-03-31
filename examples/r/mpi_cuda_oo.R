@@ -20,17 +20,14 @@ shri_t <- c(4L,0L,12L,0L,1L,0L,3L,0L,5L,0L,15L,0L,5L,1L,13L,1L,2L,1L,6L,1L,12L,1
 rook <- mpi$cuda$DRESS(16L, rook_s, rook_t)
 shri <- mpi$cuda$DRESS(16L, shri_s, shri_t)
 
-# Fit (runs on GPU)
-rook$fit()
-shri$fit()
 
 # MPI+CUDA distributed Δ¹-DRESS
 dr <- rook$delta_fit(k = 1L, keep_multisets = TRUE)
 ds <- shri$delta_fit(k = 1L, keep_multisets = TRUE)
 
 if (comm.rank() == 0L) {
-  cat(sprintf("Rook:       %d bins, %d subgraphs\n", dr$hist_size, dr$num_subgraphs))
-  cat(sprintf("Shrikhande: %d bins, %d subgraphs\n", ds$hist_size, ds$num_subgraphs))
+  cat(sprintf("Rook:       %d exact values, %d subgraphs\n", nrow(dr$histogram), dr$num_subgraphs))
+  cat(sprintf("Shrikhande: %d exact values, %d subgraphs\n", nrow(ds$histogram), ds$num_subgraphs))
   cat("Histograms differ: ", !identical(dr$histogram, ds$histogram), "\n")
 
   canonicalize <- function(ms) {

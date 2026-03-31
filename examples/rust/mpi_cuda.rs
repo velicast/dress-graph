@@ -23,14 +23,14 @@ fn main() {
     let shri_s = vec![0,4,0,12,0,1,0,3,0,5,0,15,1,5,1,13,1,2,1,6,1,12,2,6,2,14,2,3,2,7,2,13,3,7,3,15,3,4,3,14,4,8,4,5,4,7,4,9,5,9,5,6,5,10,6,10,6,7,6,11,7,11,7,8,8,12,8,9,8,11,8,13,9,13,9,10,9,14,10,14,10,11,10,15,11,15,11,12,12,13,12,15,13,14,14,15];
     let shri_t = vec![4,0,12,0,1,0,3,0,5,0,15,0,5,1,13,1,2,1,6,1,12,1,6,2,14,2,3,2,7,2,13,2,7,3,15,3,4,3,14,3,8,4,5,4,7,4,9,4,9,5,6,5,10,5,10,6,7,6,11,6,11,7,8,7,12,8,9,8,11,8,13,8,13,9,10,9,14,9,14,10,11,10,15,10,15,11,12,11,13,12,15,12,14,13,15,14];
 
-    let dr = mpi::cuda::delta_fit(16, rook_s, rook_t, None, 1, 100, 1e-6,
-                                   Variant::Undirected, false, true, &world).unwrap();
-    let ds = mpi::cuda::delta_fit(16, shri_s, shri_t, None, 1, 100, 1e-6,
-                                   Variant::Undirected, false, true, &world).unwrap();
+    let dr = mpi::cuda::delta_fit(16, rook_s, rook_t, None, None, 1, 100, 1e-6, 0, 0,
+                                   Variant::Undirected, false, true, true, &world).unwrap();
+    let ds = mpi::cuda::delta_fit(16, shri_s, shri_t, None, None, 1, 100, 1e-6, 0, 0,
+                                   Variant::Undirected, false, true, true, &world).unwrap();
 
     if rank == 0 {
-        println!("Rook:       {} bins, {} subgraphs", dr.hist_size, dr.num_subgraphs);
-        println!("Shrikhande: {} bins, {} subgraphs", ds.hist_size, ds.num_subgraphs);
+        println!("Rook:       {} bins, {} subgraphs", dr.histogram.len(), dr.num_subgraphs);
+        println!("Shrikhande: {} bins, {} subgraphs", ds.histogram.len(), ds.num_subgraphs);
         println!("Histograms differ:  {}", dr.histogram != ds.histogram);
 
         let canonicalize = |ms: &[f64], ns: usize, e: usize| -> Vec<Vec<f64>> {

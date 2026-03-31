@@ -12,7 +12,7 @@ func TestTriangle(t *testing.T) {
 	r, err := dress.Fit(3,
 		[]int32{0, 1, 0},
 		[]int32{1, 2, 2},
-		nil, dress.Undirected, 100, 1e-8, true)
+		nil, nil, dress.Undirected, 100, 1e-8, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestPath(t *testing.T) {
 	r, err := dress.Fit(4,
 		[]int32{0, 1, 2},
 		[]int32{1, 2, 3},
-		nil, dress.Undirected, 100, 1e-6, true)
+		nil, nil, dress.Undirected, 100, 1e-6, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestVariants(t *testing.T) {
 		r, err := dress.Fit(3,
 			[]int32{0, 1, 0},
 			[]int32{1, 2, 2},
-			nil, v, 100, 1e-6, true)
+			nil, nil, v, 100, 1e-6, true)
 		if err != nil {
 			t.Errorf("variant %d: %v", v, err)
 		}
@@ -76,7 +76,7 @@ func TestWeighted(t *testing.T) {
 	r, err := dress.Fit(3,
 		[]int32{0, 1, 0},
 		[]int32{1, 2, 2},
-		[]float64{1.0, 2.0, 3.0},
+		[]float64{1.0, 2.0, 3.0}, nil,
 		dress.Undirected, 100, 1e-6, true)
 	if err != nil {
 		t.Fatal(err)
@@ -90,9 +90,36 @@ func TestLengthMismatch(t *testing.T) {
 	_, err := dress.Fit(3,
 		[]int32{0, 1},
 		[]int32{1, 2, 3},
-		nil, dress.Undirected, 100, 1e-6, true)
+		nil, nil, dress.Undirected, 100, 1e-6, true)
 	if err == nil {
 		t.Fatal("expected error for mismatched lengths")
+	}
+}
+
+func TestNodeWeights(t *testing.T) {
+	// K3
+	n := 3
+	src := []int32{0, 1, 0}
+	tgt := []int32{1, 2, 2}
+
+	// 1. Default (implicit All-1 node weights)
+	r1, err := dress.Fit(n, src, tgt, nil, nil, dress.Undirected, 100, 1e-8, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// 2. Explicit All-1 node weights
+	nw := []float64{1.0, 1.0, 1.0}
+	r2, err := dress.Fit(n, src, tgt, nil, nw, dress.Undirected, 100, 1e-8, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for i, d1 := range r1.EdgeDress {
+		d2 := r2.EdgeDress[i]
+		if math.Abs(d1-d2) > 1e-12 {
+			t.Errorf("Explicit node_weights=1.0 differs from default: %.12f != %.12f", d2, d1)
+		}
 	}
 }
 
@@ -101,7 +128,7 @@ func TestDRESS(t *testing.T) {
 	g, err := dress.NewDRESS(3,
 		[]int32{0, 1, 0},
 		[]int32{1, 2, 2},
-		nil, dress.Undirected, true)
+		nil, nil, dress.Undirected, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,5 +171,25 @@ func TestDRESS(t *testing.T) {
 	_, err = g.Get(0, 0, 100, 1e-6, 1.0)
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestNodeWeighted(t *testing.T) {
+	// Triangle: 0-1, 1-2, 0-2
+	nw := []float64{0.1, 0.2, 0.3}
+	r, err := dress.Fit(3,
+		[]int32{0, 1, 0},
+		[]int32{1, 2, 2},
+		nil, nw,
+		dress.Undirected, 100, 1e-6, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(r.NodeWeights) != 3 {
+		t.Fatalf("expected 3 node weights, got %d", len(r.NodeWeights))
+	}
+	// Floating point comparison with small epsilon if needed, but here exact copy is expected
+	if r.NodeWeights[0] != 0.1 || r.NodeWeights[1] != 0.2 || r.NodeWeights[2] != 0.3 {
+		t.Fatalf("node weights mismatch: %v", r.NodeWeights)
 	}
 }

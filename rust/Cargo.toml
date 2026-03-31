@@ -1,10 +1,10 @@
 [package]
 name    = "dress-graph"
-version = "0.6.2"
+version = "0.7.0"
 edition = "2021"
 authors = ["Eduar Castrillo Velilla <https://orcid.org/0009-0005-2492-0957>"]
 license = "MIT"
-description = "DRESS is a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a canonical fingerprint: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is isomorphism-invariant by construction, numerically stable (no overflow, no error amplification, no undefined behavior), fast and embarrassingly parallel to compute: DRESS total runtime is O(I * m * d_max) for I iterations to convergence, and convergence is guaranteed by Birkhoff contraction."
+description = "DRESS is a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a canonical fingerprint: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is self-contained, isomorphism-invariant by construction, numerically stable (no overflow, no error amplification, no undefined behavior), fast and embarrassingly parallel to compute: DRESS total runtime is O(I * m * d_max) for I iterations to convergence, and convergence is guaranteed by Birkhoff contraction."
 repository  = "https://github.com/velicast/dress-graph"
 keywords    = ["graph", "similarity", "community-detection", "isomorphism", "network"]
 categories  = ["algorithms", "science"]
@@ -12,6 +12,7 @@ include     = ["src/**", "vendor/**", "build.rs", "Cargo.toml", "LICENSE"]
 
 [features]
 cuda = []
+omp = []
 mpi = ["dep:mpi"]
 
 [lib]

@@ -146,7 +146,7 @@ static int run_test(const char *name, dress_variant_t variant,
     builder(&N, &E, &U, &V, &W);
 
     /* Build reference graph (CPU) */
-    p_dress_graph_t g_cpu = init_dress_graph(N, E, U, V, W, variant,
+    p_dress_graph_t g_cpu = dress_init_graph(N, E, U, V, W, NULL, variant,
                                              precompute_intercepts);
 
     /* Deep-copy for GPU run */
@@ -184,8 +184,8 @@ static int run_test(const char *name, dress_variant_t variant,
            name, iter_cpu, iter_gpu, max_diff_edge, max_diff_node,
            pass ? "PASS" : "FAIL");
 
-    free_dress_graph(g_cpu);
-    free_dress_graph(g_gpu);
+    dress_free_graph(g_cpu);
+    dress_free_graph(g_gpu);
 
     return pass ? 0 : 1;
 }

@@ -5,7 +5,7 @@ function T = dress_to_table(result, varargin)
 %   T = DRESS_TO_TABLE(result, 'OneBased', true)
 %
 %   Input:
-%     result — struct returned by dress_fit.
+%     result — struct returned by fit.
 %
 %   Optional name-value pair:
 %     'OneBased' — Logical; if true (default), shift vertex ids to 1-based
@@ -14,7 +14,7 @@ function T = dress_to_table(result, varargin)
 %   Output:
 %     T — table with columns: src, dst, dress, weight
 %
-%   See also: dress_fit
+%   See also: fit
 
     p = inputParser;
     addParameter(p, 'OneBased', true, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));

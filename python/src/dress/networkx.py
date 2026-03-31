@@ -6,36 +6,37 @@ Usage::
     import networkx as nx
 
     # CPU (default — uses C extension or pure-Python fallback)
-    from dress.networkx import dress_graph, delta_dress_graph
+    from dress.networkx import fit, delta_fit
 
-    result = dress_graph(G)
-    delta  = delta_dress_graph(G, k=1)
+    result = fit(G)
+    delta  = delta_fit(G, k=1)
 
     # GPU (requires libdress_cuda.so) — same API, different import
-    from dress.cuda.networkx import dress_graph, delta_dress_graph
+    from dress.cuda.networkx import fit, delta_fit
 
-    result = dress_graph(G)
-    delta  = delta_dress_graph(G, k=1)
+    result = fit(G)
+    delta  = delta_fit(G, k=1)
 
     # Set attributes on the graph directly
-    dress_graph(G, set_attributes=True)
+    fit(G, set_attributes=True)
 """
 
 from __future__ import annotations
 
 from dress.core import DRESSResult, DeltaDRESSResult, Variant, UNDIRECTED
 
-__all__ = ["dress_graph", "delta_dress_graph", "NxDRESS"]
+__all__ = ["fit", "delta_fit", "nabla_fit", "NxDRESS"]
 
 
 # ---------------------------------------------------------------------------
 # Shared helpers (also used by dress.cuda.networkx)
 # ---------------------------------------------------------------------------
 
-def _extract_edges(G, weight_attr="weight"):
+def _extract_edges(G, weight_attr="weight", node_weight_attr="node_weight"):
     """Convert a NetworkX graph to 0-indexed edge arrays.
 
-    Returns (n_vertices, sources, targets, weights_or_None, node_list).
+    Returns (n_vertices, sources, targets, weights_or_None,
+             node_weights_or_None, node_list).
     """
     nodes = list(G.nodes())
     node_to_idx = {n: i for i, n in enumerate(nodes)}
@@ -53,7 +54,19 @@ def _extract_edges(G, weight_attr="weight"):
         if w != 1.0:
             has_weights = True
 
-    return len(nodes), sources, targets, (weights if has_weights else None), nodes
+    # Extract per-node weights
+    node_weights = []
+    has_node_weights = False
+    for n in nodes:
+        nw = G.nodes[n].get(node_weight_attr, 1.0)
+        node_weights.append(float(nw))
+        if nw != 1.0:
+            has_node_weights = True
+
+    return (len(nodes), sources, targets,
+            weights if has_weights else None,
+            node_weights if has_node_weights else None,
+            nodes)
 
 
 def _set_graph_attributes(G, result, nodes):
@@ -73,17 +86,20 @@ def _dress_graph_impl(
     *,
     variant=UNDIRECTED,
     weight="weight",
+    node_weight="node_weight",
     max_iterations=100,
     epsilon=1e-6,
     precompute_intercepts=False,
     set_attributes=False,
 ):
     """Core implementation shared by CPU and CUDA wrappers."""
-    n_vertices, sources, targets, weights, nodes = _extract_edges(G, weight)
+    n_vertices, sources, targets, weights, node_weights, nodes = _extract_edges(
+        G, weight, node_weight)
 
     result = fit_fn(
         n_vertices, sources, targets,
-        weights=weights, variant=variant,
+        weights=weights, node_weights=node_weights,
+        variant=variant,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute_intercepts=precompute_intercepts,
     )
@@ -101,6 +117,7 @@ def _delta_dress_graph_impl(
     k=0,
     variant=UNDIRECTED,
     weight="weight",
+    node_weight="node_weight",
     max_iterations=100,
     epsilon=1e-6,
     precompute=False,
@@ -108,11 +125,13 @@ def _delta_dress_graph_impl(
     **kwargs,
 ):
     """Core implementation shared by CPU, CUDA, and MPI wrappers."""
-    n_vertices, sources, targets, weights, _nodes = _extract_edges(G, weight)
+    n_vertices, sources, targets, weights, node_weights, _nodes = _extract_edges(
+        G, weight, node_weight)
 
     return delta_fn(
         n_vertices, sources, targets,
-        weights=weights, k=k, variant=variant,
+        weights=weights, node_weights=node_weights,
+        k=k, variant=variant,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
         keep_multisets=keep_multisets,
@@ -124,7 +143,7 @@ def _delta_dress_graph_impl(
 # Public CPU API
 # ---------------------------------------------------------------------------
 
-def dress_graph(
+def fit(
     G,
     *,
     variant: Variant = UNDIRECTED,
@@ -159,9 +178,9 @@ def dress_graph(
     -------
     DRESSResult
     """
-    from dress import dress_fit
+    from dress import fit
     return _dress_graph_impl(
-        dress_fit, G,
+        fit, G,
         variant=variant, weight=weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute_intercepts=precompute_intercepts,
@@ -169,7 +188,7 @@ def dress_graph(
     )
 
 
-def delta_dress_graph(
+def delta_fit(
     G,
     *,
     k: int = 0,
@@ -179,6 +198,9 @@ def delta_dress_graph(
     epsilon: float = 1e-6,
     precompute: bool = False,
     keep_multisets: bool = False,
+    n_samples: int = 0,
+    seed: int = 0,
+    compute_histogram: bool = True,
 ) -> DeltaDRESSResult:
     """Compute the Δ^k-DRESS histogram on a NetworkX graph.
 
@@ -215,13 +237,59 @@ def delta_dress_graph(
         and ``hist_size``. If *keep_multisets* is ``True``, also
         ``multisets`` and ``num_subgraphs``.
     """
-    from dress import delta_dress_fit
+    from dress import delta_fit
     return _delta_dress_graph_impl(
-        delta_dress_fit, G,
+        delta_fit, G,
         k=k, variant=variant, weight=weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
         keep_multisets=keep_multisets,
+        n_samples=n_samples, seed=seed,
+        compute_histogram=compute_histogram,
+    )
+
+
+def nabla_fit(
+    G,
+    *,
+    k: int = 0,
+    variant: Variant = UNDIRECTED,
+    weight: str = "weight",
+    node_weight: str = "node_weight",
+    max_iterations: int = 100,
+    epsilon: float = 1e-6,
+    precompute: bool = False,
+    keep_multisets: bool = False,
+    n_samples: int = 0,
+    seed: int = 0,
+    compute_histogram: bool = True,
+):
+    """Compute the nabla^k-DRESS histogram on a NetworkX graph.
+
+    Parameters
+    ----------
+    G : networkx.Graph or networkx.DiGraph
+    k : int
+        Individualization depth.
+    variant : Variant
+    weight, node_weight : str
+        Edge/node attribute names.
+    max_iterations, epsilon : int, float
+    precompute, keep_multisets : bool
+
+    Returns
+    -------
+    NablaDRESSResult
+    """
+    from dress import nabla_fit
+    return _delta_dress_graph_impl(
+        nabla_fit, G,
+        k=k, variant=variant, weight=weight, node_weight=node_weight,
+        max_iterations=max_iterations, epsilon=epsilon,
+        precompute=precompute,
+        keep_multisets=keep_multisets,
+        n_samples=n_samples, seed=seed,
+        compute_histogram=compute_histogram,
     )
 
 
@@ -266,9 +334,11 @@ class NxDRESS:
         *,
         variant: Variant = UNDIRECTED,
         weight: str = "weight",
+        node_weight: str = "node_weight",
         precompute_intercepts: bool = False,
     ) -> None:
-        n_vertices, sources, targets, weights, nodes = _extract_edges(G, weight)
+        n_vertices, sources, targets, weights, node_weights, nodes = _extract_edges(
+            G, weight, node_weight)
         self._nodes = nodes
         self._node_to_idx = {n: i for i, n in enumerate(nodes)}
         cls = self._dress_cls
@@ -276,7 +346,8 @@ class NxDRESS:
             from dress import DRESS as cls
         self._dress = cls(
             n_vertices, sources, targets,
-            weights=weights, variant=variant,
+            weights=weights, node_weights=node_weights,
+            variant=variant,
             precompute_intercepts=precompute_intercepts,
         )
         self._closed = False
@@ -315,6 +386,28 @@ class NxDRESS:
         DeltaDRESSResult
         """
         return self._dress.delta_fit(
+            k=k, max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, **kwargs,
+        )
+
+    def nabla_fit(
+        self,
+        k: int = 0,
+        max_iterations: int = 100,
+        epsilon: float = 1e-6,
+        keep_multisets: bool = False,
+        **kwargs,
+    ):
+        """Compute the nabla^k-DRESS histogram.
+
+        Accepts the same parameters as :meth:`dress.DRESS.nabla_fit`
+        plus any backend-specific keyword arguments.
+
+        Returns
+        -------
+        NablaDRESSResult
+        """
+        return self._dress.nabla_fit(
             k=k, max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, **kwargs,
         )

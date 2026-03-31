@@ -1,18 +1,25 @@
 dress-graph >> DRESS edge similarity
 
 DRESS similarity
- dress_fit
+ fit
  dress_to_table
  dress_build
  DRESS
 
 Delta-k-DRESS
- delta_dress_fit
+ delta_fit
+
+Nabla-k-DRESS
+ nabla_fit
 
 CUDA
- cuda.dress_fit
- cuda.delta_dress_fit
+ cuda.fit
+ cuda.delta_fit
+ cuda.nabla_fit
  cuda.DRESS
+
+OpenMP
+ omp.nabla_fit
 
 MPI
  mpi.DRESS

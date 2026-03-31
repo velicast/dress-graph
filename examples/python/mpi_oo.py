@@ -33,8 +33,8 @@ dr = rook.delta_fit(k=1, keep_multisets=True)
 ds = shri.delta_fit(k=1, keep_multisets=True)
 
 if MPI.COMM_WORLD.Get_rank() == 0:
-    print(f"Rook:       {dr.hist_size} bins, {dr.num_subgraphs} subgraphs")
-    print(f"Shrikhande: {ds.hist_size} bins, {ds.num_subgraphs} subgraphs")
+    print(f"Rook:       {len(dr.histogram)} bins, {dr.num_subgraphs} subgraphs")
+    print(f"Shrikhande: {len(ds.histogram)} bins, {ds.num_subgraphs} subgraphs")
     print(f"Histograms differ:  {dr.histogram != ds.histogram}")
 
     def canonicalize(ms):

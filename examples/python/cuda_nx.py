@@ -5,7 +5,7 @@ Run:
     python cuda_nx.py
 """
 import networkx as nx
-from dress.cuda.networkx import dress_graph
+from dress.cuda.networkx import fit
 
 # Prism graph (C₃ □ K₂)
 prism = nx.circular_ladder_graph(3)
@@ -13,8 +13,8 @@ prism = nx.circular_ladder_graph(3)
 # K₃,₃ (complete bipartite)
 k33 = nx.complete_bipartite_graph(3, 3)
 
-rp = dress_graph(prism)
-rk = dress_graph(k33)
+rp = fit(prism)
+rk = fit(k33)
 
 fp = sorted(rp.edge_dress)
 fk = sorted(rk.edge_dress)

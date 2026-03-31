@@ -5,9 +5,9 @@
  *
  * Usage (ES module):
  *
- *   import { dressFit } from './dress.js';
+ *   import { fit } from './dress.js';
  *
- *   const result = await dressFit({
+ *   const result = await fit({
  *     numVertices: 4,
  *     sources:     [0, 1, 2, 0],
  *     targets:     [1, 2, 3, 3],
@@ -86,7 +86,7 @@ export const Variant = Object.freeze({
  * @param {DressOptions} opts
  * @returns {Promise<DressResult>}
  */
-export async function dressFit(opts) {
+export async function fit(opts) {
     const M = await getModule();
 
     const N = opts.numVertices;
@@ -104,7 +104,7 @@ export async function dressFit(opts) {
     const epsilon     = opts.epsilon ?? 1e-6;
     const precompute  = (opts.precomputeIntercepts ?? false) ? 1 : 0;
 
-    // Allocate C arrays (ownership transfers to dress.c — freed by free_dress_graph)
+    // Allocate C arrays (ownership transfers to dress.c — freed by dress_free_graph)
     const uPtr = M._malloc(E * 4);
     const vPtr = M._malloc(E * 4);
 
@@ -128,10 +128,24 @@ export async function dressFit(opts) {
         }
     }
 
-    // Call init_dress_graph
-    const g = M._init_dress_graph(N, E, uPtr, vPtr, wPtr, variant, precompute);
+    // Node weights (nullable)
+    let nwPtr = 0; // NULL
+    if (opts.nodeWeights) {
+        if (opts.nodeWeights.length !== N) {
+            throw new Error(`nodeWeights (${opts.nodeWeights.length}) must equal vertex count (${N})`);
+        }
+        nwPtr = M._malloc(N * 8);
+        const heapF64 = M.HEAPF64;
+        const nw = opts.nodeWeights;
+        for (let i = 0; i < N; i++) {
+            heapF64[(nwPtr >> 3) + i] = nw[i];
+        }
+    }
+
+    // Call dress_init_graph
+    const g = M._dress_init_graph(N, E, uPtr, vPtr, wPtr, nwPtr, variant, precompute);
     if (g === 0) {
-        throw new Error('init_dress_graph returned NULL');
+        throw new Error('dress_init_graph returned NULL');
     }
 
     // Allocate output params
@@ -154,15 +168,16 @@ export async function dressFit(opts) {
     //   offset 20: *adj_offset    (ptr32)
     //   offset 24: *adj_target    (ptr32)
     //   offset 28: *adj_edge_idx  (ptr32)
-    //   offset 32: max_degree      (i32)
-    //   offset 36: *W             (ptr32)  raw input weights
+    //   offset 32: max_degree     (i32)
+    //   offset 36: *W             (ptr32)
     //   offset 40: *edge_weight   (ptr32)
-    //   offset 48: *edge_dress    (ptr32)
-    //   offset 52: *edge_dress_next (ptr32)
-    //   offset 56: *node_dress    (ptr32)
-    const ewPtr = M.getValue(g + 44, 'i32');  // edge_weight pointer
-    const edPtr = M.getValue(g + 48, 'i32');  // edge_dress pointer
-    const ndPtr = M.getValue(g + 56, 'i32');  // node_dress pointer
+    //   offset 44: *edge_dress    (ptr32)
+    //   offset 48: *edge_dress_next (ptr32)
+    //   offset 52: *node_dress    (ptr32)
+    //   offset 56: *NW            (ptr32)
+    const ewPtr = M.getValue(g + 40, 'i32');  // edge_weight pointer
+    const edPtr = M.getValue(g + 44, 'i32');  // edge_dress pointer
+    const ndPtr = M.getValue(g + 52, 'i32');  // node_dress pointer
 
     // Copy results into JS-owned typed arrays
     const edgeWeight = new Float64Array(E);
@@ -187,7 +202,7 @@ export async function dressFit(opts) {
     }
 
     // Clean up
-    M._free_dress_graph(g);
+    M._dress_free_graph(g);
     M._free(iterPtr);
     M._free(deltaPtr);
 
@@ -270,8 +285,16 @@ export class DRESS {
             }
         }
 
-        const g = M._init_dress_graph(N, E, uPtr, vPtr, wPtr, variant, precompute);
-        if (g === 0) throw new Error('init_dress_graph returned NULL');
+        let nwPtr = 0;
+        if (opts.nodeWeights && opts.nodeWeights.length === N) {
+            nwPtr = M._malloc(N * 8);
+            for (let i = 0; i < N; i++) {
+                M.HEAPF64[(nwPtr >> 3) + i] = opts.nodeWeights[i];
+            }
+        }
+
+        const g = M._dress_init_graph(N, E, uPtr, vPtr, wPtr, nwPtr, variant, precompute);
+        if (g === 0) throw new Error('dress_init_graph returned NULL');
 
         return new DRESS(M, g, N, E, opts.sources, opts.targets);
     }
@@ -317,9 +340,9 @@ export class DRESS {
         const N = this._n;
 
         // WASM32 offsets
-        const ewPtr = M.getValue(this._g + 44, 'i32');
-        const edPtr = M.getValue(this._g + 48, 'i32');
-        const ndPtr = M.getValue(this._g + 56, 'i32');
+        const ewPtr = M.getValue(this._g + 40, 'i32');
+        const edPtr = M.getValue(this._g + 44, 'i32');
+        const ndPtr = M.getValue(this._g + 52, 'i32');
 
         const edgeWeight = new Float64Array(E);
         const edgeDress  = new Float64Array(E);
@@ -345,12 +368,159 @@ export class DRESS {
     }
 
     /**
+     * Compute Δ^k-DRESS on this persistent graph.
+     * @param {number} [k=0]
+     * @param {number} [maxIterations=100]
+     * @param {number} [epsilon=1e-6]
+     * @param {number} [nSamples=0]
+     * @param {number} [seed=0]
+     * @param {boolean} [keepMultisets=false]
+     * @param {boolean} [computeHistogram=true]
+     * @returns {DeltaDressResult}
+     */
+    deltaFit(k = 0, maxIterations = 100, epsilon = 1e-6,
+             nSamples = 0, seed = 0,
+             keepMultisets = false, computeHistogram = true) {
+        if (!this._g) throw new Error('DRESS already freed');
+        const M = this._M;
+        const E = this._e;
+
+        const keepMS = keepMultisets ? 1 : 0;
+        const histSizePtr = M._malloc(4);
+
+        let msPtrPtr = 0;
+        let numSubPtr = 0;
+        if (keepMS) {
+            msPtrPtr  = M._malloc(4);
+            numSubPtr = M._malloc(8);
+            M.setValue(msPtrPtr, 0, 'i32');
+            M.setValue(numSubPtr, 0, 'i32');
+            M.setValue(numSubPtr + 4, 0, 'i32');
+        }
+
+        const histPtr = M._dress_delta_fit_strided(
+            this._g, k, maxIterations, epsilon,
+            nSamples, seed,
+            computeHistogram ? histSizePtr : 0,
+            keepMS, msPtrPtr || 0, numSubPtr || 0,
+            0, 1);
+
+        const histSize = M.getValue(histSizePtr, 'i32');
+
+        const histogram = new Array(histSize);
+        for (let i = 0; i < histSize; i++) {
+            const value = M.HEAPF64[(histPtr >> 3) + i * 2];
+            const countLo = M.HEAPU32[(histPtr >> 2) + i * 4 + 2];
+            const countHi = M.HEAPU32[(histPtr >> 2) + i * 4 + 3];
+            histogram[i] = { value, count: countHi * 4294967296 + countLo };
+        }
+
+        let multisets = null;
+        let numSubgraphs = 0;
+        if (keepMS && msPtrPtr) {
+            const msPtr = M.getValue(msPtrPtr, 'i32');
+            const nsLo = M.HEAPU32[(numSubPtr >> 2)];
+            const nsHi = M.HEAP32[(numSubPtr >> 2) + 1];
+            numSubgraphs = nsHi * 4294967296 + nsLo;
+
+            if (msPtr !== 0 && numSubgraphs > 0) {
+                const totalVals = numSubgraphs * E;
+                multisets = new Float64Array(totalVals);
+                for (let i = 0; i < totalVals; i++) {
+                    multisets[i] = M.HEAPF64[(msPtr >> 3) + i];
+                }
+                M._free(msPtr);
+            }
+            M._free(msPtrPtr);
+            M._free(numSubPtr);
+        }
+
+        if (histPtr) M._free(histPtr);
+        M._free(histSizePtr);
+
+        return { histogram, multisets, numSubgraphs };
+    }
+
+    /**
+     * Compute ∇^k-DRESS on this persistent graph.
+     * @param {number} [k=0]
+     * @param {number} [maxIterations=100]
+     * @param {number} [epsilon=1e-6]
+     * @param {number} [nSamples=0]
+     * @param {number} [seed=0]
+     * @param {boolean} [keepMultisets=false]
+     * @param {boolean} [computeHistogram=true]
+     * @returns {NablaDressResult}
+     */
+    nablaFit(k = 0, maxIterations = 100, epsilon = 1e-6,
+             nSamples = 0, seed = 0,
+             keepMultisets = false, computeHistogram = true) {
+        if (!this._g) throw new Error('DRESS already freed');
+        const M = this._M;
+        const E = this._e;
+
+        const keepMS = keepMultisets ? 1 : 0;
+        const histSizePtr = M._malloc(4);
+
+        let msPtrPtr = 0;
+        let numTupPtr = 0;
+        if (keepMS) {
+            msPtrPtr  = M._malloc(4);
+            numTupPtr = M._malloc(8);
+            M.setValue(msPtrPtr, 0, 'i32');
+            M.setValue(numTupPtr, 0, 'i32');
+            M.setValue(numTupPtr + 4, 0, 'i32');
+        }
+
+        const histPtr = M._dress_nabla_fit(
+            this._g, k, maxIterations, epsilon,
+            nSamples, seed,
+            computeHistogram ? histSizePtr : 0,
+            keepMS, msPtrPtr || 0, numTupPtr || 0);
+
+        const histSize = M.getValue(histSizePtr, 'i32');
+
+        const histogram = new Array(histSize);
+        for (let i = 0; i < histSize; i++) {
+            const value = M.HEAPF64[(histPtr >> 3) + i * 2];
+            const countLo = M.HEAPU32[(histPtr >> 2) + i * 4 + 2];
+            const countHi = M.HEAPU32[(histPtr >> 2) + i * 4 + 3];
+            histogram[i] = { value, count: countHi * 4294967296 + countLo };
+        }
+
+        let multisets = null;
+        let numTuples = 0;
+        if (keepMS && msPtrPtr) {
+            const msPtr = M.getValue(msPtrPtr, 'i32');
+            const ntLo = M.HEAPU32[(numTupPtr >> 2)];
+            const ntHi = M.HEAP32[(numTupPtr >> 2) + 1];
+            numTuples = ntHi * 4294967296 + ntLo;
+
+            if (msPtr !== 0 && numTuples > 0) {
+                const totalVals = numTuples * E;
+                multisets = new Float64Array(totalVals);
+                for (let i = 0; i < totalVals; i++) {
+                    multisets[i] = M.HEAPF64[(msPtr >> 3) + i];
+                }
+                M._free(msPtr);
+            }
+            M._free(msPtrPtr);
+            M._free(numTupPtr);
+        }
+
+        if (histPtr) M._free(histPtr);
+        M._free(histSizePtr);
+
+        return { histogram, multisets, numTuples };
+    }
+
+    /**
      * Free the underlying C graph.
      */
     free() {
         if (this._g) {
             const M = this._M;
-            M._free_dress_graph(this._g);
+            M._dress_free_graph(this._g);
             M._free(this._iterPtr);
             M._free(this._deltaPtr);
             this._g = 0;
@@ -373,9 +543,16 @@ export class DRESS {
  */
 
 /**
+ * @typedef {Object} HistogramEntry
+ * @property {number} value - Exact DRESS value
+ * @property {number} count - Number of occurrences of that value
+ */
+
+/**
  * @typedef {Object} DeltaDressResult
- * @property {Float64Array} histogram - Bin counts (as Float64 for BigInt-free access)
- * @property {number}       histSize  - Number of bins
+ * @property {HistogramEntry[]} histogram - Exact sparse histogram entries
+ * @property {Float64Array|null} multisets - Per-subgraph edge values, row-major C(N,k) x E
+ * @property {number} numSubgraphs - Number of subgraphs C(N,k)
  */
 
 /**
@@ -387,7 +564,7 @@ export class DRESS {
  * @param {DeltaDressOptions} opts
  * @returns {Promise<DeltaDressResult>}
  */
-export async function deltaDressFit(opts) {
+export async function deltaFit(opts) {
     const M = await getModule();
 
     const N = opts.numVertices;
@@ -401,12 +578,13 @@ export async function deltaDressFit(opts) {
     const variant     = opts.variant ?? Variant.UNDIRECTED;
     const maxIter     = opts.maxIterations ?? 100;
     const epsilon     = opts.epsilon ?? 1e-6;
+    const nSamples    = opts.nSamples ?? 0;
+    const seed        = opts.seed ?? 0;
     const precompute  = (opts.precompute ?? false) ? 1 : 0;
     const keepMS      = (opts.keepMultisets ?? false) ? 1 : 0;
-    const offset      = opts.offset ?? 0;
-    const stride      = opts.stride ?? 1;
+    const computeHist = (opts.computeHistogram ?? true) ? 1 : 0;
 
-    // Allocate C arrays (ownership transfers to init_dress_graph)
+    // Allocate C arrays (ownership transfers to dress_init_graph)
     const uPtr = M._malloc(E * 4);
     const vPtr = M._malloc(E * 4);
 
@@ -427,10 +605,19 @@ export async function deltaDressFit(opts) {
         }
     }
 
+    let nwPtr = 0;
+    if (opts.nodeWeights && opts.nodeWeights.length === N) {
+        nwPtr = M._malloc(N * 8);
+        const heapF64 = M.HEAPF64;
+        for (let i = 0; i < N; i++) {
+            heapF64[(nwPtr >> 3) + i] = opts.nodeWeights[i];
+        }
+    }
+
     // Build graph
-    const g = M._init_dress_graph(N, E, uPtr, vPtr, wPtr, variant, precompute);
+    const g = M._dress_init_graph(N, E, uPtr, vPtr, wPtr, nwPtr, variant, precompute);
     if (g === 0) {
-        throw new Error('init_dress_graph returned NULL');
+        throw new Error('dress_init_graph returned NULL');
     }
 
     // Allocate out-param for hist_size
@@ -447,19 +634,24 @@ export async function deltaDressFit(opts) {
         M.setValue(numSubPtr + 4, 0, 'i32');
     }
 
-    // Call delta_dress_fit_strided  (returns int64_t* — pointer to histogram on heap)
-    const histPtr = M._delta_dress_fit_strided(g, k, maxIter, epsilon, histSizePtr,
-                                 keepMS, msPtrPtr, numSubPtr, offset, stride);
+    // Call dress_delta_fit_strided (returns dress_hist_pair_t* on heap)
+    const histPtr = M._dress_delta_fit_strided(g, k, maxIter, epsilon,
+                                 nSamples, seed,
+                                 computeHist ? histSizePtr : 0,
+                                 keepMS, msPtrPtr, numSubPtr, 0, 1);
 
     const histSize = M.getValue(histSizePtr, 'i32');
 
-    // Copy histogram into JS Float64Array (int64 values cast to double)
-    // WASM int64_t is 8 bytes; read as pairs of i32 (little-endian)
-    const histogram = new Float64Array(histSize);
+    // Copy histogram pairs into JS objects.
+    const histogram = new Array(histSize);
     for (let i = 0; i < histSize; i++) {
-        const lo = M.HEAPU32[(histPtr >> 2) + i * 2];
-        const hi = M.HEAP32[(histPtr >> 2) + i * 2 + 1];
-        histogram[i] = hi * 4294967296 + lo;
+        const value = M.HEAPF64[(histPtr >> 3) + i * 2];
+        const countLo = M.HEAPU32[(histPtr >> 2) + i * 4 + 2];
+        const countHi = M.HEAPU32[(histPtr >> 2) + i * 4 + 3];
+        histogram[i] = {
+            value,
+            count: countHi * 4294967296 + countLo,
+        };
     }
 
     // Extract multisets if requested
@@ -487,13 +679,145 @@ export async function deltaDressFit(opts) {
     // Cleanup
     M._free(histPtr);
     M._free(histSizePtr);
-    M._free_dress_graph(g);
+    M._dress_free_graph(g);
 
     return {
         histogram:     histogram,
-        histSize:      histSize,
         multisets:     multisets,
         numSubgraphs:  numSubgraphs,
+    };
+}
+
+/**
+ * Compute the Nabla-k-DRESS histogram.
+ *
+ * Exhaustively removes all k-vertex tuples and measures
+ * the change in edge similarity values.
+ *
+ * @param {NablaDressOptions} opts
+ * @returns {Promise<NablaDressResult>}
+ */
+export async function nablaFit(opts) {
+    const M = await getModule();
+
+    const N = opts.numVertices;
+    const E = opts.sources.length;
+
+    if (opts.targets.length !== E) {
+        throw new Error(`sources (${E}) and targets (${opts.targets.length}) must have equal length`);
+    }
+
+    const k           = opts.k ?? 0;
+    const variant     = opts.variant ?? Variant.UNDIRECTED;
+    const maxIter     = opts.maxIterations ?? 100;
+    const epsilon     = opts.epsilon ?? 1e-6;
+    const nSamples    = opts.nSamples ?? 0;
+    const seed        = opts.seed ?? 0;
+    const precompute  = (opts.precompute ?? false) ? 1 : 0;
+    const keepMS      = (opts.keepMultisets ?? false) ? 1 : 0;
+    const computeHist = (opts.computeHistogram ?? true) ? 1 : 0;
+
+    // Allocate C arrays (ownership transfers to dress_init_graph)
+    const uPtr = M._malloc(E * 4);
+    const vPtr = M._malloc(E * 4);
+
+    const heap32 = M.HEAP32;
+    const src = opts.sources;
+    const tgt = opts.targets;
+    for (let i = 0; i < E; i++) {
+        heap32[(uPtr >> 2) + i] = src[i];
+        heap32[(vPtr >> 2) + i] = tgt[i];
+    }
+
+    let wPtr = 0;
+    if (opts.weights && opts.weights.length === E) {
+        wPtr = M._malloc(E * 8);
+        const heapF64 = M.HEAPF64;
+        for (let i = 0; i < E; i++) {
+            heapF64[(wPtr >> 3) + i] = opts.weights[i];
+        }
+    }
+
+    let nwPtr = 0;
+    if (opts.nodeWeights && opts.nodeWeights.length === N) {
+        nwPtr = M._malloc(N * 8);
+        const heapF64 = M.HEAPF64;
+        for (let i = 0; i < N; i++) {
+            heapF64[(nwPtr >> 3) + i] = opts.nodeWeights[i];
+        }
+    }
+
+    // Build graph
+    const g = M._dress_init_graph(N, E, uPtr, vPtr, wPtr, nwPtr, variant, precompute);
+    if (g === 0) {
+        throw new Error('dress_init_graph returned NULL');
+    }
+
+    // Allocate out-param for hist_size
+    const histSizePtr = M._malloc(4);
+
+    // Allocate out-params for multisets (pointer-to-pointer and num_tuples)
+    let msPtrPtr = 0;
+    let numTupPtr = 0;
+    if (keepMS) {
+        msPtrPtr   = M._malloc(4);  // pointer to double*
+        numTupPtr  = M._malloc(8);  // int64_t
+        M.setValue(msPtrPtr, 0, 'i32');
+        M.setValue(numTupPtr, 0, 'i32');
+        M.setValue(numTupPtr + 4, 0, 'i32');
+    }
+
+    // Call dress_nabla_fit (returns dress_hist_pair_t* on heap)
+    const histPtr = M._dress_nabla_fit(g, k, maxIter, epsilon,
+                                 nSamples, seed,
+                                 computeHist ? histSizePtr : 0,
+                                 keepMS, msPtrPtr, numTupPtr);
+
+    const histSize = M.getValue(histSizePtr, 'i32');
+
+    // Copy histogram pairs into JS objects.
+    const histogram = new Array(histSize);
+    for (let i = 0; i < histSize; i++) {
+        const value = M.HEAPF64[(histPtr >> 3) + i * 2];
+        const countLo = M.HEAPU32[(histPtr >> 2) + i * 4 + 2];
+        const countHi = M.HEAPU32[(histPtr >> 2) + i * 4 + 3];
+        histogram[i] = {
+            value,
+            count: countHi * 4294967296 + countLo,
+        };
+    }
+
+    // Extract multisets if requested
+    let multisets = null;
+    let numTuples = 0;
+    if (keepMS && msPtrPtr) {
+        const msPtr = M.getValue(msPtrPtr, 'i32');  // double*
+        // Read int64 num_tuples as lo/hi pair
+        const ntLo = M.HEAPU32[(numTupPtr >> 2)];
+        const ntHi = M.HEAP32[(numTupPtr >> 2) + 1];
+        numTuples = ntHi * 4294967296 + ntLo;
+
+        if (msPtr !== 0 && numTuples > 0) {
+            const totalVals = numTuples * E;
+            multisets = new Float64Array(totalVals);
+            for (let i = 0; i < totalVals; i++) {
+                multisets[i] = M.HEAPF64[(msPtr >> 3) + i];
+            }
+            M._free(msPtr);
+        }
+        M._free(msPtrPtr);
+        M._free(numTupPtr);
+    }
+
+    // Cleanup
+    M._free(histPtr);
+    M._free(histSizePtr);
+    M._dress_free_graph(g);
+
+    return {
+        histogram:  histogram,
+        multisets:  multisets,
+        numTuples:  numTuples,
     };
 }
 

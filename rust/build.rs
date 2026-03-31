@@ -8,10 +8,20 @@ fn main() {
         .file(vendor.join("dress.c"))
         .file(vendor.join("delta_dress.c"))
         .file(vendor.join("delta_dress_impl.c"))
+        .file(vendor.join("nabla_dress.c"))
+        .file(vendor.join("nabla_dress_impl.c"))
+        .file(vendor.join("dress_histogram.c"))
         .include(vendor.join("include"))
         .include(&vendor)
         .opt_level(3)
         .flag_if_supported("-fopenmp");
+
+    // OMP feature: compile omp source files
+    if std::env::var("CARGO_FEATURE_OMP").is_ok() {
+        build.file(vendor.join("dress_omp.c"))
+             .file(vendor.join("delta_dress_omp.c"))
+             .file(vendor.join("nabla_dress_omp.c"));
+    }
 
     // MPI feature: compile dress_mpi.c (needs system MPI headers)
     if std::env::var("CARGO_FEATURE_MPI").is_ok() {
@@ -32,7 +42,7 @@ fn main() {
         }
 
         // If CUDA is also enabled, define DRESS_CUDA so the MPI source
-        // compiles the delta_dress_fit_mpi_cuda path.
+        // compiles the dress_delta_fit_mpi_cuda path.
         if std::env::var("CARGO_FEATURE_CUDA").is_ok() {
             build.define("DRESS_CUDA", None);
         }
@@ -85,6 +95,8 @@ fn main() {
     println!("cargo:rerun-if-changed=vendor/delta_dress.c");
     println!("cargo:rerun-if-changed=vendor/delta_dress_impl.h");
     println!("cargo:rerun-if-changed=vendor/delta_dress_impl.c");
+    println!("cargo:rerun-if-changed=vendor/dress_histogram.h");
+    println!("cargo:rerun-if-changed=vendor/dress_histogram.c");
     println!("cargo:rerun-if-changed=vendor/delta_dress_cuda.c");
     println!("cargo:rerun-if-changed=vendor/dress_cuda.o");
     println!("cargo:rerun-if-changed=vendor/mpi/dress_mpi.c");

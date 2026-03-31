@@ -29,7 +29,7 @@ static void run(const char *name, const int *edges, int n_edges) {
     igraph_vector_int_destroy(&ev);
 
     dress_result_igraph_t result;
-    dress_fit(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    dress_fit(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
              100, 1e-6, 0, &result);
 
     double *vals = malloc(result.E * sizeof(double));

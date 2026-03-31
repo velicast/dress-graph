@@ -60,36 +60,73 @@ want() { [[ " ${TARGETS[*]} " == *" $1 "* ]]; }
 # Copy libdress sources into Rust and R vendor directories.
 vendor_sources() {
     # Rust
-    mkdir -p rust/vendor/include/dress/cuda
+    mkdir -p rust/vendor/include/dress/cuda rust/vendor/include/dress/omp rust/vendor/include/dress/mpi rust/vendor/mpi
     cp libdress/src/dress.c            rust/vendor/dress.c
     cp libdress/src/delta_dress.c      rust/vendor/delta_dress.c
     cp libdress/src/delta_dress_impl.c rust/vendor/delta_dress_impl.c
     cp libdress/src/delta_dress_impl.h rust/vendor/delta_dress_impl.h
+    cp libdress/src/nabla_dress_impl.c rust/vendor/nabla_dress_impl.c
+    cp libdress/src/nabla_dress_impl.h rust/vendor/nabla_dress_impl.h
+    cp libdress/src/dress_histogram.c  rust/vendor/dress_histogram.c
+    cp libdress/src/dress_histogram.h  rust/vendor/dress_histogram.h
     cp libdress/include/dress/dress.h       rust/vendor/include/dress/dress.h
-    cp libdress/include/dress/delta_dress.h rust/vendor/include/dress/delta_dress.h
     cp libdress/include/dress/cuda/dress_cuda.h rust/vendor/include/dress/cuda/dress_cuda.h
+    cp libdress/include/dress/omp/dress_omp.h   rust/vendor/include/dress/omp/dress_omp.h
+    cp libdress/include/dress/omp/dress.h       rust/vendor/include/dress/omp/dress.h
     cp libdress/src/cuda/delta_dress_cuda.c     rust/vendor/delta_dress_cuda.c
+    cp libdress/src/omp/dress_omp.c             rust/vendor/dress_omp.c
+    cp libdress/src/omp/delta_dress_omp.c       rust/vendor/delta_dress_omp.c
+    cp libdress/src/nabla_dress.c               rust/vendor/nabla_dress.c
+    cp libdress/src/omp/nabla_dress_omp.c       rust/vendor/nabla_dress_omp.c
+    cp libdress/src/mpi/dress_mpi.c             rust/vendor/mpi/dress_mpi.c
+    cp libdress/include/dress/mpi/dress_mpi.h   rust/vendor/include/dress/mpi/dress_mpi.h
+    sed -i 's|"../delta_dress_impl.h"|"../delta_dress_impl.h"|' rust/vendor/mpi/dress_mpi.c 2>/dev/null || true
+    sed -i 's|"../nabla_dress_impl.h"|"../nabla_dress_impl.h"|' rust/vendor/mpi/dress_mpi.c 2>/dev/null || true
 
     # R
-    mkdir -p r/src/dress/cuda r/src/dress/mpi
+    mkdir -p r/src/dress/cuda r/src/dress/mpi r/src/dress/omp
     cp libdress/src/dress.c            r/src/dress.c
     cp libdress/src/delta_dress.c      r/src/delta_dress.c
     cp libdress/src/delta_dress_impl.c r/src/delta_dress_impl.c
     cp libdress/src/delta_dress_impl.h r/src/delta_dress_impl.h
+    cp libdress/src/dress_histogram.c  r/src/dress_histogram.c
+    cp libdress/src/dress_histogram.h  r/src/dress_histogram.h
+    cp libdress/src/omp/dress_omp.c    r/src/dress_omp.c
+    cp libdress/src/omp/delta_dress_omp.c r/src/delta_dress_omp.c
+    cp libdress/src/nabla_dress.c        r/src/nabla_dress.c
+    cp libdress/src/nabla_dress_impl.c   r/src/nabla_dress_impl.c
+    cp libdress/src/nabla_dress_impl.h   r/src/nabla_dress_impl.h
+    cp libdress/src/omp/nabla_dress_omp.c r/src/nabla_dress_omp.c
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' r/src/dress_omp.c 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' r/src/dress_omp.c 2>/dev/null || true
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' r/src/delta_dress_omp.c 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' r/src/delta_dress_omp.c 2>/dev/null || true
+    sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' r/src/nabla_dress_omp.c 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' r/src/nabla_dress_omp.c 2>/dev/null || true
     cp libdress/src/cuda/delta_dress_cuda.c   r/src/delta_dress_cuda.c
+    cp libdress/src/cuda/nabla_dress_cuda.c   r/src/nabla_dress_cuda.c
     cp libdress/src/cuda/dress_cuda.cu        r/src/dress_cuda.cu
     cp libdress/include/dress/dress.h            r/src/dress/dress.h
-    cp libdress/include/dress/delta_dress.h      r/src/dress/delta_dress.h
     cp libdress/include/dress/cuda/dress_cuda.h  r/src/dress/cuda/dress_cuda.h
+    cp libdress/include/dress/omp/dress_omp.h    r/src/dress/omp/dress_omp.h
+    cp libdress/include/dress/omp/dress.h        r/src/dress/omp/dress.h
     cp libdress/include/dress/mpi/dress_mpi.h    r/src/dress/mpi/dress_mpi.h
     cp libdress/src/mpi/dress_mpi.c              r/src/dress_mpi.c
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' r/src/dress_mpi.c
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' r/src/dress_mpi.c
+    sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' r/src/dress_mpi.c
+    sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' r/src/nabla_dress_cuda.c 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' r/src/nabla_dress_cuda.c 2>/dev/null || true
 }
 
 # Remove vendored copies.
 unvendor_sources() {
     rm -rf rust/vendor
     rm -f  r/src/dress.c r/src/delta_dress.c r/src/delta_dress_impl.c r/src/delta_dress_impl.h
-    rm -f  r/src/delta_dress_cuda.c r/src/dress_cuda.cu r/src/dress_cuda.o r/src/dress_mpi.c
+    rm -f  r/src/nabla_dress.c r/src/nabla_dress_impl.c r/src/nabla_dress_impl.h
+    rm -f  r/src/dress_histogram.c r/src/dress_histogram.h
+    rm -f  r/src/dress_omp.c r/src/delta_dress_omp.c r/src/nabla_dress_omp.c
+    rm -f  r/src/delta_dress_cuda.c r/src/nabla_dress_cuda.c r/src/dress_cuda.cu r/src/dress_cuda.o r/src/dress_mpi.c
     rm -f  r/src/Makevars
     rm -rf r/src/dress
     rm -f  python/_dress.c python/_delta_dress.c python/_delta_dress_impl.c python/delta_dress_impl.h
@@ -168,6 +205,7 @@ build_igraph() {
         libdress/src/dress.c
         libdress/src/delta_dress.c
         libdress/src/delta_dress_impl.c
+        libdress/src/dress_histogram.c
     )
 
     # Build + test: DRESS igraph wrapper
@@ -287,6 +325,7 @@ build_r() {
         skip "R"; return
     fi
     header "R"
+    vendor_sources
     R CMD build r/ 2>&1 | tail -1
     pass "R tarball built"
 
@@ -297,6 +336,8 @@ build_r() {
             run_step "R check" R CMD check "$tarball" --no-manual
         fi
     fi
+
+    unvendor_sources
 }
 
 # ── Julia ───────────────────────────────────────────────────────────
@@ -307,7 +348,8 @@ build_julia() {
     fi
     header "Julia"
     if [[ $RUN_TESTS -eq 1 ]]; then
-        run_step "Julia tests" julia tests/julia/test_dress.jl
+        run_step "Julia DRESS tests" julia tests/julia/test_dress.jl
+        run_step "Julia delta tests" julia tests/julia/test_delta_dress.jl
     else
         # No separate build step — Julia is JIT compiled
         pass "Julia (JIT, no build step)"
@@ -340,21 +382,30 @@ build_octave() {
     cp "$ROOT/LICENSE"            "$PKG/COPYING" 2>/dev/null || true
 
     # Vendor .m files into inst/
-    cp "$ROOT/matlab/dress_fit.m"        "$PKG/inst/"
-    cp "$ROOT/matlab/delta_dress_fit.m"  "$PKG/inst/"
+    cp "$ROOT/matlab/fit.m"        "$PKG/inst/"
+    cp "$ROOT/matlab/delta_fit.m"  "$PKG/inst/"
+    cp "$ROOT/matlab/nabla_fit.m"  "$PKG/inst/"
     cp "$ROOT/matlab/dress_to_table.m"   "$PKG/inst/"
     cp "$ROOT/matlab/DRESS.m"       "$PKG/inst/"
 
     # Vendor +cuda/ namespace (GPU wrappers)
     mkdir -p "$PKG/inst/+cuda"
-    cp "$ROOT/matlab/+cuda/dress_fit.m"       "$PKG/inst/+cuda/"
-    cp "$ROOT/matlab/+cuda/delta_dress_fit.m" "$PKG/inst/+cuda/"
+    cp "$ROOT/matlab/+cuda/fit.m"       "$PKG/inst/+cuda/"
+    cp "$ROOT/matlab/+cuda/delta_fit.m" "$PKG/inst/+cuda/"
+    cp "$ROOT/matlab/+cuda/nabla_fit.m" "$PKG/inst/+cuda/"
     cp "$ROOT/matlab/+cuda/DRESS.m"           "$PKG/inst/+cuda/"
 
+    # Vendor +omp/ namespace (OMP wrappers)
+    mkdir -p "$PKG/inst/+omp"
+    cp "$ROOT/matlab/+omp/fit.m"        "$PKG/inst/+omp/"
+    cp "$ROOT/matlab/+omp/delta_fit.m"  "$PKG/inst/+omp/"
+    cp "$ROOT/matlab/+omp/nabla_fit.m"  "$PKG/inst/+omp/"
+
     # Vendor +mpi/ namespace (MPI wrappers)
-    mkdir -p "$PKG/inst/+mpi/+cuda"
+    mkdir -p "$PKG/inst/+mpi/+cuda" "$PKG/inst/+mpi/+omp"
     cp "$ROOT/matlab/+mpi/DRESS.m"            "$PKG/inst/+mpi/"
     cp "$ROOT/matlab/+mpi/+cuda/DRESS.m"      "$PKG/inst/+mpi/+cuda/"
+    cp "$ROOT/matlab/+mpi/+omp/DRESS.m"       "$PKG/inst/+mpi/+omp/"
 
     # Vendor C sources into src/
     cp "$ROOT/matlab/dress_mex.c"        "$PKG/src/"
@@ -367,18 +418,49 @@ build_octave() {
     cp "$ROOT/matlab/dress_cuda_mex.c"        "$PKG/src/"
     cp "$ROOT/matlab/delta_dress_cuda_mex.c"  "$PKG/src/"
     cp "$ROOT/matlab/dress_fit_cuda_obj_mex.c" "$PKG/src/"
+    cp "$ROOT/matlab/delta_dress_mpi_obj_mex.c" "$PKG/src/"
+    cp "$ROOT/matlab/delta_dress_mpi_cuda_obj_mex.c" "$PKG/src/"
+    cp "$ROOT/matlab/dress_omp_mex.c"         "$PKG/src/"
+    cp "$ROOT/matlab/delta_dress_omp_mex.c"   "$PKG/src/"
+    cp "$ROOT/matlab/nabla_dress_mex.c"      "$PKG/src/"
+    cp "$ROOT/matlab/nabla_dress_omp_mex.c"  "$PKG/src/"
+    cp "$ROOT/matlab/nabla_dress_cuda_mex.c" "$PKG/src/"
     cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c" "$PKG/src/"
+    cp "$ROOT/libdress/src/cuda/nabla_dress_cuda.c" "$PKG/src/"
     cp "$ROOT/libdress/src/cuda/dress_cuda.cu"      "$PKG/src/"
     cp "$ROOT/libdress/src/dress.c"          "$PKG/src/"
     cp "$ROOT/libdress/src/delta_dress.c"    "$PKG/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.c" "$PKG/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.h" "$PKG/src/"
+    cp "$ROOT/libdress/src/dress_histogram.c" "$PKG/src/"
+    cp "$ROOT/libdress/src/dress_histogram.h" "$PKG/src/"
+    cp "$ROOT/libdress/src/omp/dress_omp.c"  "$PKG/src/"
+    cp "$ROOT/libdress/src/omp/delta_dress_omp.c" "$PKG/src/"
+    cp "$ROOT/libdress/src/nabla_dress.c"        "$PKG/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.c"   "$PKG/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.h"   "$PKG/src/"
+    cp "$ROOT/libdress/src/omp/nabla_dress_omp.c" "$PKG/src/"
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' "$PKG/src/dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$PKG/src/dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' "$PKG/src/delta_dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$PKG/src/delta_dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' "$PKG/src/nabla_dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$PKG/src/nabla_dress_omp.c" 2>/dev/null || true
+    mkdir -p "$PKG/inst/include/dress/mpi" "$PKG/inst/include/dress/omp"
+    cp "$ROOT/libdress/include/dress/mpi/dress_mpi.h" "$PKG/inst/include/dress/mpi/"
+    cp "$ROOT/libdress/src/mpi/dress_mpi.c" "$PKG/src/"
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' "$PKG/src/dress_mpi.c"
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$PKG/src/dress_mpi.c"
+    sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' "$PKG/src/dress_mpi.c"
+    sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' "$PKG/src/nabla_dress_cuda.c" 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$PKG/src/nabla_dress_cuda.c" 2>/dev/null || true
 
     # Headers (used at build time via -I../inst/include)
     cp "$ROOT/libdress/include/dress/dress.h"       "$PKG/inst/include/dress/"
-    cp "$ROOT/libdress/include/dress/delta_dress.h" "$PKG/inst/include/dress/"
     mkdir -p "$PKG/inst/include/dress/cuda"
     cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$PKG/inst/include/dress/cuda/"
+    cp "$ROOT/libdress/include/dress/omp/dress_omp.h" "$PKG/inst/include/dress/omp/"
+    cp "$ROOT/libdress/include/dress/omp/dress.h"     "$PKG/inst/include/dress/omp/"
 
     # Makefile
     cp "$ROOT/octave/src/Makefile" "$PKG/src/"

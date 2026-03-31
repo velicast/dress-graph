@@ -3,7 +3,7 @@
 DRESS is not a single equation. It is a **family** of continuous structural
 refinement algorithms, building from the concrete to the general. The paper
 presents them in this order: Original-DRESS → Motif-DRESS → Generalized-DRESS
-→ ∇-DRESS / Δ-DRESS.
+→ Δ-DRESS.
 
 ## Motif-DRESS
 

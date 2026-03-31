@@ -4,7 +4,7 @@
  *
  * Drop-in replacement for dress/dress.h.
  * Including this single header redirects dress_fit() to CUDA and
- * delta_dress_fit() to the CUDA + MPI backend — no source changes required.
+ * dress_delta_fit() to the CUDA + MPI backend — no source changes required.
  *
  * Equivalent to:
  *   #include "dress/cuda/dress.h"

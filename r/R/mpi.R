@@ -5,7 +5,7 @@
 # Usage:
 #   library(dress.graph)
 #   Rmpi::mpi.bcast.cmd(cmd = {library(dress.graph)})
-#   result <- mpi$delta_dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
+#   result <- mpi$delta_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
 #
 # Requires the dress.graph package built with DRESS_MPI support and an
 # MPI-capable R environment (pbdMPI, Rmpi, or manual comm handle).
@@ -13,17 +13,17 @@
 #' MPI-distributed DRESS functions.
 #'
 #' An environment containing MPI-distributed versions of
-#' \code{delta_dress_fit}.  Switch from CPU to MPI by prefixing calls
+#' \code{delta_fit}.  Switch from CPU to MPI by prefixing calls
 #' with \code{mpi$}.
 #'
 #' @details
 #' The \code{mpi} environment provides:
 #' \describe{
-#'   \item{\code{mpi$delta_dress_fit(...)}}{MPI-distributed
-#'         \code{\link{delta_dress_fit}} (CPU backend).
+#'   \item{\code{mpi$delta_fit(...)}}{MPI-distributed
+#'         \code{\link{delta_fit}} (CPU backend).
 #'         Same arguments plus \code{comm_f}.}
-#'   \item{\code{mpi$cuda$delta_dress_fit(...)}}{MPI-distributed
-#'         \code{\link{delta_dress_fit}} (CUDA backend).
+#'   \item{\code{mpi$cuda$delta_fit(...)}}{MPI-distributed
+#'         \code{\link{delta_fit}} (CUDA backend).
 #'         Each rank runs GPU-accelerated DRESS.}
 #' }
 #'
@@ -33,13 +33,13 @@
 #' @examples
 #' \dontrun{
 #'   # CPU
-#'   r1 <- delta_dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
+#'   r1 <- delta_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
 #'
 #'   # MPI -- same signature, distributed
-#'   r2 <- mpi$delta_dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
+#'   r2 <- mpi$delta_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
 #'
 #'   # MPI + CUDA
-#'   r3 <- mpi$cuda$delta_dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
+#'   r3 <- mpi$cuda$delta_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L), k = 1L)
 #' }
 #' @export
 mpi <- new.env(parent = emptyenv())
@@ -62,30 +62,39 @@ mpi <- new.env(parent = emptyenv())
 #' @param comm_f Integer. Fortran MPI communicator handle.
 #'   If NULL, attempts to get MPI_COMM_WORLD from pbdMPI.
 #'
-#' @return A list with histogram, hist_size, and optionally multisets.
+#' @return A list with a sparse exact \code{histogram} data frame and optionally
+#'   \code{multisets} and \code{num_subgraphs}.
 #' @export
-mpi$delta_dress_fit <- function(n_vertices,
+mpi$delta_fit <- function(n_vertices,
                                 sources,
                                 targets,
                                 weights          = NULL,
+                                node_weights     = NULL,
                                 k                = 0L,
                                 variant          = 0L,
                                 max_iterations   = 100L,
                                 epsilon          = 1e-6,
+                                n_samples        = 0L,
+                                seed             = 0L,
                                 precompute       = FALSE,
                                 keep_multisets   = FALSE,
+                                compute_histogram = TRUE,
                                 comm_f           = NULL) {
 
   n_vertices     <- as.integer(n_vertices)
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
   epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
   precompute     <- as.integer(precompute)
   keep_multisets <- as.integer(keep_multisets)
+  compute_histogram <- as.integer(compute_histogram)
 
   stopifnot(length(sources) == length(targets))
 
@@ -104,12 +113,90 @@ mpi$delta_dress_fit <- function(n_vertices,
         sources,
         targets,
         weights,
+        node_weights,
         k,
         variant,
         max_iterations,
         epsilon,
+        n_samples,
+        seed,
         precompute,
         keep_multisets,
+        compute_histogram,
+        comm_f)
+}
+
+# ---- MPI Nabla-k-DRESS --------------------------------------------------
+
+#' MPI-distributed Nabla-k-DRESS histogram
+#'
+#' Compute the Nabla-k-DRESS distribution using MPI.
+#' All MPI logic runs in C.
+#'
+#' @inheritParams nabla_fit
+#' @param comm_f Integer. Fortran MPI communicator handle.
+#'   If NULL, attempts to get MPI_COMM_WORLD from pbdMPI.
+#' @return A list with a sparse exact \code{histogram} data frame and optionally
+#'   \code{multisets} and \code{num_tuples}.
+#' @export
+mpi$nabla_fit <- function(n_vertices,
+                                sources,
+                                targets,
+                                weights          = NULL,
+                                node_weights     = NULL,
+                                k                = 0L,
+                                variant          = 0L,
+                                max_iterations   = 100L,
+                                epsilon          = 1e-6,
+                                n_samples        = 0L,
+                                seed             = 0L,
+                                precompute       = FALSE,
+                                keep_multisets   = FALSE,
+                                compute_histogram = TRUE,
+                                comm_f           = NULL) {
+
+  n_vertices     <- as.integer(n_vertices)
+  sources        <- as.integer(sources)
+  targets        <- as.integer(targets)
+  if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  k              <- as.integer(k)
+  variant        <- as.integer(variant)
+  max_iterations <- as.integer(max_iterations)
+  epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
+  precompute     <- as.integer(precompute)
+  keep_multisets <- as.integer(keep_multisets)
+  compute_histogram <- as.integer(compute_histogram)
+
+  stopifnot(length(sources) == length(targets))
+
+  # Resolve communicator handle
+  if (is.null(comm_f)) {
+    if (requireNamespace("pbdMPI", quietly = TRUE)) {
+      comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+    } else {
+      stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+    }
+  }
+  comm_f <- as.integer(comm_f)
+
+  .Call(C_nabla_dress_fit_mpi,
+        n_vertices,
+        sources,
+        targets,
+        weights,
+        node_weights,
+        k,
+        variant,
+        max_iterations,
+        epsilon,
+        n_samples,
+        seed,
+        precompute,
+        keep_multisets,
+        compute_histogram,
         comm_f)
 }
 
@@ -119,32 +206,40 @@ mpi$cuda <- new.env(parent = emptyenv())
 
 #' MPI+CUDA distributed Delta-k-DRESS histogram
 #'
-#' Same as \code{mpi$delta_dress_fit} but each rank runs GPU-accelerated DRESS.
+#' Same as \code{mpi$delta_fit} but each rank runs GPU-accelerated DRESS.
 #'
-#' @inheritParams mpi$delta_dress_fit
+#' @inheritParams mpi$delta_fit
 #' @export
-mpi$cuda$delta_dress_fit <- function(n_vertices,
+mpi$cuda$delta_fit <- function(n_vertices,
                                      sources,
                                      targets,
                                      weights          = NULL,
+                                     node_weights     = NULL,
                                      k                = 0L,
                                      variant          = 0L,
                                      max_iterations   = 100L,
                                      epsilon          = 1e-6,
+                                     n_samples        = 0L,
+                                     seed             = 0L,
                                      precompute       = FALSE,
                                      keep_multisets   = FALSE,
+                                     compute_histogram = TRUE,
                                      comm_f           = NULL) {
 
   n_vertices     <- as.integer(n_vertices)
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
   epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
   precompute     <- as.integer(precompute)
   keep_multisets <- as.integer(keep_multisets)
+  compute_histogram <- as.integer(compute_histogram)
 
   stopifnot(length(sources) == length(targets))
 
@@ -162,12 +257,220 @@ mpi$cuda$delta_dress_fit <- function(n_vertices,
         sources,
         targets,
         weights,
+        node_weights,
         k,
         variant,
         max_iterations,
         epsilon,
+        n_samples,
+        seed,
         precompute,
         keep_multisets,
+        compute_histogram,
+        comm_f)
+}
+
+#' MPI+CUDA distributed Nabla-k-DRESS histogram
+#'
+#' Same as \code{mpi$nabla_fit} but each rank runs GPU-accelerated DRESS.
+#'
+#' @inheritParams mpi$nabla_fit
+#' @export
+mpi$cuda$nabla_fit <- function(n_vertices,
+                                     sources,
+                                     targets,
+                                     weights          = NULL,
+                                     node_weights     = NULL,
+                                     k                = 0L,
+                                     variant          = 0L,
+                                     max_iterations   = 100L,
+                                     epsilon          = 1e-6,
+                                     n_samples        = 0L,
+                                     seed             = 0L,
+                                     precompute       = FALSE,
+                                     keep_multisets   = FALSE,
+                                     compute_histogram = TRUE,
+                                     comm_f           = NULL) {
+
+  n_vertices     <- as.integer(n_vertices)
+  sources        <- as.integer(sources)
+  targets        <- as.integer(targets)
+  if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  k              <- as.integer(k)
+  variant        <- as.integer(variant)
+  max_iterations <- as.integer(max_iterations)
+  epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
+  precompute     <- as.integer(precompute)
+  keep_multisets <- as.integer(keep_multisets)
+  compute_histogram <- as.integer(compute_histogram)
+
+  stopifnot(length(sources) == length(targets))
+
+  if (is.null(comm_f)) {
+    if (requireNamespace("pbdMPI", quietly = TRUE)) {
+      comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+    } else {
+      stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+    }
+  }
+  comm_f <- as.integer(comm_f)
+
+  .Call(C_nabla_dress_fit_mpi_cuda,
+        n_vertices,
+        sources,
+        targets,
+        weights,
+        node_weights,
+        k,
+        variant,
+        max_iterations,
+        epsilon,
+        n_samples,
+        seed,
+        precompute,
+        keep_multisets,
+        compute_histogram,
+        comm_f)
+}
+
+# ---- MPI + OMP environment ----------------------------------------------
+
+mpi$omp <- new.env(parent = emptyenv())
+
+#' MPI+OMP distributed Delta-k-DRESS histogram
+#'
+#' Same as \code{mpi$delta_fit} but within each rank, OpenMP threads
+#' parallelise the subgraph slice.
+#'
+#' @inheritParams mpi$delta_fit
+#' @export
+mpi$omp$delta_fit <- function(n_vertices,
+                                    sources,
+                                    targets,
+                                    weights          = NULL,
+                                    node_weights     = NULL,
+                                    k                = 0L,
+                                    variant          = 0L,
+                                    max_iterations   = 100L,
+                                    epsilon          = 1e-6,
+                                    n_samples        = 0L,
+                                    seed             = 0L,
+                                    precompute       = FALSE,
+                                    keep_multisets   = FALSE,
+                                    compute_histogram = TRUE,
+                                    comm_f           = NULL) {
+
+  n_vertices     <- as.integer(n_vertices)
+  sources        <- as.integer(sources)
+  targets        <- as.integer(targets)
+  if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  k              <- as.integer(k)
+  variant        <- as.integer(variant)
+  max_iterations <- as.integer(max_iterations)
+  epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
+  precompute     <- as.integer(precompute)
+  keep_multisets <- as.integer(keep_multisets)
+  compute_histogram <- as.integer(compute_histogram)
+
+  stopifnot(length(sources) == length(targets))
+
+  if (is.null(comm_f)) {
+    if (requireNamespace("pbdMPI", quietly = TRUE)) {
+      comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+    } else {
+      stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+    }
+  }
+  comm_f <- as.integer(comm_f)
+
+  .Call(C_delta_dress_fit_mpi_omp,
+        n_vertices,
+        sources,
+        targets,
+        weights,
+        node_weights,
+        k,
+        variant,
+        max_iterations,
+        epsilon,
+        n_samples,
+        seed,
+        precompute,
+        keep_multisets,
+        compute_histogram,
+        comm_f)
+}
+
+#' MPI+OMP distributed Nabla-k-DRESS histogram
+#'
+#' Same as \code{mpi$nabla_fit} but within each rank, OpenMP threads
+#' parallelise the tuple slice.
+#'
+#' @inheritParams mpi$nabla_fit
+#' @export
+mpi$omp$nabla_fit <- function(n_vertices,
+                                    sources,
+                                    targets,
+                                    weights          = NULL,
+                                    node_weights     = NULL,
+                                    k                = 0L,
+                                    variant          = 0L,
+                                    max_iterations   = 100L,
+                                    epsilon          = 1e-6,
+                                    n_samples        = 0L,
+                                    seed             = 0L,
+                                    precompute       = FALSE,
+                                    keep_multisets   = FALSE,
+                                    compute_histogram = TRUE,
+                                    comm_f           = NULL) {
+
+  n_vertices     <- as.integer(n_vertices)
+  sources        <- as.integer(sources)
+  targets        <- as.integer(targets)
+  if (!is.null(weights)) weights <- as.double(weights)
+  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  k              <- as.integer(k)
+  variant        <- as.integer(variant)
+  max_iterations <- as.integer(max_iterations)
+  epsilon        <- as.double(epsilon)
+  n_samples      <- as.integer(n_samples)
+  seed           <- as.integer(seed)
+  precompute     <- as.integer(precompute)
+  keep_multisets <- as.integer(keep_multisets)
+  compute_histogram <- as.integer(compute_histogram)
+
+  stopifnot(length(sources) == length(targets))
+
+  if (is.null(comm_f)) {
+    if (requireNamespace("pbdMPI", quietly = TRUE)) {
+      comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+    } else {
+      stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+    }
+  }
+  comm_f <- as.integer(comm_f)
+
+  .Call(C_nabla_dress_fit_mpi_omp,
+        n_vertices,
+        sources,
+        targets,
+        weights,
+        node_weights,
+        k,
+        variant,
+        max_iterations,
+        epsilon,
+        n_samples,
+        seed,
+        precompute,
+        keep_multisets,
+        compute_histogram,
         comm_f)
 }
 
@@ -179,8 +482,8 @@ mpi$cuda$delta_dress_fit <- function(n_vertices,
 #' @inheritParams DRESS
 #' @return An environment (class \code{"DRESS"}) with methods:
 #' \describe{
-#'   \item{\code{$fit(max_iterations, epsilon)}}{Fit (CPU).}
-#'   \item{\code{$delta_fit(k, ...)}}{MPI-distributed Δ^k-DRESS.}
+#'   \\item{\\code{$delta_fit(k, ...)}}{MPI-distributed \u0394^k-DRESS.}
+#'   \\item{\\code{$nabla_fit(k, ...)}}{MPI-distributed \u2207^k-DRESS.}
 #'   \item{\code{$get(u, v, ...)}}{Query edge value.}
 #'   \item{\code{$result()}}{Extract current results.}
 #'   \item{\code{$close()}}{Free C graph.}
@@ -190,6 +493,7 @@ mpi$DRESS <- function(n_vertices,
                       sources,
                       targets,
                       weights               = NULL,
+                      node_weights          = NULL,
                       variant               = DRESS_UNDIRECTED,
                       precompute_intercepts = FALSE) {
 
@@ -208,19 +512,17 @@ mpi$DRESS <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
+  if (!is.null(node_weights)) {
+    node_weights <- as.double(node_weights)
+    stopifnot(length(node_weights) == n_vertices)
+  }
+
   ptr <- .Call(C_dress_init,
-               n_vertices, sources, targets, weights,
+               n_vertices, sources, targets, weights, node_weights,
                variant, precompute)
 
   self <- new.env(parent = emptyenv())
   self$.ptr <- ptr
-
-  self$fit <- function(max_iterations = 100L, epsilon = 1e-6) {
-    .Call(C_dress_fit_obj,
-          self$.ptr,
-          as.integer(max_iterations),
-          as.double(epsilon))
-  }
 
   self$delta_fit <- function(k                = 0L,
                              max_iterations   = 100L,
@@ -234,7 +536,7 @@ mpi$DRESS <- function(n_vertices,
         stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
       }
     }
-    mpi$delta_dress_fit(n_vertices, sources, targets,
+    mpi$delta_fit(n_vertices, sources, targets,
                         weights          = weights,
                         k                = as.integer(k),
                         variant          = variant,
@@ -242,6 +544,35 @@ mpi$DRESS <- function(n_vertices,
                         epsilon          = as.double(epsilon),
                         precompute       = as.logical(precompute),
                         keep_multisets   = keep_multisets,
+                        comm_f           = as.integer(comm_f))
+  }
+
+  self$nabla_fit <- function(k                = 0L,
+                             max_iterations   = 100L,
+                             epsilon          = 1e-6,
+                             n_samples        = 0L,
+                             seed             = 0L,
+                             keep_multisets   = FALSE,
+                             compute_histogram = TRUE,
+                             comm_f           = NULL) {
+    if (is.null(comm_f)) {
+      if (requireNamespace("pbdMPI", quietly = TRUE)) {
+        comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+      } else {
+        stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+      }
+    }
+    mpi$nabla_fit(n_vertices, sources, targets,
+                        weights          = weights,
+                        k                = as.integer(k),
+                        variant          = variant,
+                        max_iterations   = as.integer(max_iterations),
+                        epsilon          = as.double(epsilon),
+                        n_samples        = as.integer(n_samples),
+                        seed             = as.integer(seed),
+                        precompute       = as.logical(precompute),
+                        keep_multisets   = keep_multisets,
+                        compute_histogram = compute_histogram,
                         comm_f           = as.integer(comm_f))
   }
 
@@ -281,6 +612,7 @@ mpi$cuda$DRESS <- function(n_vertices,
                            sources,
                            targets,
                            weights               = NULL,
+                           node_weights          = NULL,
                            variant               = DRESS_UNDIRECTED,
                            precompute_intercepts = FALSE) {
 
@@ -299,20 +631,17 @@ mpi$cuda$DRESS <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
+  if (!is.null(node_weights)) {
+    node_weights <- as.double(node_weights)
+    stopifnot(length(node_weights) == n_vertices)
+  }
+
   ptr <- .Call(C_dress_init,
-               n_vertices, sources, targets, weights,
+               n_vertices, sources, targets, weights, node_weights,
                variant, precompute)
 
   self <- new.env(parent = emptyenv())
   self$.ptr <- ptr
-
-  self$fit <- function(max_iterations = 100L, epsilon = 1e-6) {
-    .Call("C_dress_fit_cuda_obj",
-          self$.ptr,
-          as.integer(max_iterations),
-          as.double(epsilon),
-          PACKAGE = "dress.graph")
-  }
 
   self$delta_fit <- function(k                = 0L,
                              max_iterations   = 100L,
@@ -326,7 +655,7 @@ mpi$cuda$DRESS <- function(n_vertices,
         stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
       }
     }
-    mpi$cuda$delta_dress_fit(n_vertices, sources, targets,
+    mpi$cuda$delta_fit(n_vertices, sources, targets,
                              weights          = weights,
                              k                = as.integer(k),
                              variant          = variant,
@@ -334,6 +663,35 @@ mpi$cuda$DRESS <- function(n_vertices,
                              epsilon          = as.double(epsilon),
                              precompute       = as.logical(precompute),
                              keep_multisets   = keep_multisets,
+                             comm_f           = as.integer(comm_f))
+  }
+
+  self$nabla_fit <- function(k                = 0L,
+                             max_iterations   = 100L,
+                             epsilon          = 1e-6,
+                             n_samples        = 0L,
+                             seed             = 0L,
+                             keep_multisets   = FALSE,
+                             compute_histogram = TRUE,
+                             comm_f           = NULL) {
+    if (is.null(comm_f)) {
+      if (requireNamespace("pbdMPI", quietly = TRUE)) {
+        comm_f <- pbdMPI::spmd.comm.c2f(.pbd_env$SPMD.CT$comm)
+      } else {
+        stop("Provide 'comm_f' (Fortran MPI comm handle) or install pbdMPI.")
+      }
+    }
+    mpi$cuda$nabla_fit(n_vertices, sources, targets,
+                             weights          = weights,
+                             k                = as.integer(k),
+                             variant          = variant,
+                             max_iterations   = as.integer(max_iterations),
+                             epsilon          = as.double(epsilon),
+                             n_samples        = as.integer(n_samples),
+                             seed             = as.integer(seed),
+                             precompute       = as.logical(precompute),
+                             keep_multisets   = keep_multisets,
+                             compute_histogram = compute_histogram,
                              comm_f           = as.integer(comm_f))
   }
 

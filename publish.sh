@@ -66,17 +66,27 @@ publish_pypi() {
 
     # Vendor libdress C/C++ sources for the native extension + CUDA auto-build
     local VENDOR="src/dress/_vendored"
-    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/src/cuda" "$VENDOR/src/mpi"
+    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/include/dress/omp" "$VENDOR/src/cuda" "$VENDOR/src/mpi" "$VENDOR/src/omp"
     cp "$ROOT/libdress/include/dress/dress.h"           "$VENDOR/include/dress/"
-    cp "$ROOT/libdress/include/dress/delta_dress.h"     "$VENDOR/include/dress/"
     cp "$ROOT/libdress++/include/dress/dress.hpp"       "$VENDOR/include/dress/"
     cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$VENDOR/include/dress/cuda/"
+    cp "$ROOT/libdress/include/dress/omp/dress_omp.h"   "$VENDOR/include/dress/omp/"
+    cp "$ROOT/libdress/include/dress/omp/dress.h"       "$VENDOR/include/dress/omp/"
     cp "$ROOT/libdress/src/dress.c"                     "$VENDOR/src/"
     cp "$ROOT/libdress/src/delta_dress.c"               "$VENDOR/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.c"          "$VENDOR/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.h"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/nabla_dress.c"               "$VENDOR/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.c"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.h"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/dress_histogram.c"           "$VENDOR/src/"
+    cp "$ROOT/libdress/src/dress_histogram.h"           "$VENDOR/src/"
+    cp "$ROOT/libdress/src/omp/dress_omp.c"             "$VENDOR/src/omp/"
+    cp "$ROOT/libdress/src/omp/delta_dress_omp.c"       "$VENDOR/src/omp/"
+    cp "$ROOT/libdress/src/omp/nabla_dress_omp.c"       "$VENDOR/src/omp/"
     cp "$ROOT/libdress/src/cuda/dress_cuda.cu"          "$VENDOR/src/cuda/"
     cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"     "$VENDOR/src/cuda/"
+    cp "$ROOT/libdress/src/cuda/nabla_dress_cuda.c"     "$VENDOR/src/cuda/"
     cp "$ROOT/libdress/src/mpi/dress_mpi.c"             "$VENDOR/src/mpi/"
 
     $PY -m build
@@ -96,15 +106,20 @@ publish_pypi() {
         local site=$($PY -c "import sysconfig; print(sysconfig.get_path('purelib'))")
         local site_vendor="$site/dress/_vendored"
         rm -rf "$site_vendor"
-        mkdir -p "$site_vendor/include/dress/cuda" "$site_vendor/src/cuda" "$site_vendor/src/mpi"
+        mkdir -p "$site_vendor/include/dress/cuda" "$site_vendor/include/dress/omp" "$site_vendor/src/cuda" "$site_vendor/src/mpi" "$site_vendor/src/omp"
         cp "$ROOT/libdress/include/dress/dress.h"           "$site_vendor/include/dress/"
-        cp "$ROOT/libdress/include/dress/delta_dress.h"     "$site_vendor/include/dress/"
         cp "$ROOT/libdress++/include/dress/dress.hpp"       "$site_vendor/include/dress/"
         cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$site_vendor/include/dress/cuda/"
+        cp "$ROOT/libdress/include/dress/omp/dress_omp.h"   "$site_vendor/include/dress/omp/"
+        cp "$ROOT/libdress/include/dress/omp/dress.h"       "$site_vendor/include/dress/omp/"
         cp "$ROOT/libdress/src/dress.c"                     "$site_vendor/src/"
         cp "$ROOT/libdress/src/delta_dress.c"               "$site_vendor/src/"
         cp "$ROOT/libdress/src/delta_dress_impl.c"          "$site_vendor/src/"
         cp "$ROOT/libdress/src/delta_dress_impl.h"          "$site_vendor/src/"
+        cp "$ROOT/libdress/src/dress_histogram.c"           "$site_vendor/src/"
+        cp "$ROOT/libdress/src/dress_histogram.h"           "$site_vendor/src/"
+        cp "$ROOT/libdress/src/omp/dress_omp.c"             "$site_vendor/src/omp/"
+        cp "$ROOT/libdress/src/omp/delta_dress_omp.c"       "$site_vendor/src/omp/"
         cp "$ROOT/libdress/src/cuda/dress_cuda.cu"          "$site_vendor/src/cuda/"
         cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"     "$site_vendor/src/cuda/"
         cp "$ROOT/libdress/src/mpi/dress_mpi.c"             "$site_vendor/src/mpi/"
@@ -180,13 +195,23 @@ publish_npm() {
 publish_cargo() {
     echo "=== crates.io ==="
     # Vendor C sources into the crate (not committed to git)
-    mkdir -p "$ROOT/rust/vendor/include/dress/cuda" "$ROOT/rust/vendor/include/dress/mpi" "$ROOT/rust/vendor/mpi"
+    mkdir -p "$ROOT/rust/vendor/include/dress/cuda" "$ROOT/rust/vendor/include/dress/omp" "$ROOT/rust/vendor/include/dress/mpi" "$ROOT/rust/vendor/mpi"
     cp "$ROOT/libdress/src/dress.c"                "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/src/delta_dress.c"          "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/src/delta_dress_impl.c"     "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/src/delta_dress_impl.h"     "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/dress_histogram.c"      "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/dress_histogram.h"      "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/omp/dress_omp.c"        "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/omp/delta_dress_omp.c"  "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/nabla_dress.c"          "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.c"     "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.h"     "$ROOT/rust/vendor/"
+    cp "$ROOT/libdress/src/omp/nabla_dress_omp.c"  "$ROOT/rust/vendor/"
     cp "$ROOT/libdress/include/dress/dress.h"       "$ROOT/rust/vendor/include/dress/"
-    cp "$ROOT/libdress/include/dress/delta_dress.h" "$ROOT/rust/vendor/include/dress/"
+    # OMP headers
+    cp "$ROOT/libdress/include/dress/omp/dress_omp.h" "$ROOT/rust/vendor/include/dress/omp/"
+    cp "$ROOT/libdress/include/dress/omp/dress.h"     "$ROOT/rust/vendor/include/dress/omp/"
     # CUDA headers
     cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h" "$ROOT/rust/vendor/include/dress/cuda/"
     cp "$ROOT/libdress/include/dress/cuda/dress.h"      "$ROOT/rust/vendor/include/dress/cuda/"
@@ -232,9 +257,27 @@ publish_cran() {
     cp "$ROOT/libdress/src/delta_dress.c"          "$ROOT/r/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.c"     "$ROOT/r/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.h"     "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/dress_histogram.c"      "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/dress_histogram.h"      "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/nabla_dress.c"          "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.c"     "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.h"     "$ROOT/r/src/"
     mkdir -p "$ROOT/r/src/dress"
     cp "$ROOT/libdress/include/dress/dress.h"       "$ROOT/r/src/dress/"
-    cp "$ROOT/libdress/include/dress/delta_dress.h" "$ROOT/r/src/dress/"
+
+    # OMP headers + sources
+    mkdir -p "$ROOT/r/src/dress/omp"
+    cp "$ROOT/libdress/include/dress/omp/dress_omp.h" "$ROOT/r/src/dress/omp/"
+    cp "$ROOT/libdress/include/dress/omp/dress.h"     "$ROOT/r/src/dress/omp/"
+    cp "$ROOT/libdress/src/omp/dress_omp.c"           "$ROOT/r/src/"
+    cp "$ROOT/libdress/src/omp/delta_dress_omp.c"     "$ROOT/r/src/"
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' "$ROOT/r/src/dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$ROOT/r/src/dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' "$ROOT/r/src/delta_dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$ROOT/r/src/delta_dress_omp.c" 2>/dev/null || true
+    cp "$ROOT/libdress/src/omp/nabla_dress_omp.c"     "$ROOT/r/src/"
+    sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' "$ROOT/r/src/nabla_dress_omp.c" 2>/dev/null || true
+    sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$ROOT/r/src/nabla_dress_omp.c" 2>/dev/null || true
 
     # CUDA headers (if available)
     if [ -d "$ROOT/libdress/include/dress/cuda" ]; then
@@ -244,6 +287,11 @@ publish_cran() {
     # CUDA sources (for compile-from-source at install time)
     if [ -f "$ROOT/libdress/src/cuda/delta_dress_cuda.c" ]; then
         cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c" "$ROOT/r/src/"
+    fi
+    if [ -f "$ROOT/libdress/src/cuda/nabla_dress_cuda.c" ]; then
+        cp "$ROOT/libdress/src/cuda/nabla_dress_cuda.c" "$ROOT/r/src/"
+        sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' "$ROOT/r/src/nabla_dress_cuda.c" 2>/dev/null || true
+        sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$ROOT/r/src/nabla_dress_cuda.c" 2>/dev/null || true
     fi
     if [ -f "$ROOT/libdress/src/cuda/dress_cuda.cu" ]; then
         cp "$ROOT/libdress/src/cuda/dress_cuda.cu" "$ROOT/r/src/"
@@ -256,6 +304,9 @@ publish_cran() {
     fi
     if [ -f "$ROOT/libdress/src/mpi/dress_mpi.c" ]; then
         cp "$ROOT/libdress/src/mpi/dress_mpi.c" "$ROOT/r/src/"
+        sed -i 's|"../delta_dress_impl.h"|"delta_dress_impl.h"|' "$ROOT/r/src/dress_mpi.c"
+        sed -i 's|"../dress_histogram.h"|"dress_histogram.h"|' "$ROOT/r/src/dress_mpi.c"
+        sed -i 's|"../nabla_dress_impl.h"|"nabla_dress_impl.h"|' "$ROOT/r/src/dress_mpi.c"
     fi
 
     cd "$ROOT"
@@ -277,6 +328,8 @@ publish_cran() {
 
     # Cleanup vendored sources
     rm -f  "$ROOT/r/src/dress.c" "$ROOT/r/src/delta_dress.c" "$ROOT/r/src/delta_dress_impl.c" "$ROOT/r/src/delta_dress_impl.h"
+    rm -f  "$ROOT/r/src/dress_histogram.c" "$ROOT/r/src/dress_histogram.h"
+    rm -f  "$ROOT/r/src/dress_omp.c" "$ROOT/r/src/delta_dress_omp.c"
     rm -f  "$ROOT/r/src/dress_mpi.c" "$ROOT/r/src/delta_dress_cuda.c" "$ROOT/r/src/dress_cuda.cu" "$ROOT/r/src/dress_cuda.o"
     rm -rf "$ROOT/r/src/dress"
 }
@@ -367,10 +420,10 @@ class DressGraph < Formula
       int main() {
         int U[] = {0, 1, 2};
         int V[] = {1, 2, 0};
-        p_dress_graph_t g = init_dress_graph(3, 3, U, V, NULL, 0, 0);
+        p_dress_graph_t g = dress_init_graph(3, 3, U, V, NULL, 0, 0);
         if (!g) return 1;
         printf("OK\\\\n");
-        free_dress_graph(g);
+        dress_free_graph(g);
         return 0;
       }
     C
@@ -410,13 +463,23 @@ publish_julia() {
 
     # Vendor C sources into julia/vendor/ for standalone use
     local VENDOR="$ROOT/julia/vendor"
-    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/include/dress/mpi" "$VENDOR/src/cuda" "$VENDOR/src/mpi"
+    mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/include/dress/mpi" "$VENDOR/include/dress/omp" \
+             "$VENDOR/src/cuda" "$VENDOR/src/mpi" "$VENDOR/src/omp"
     cp "$ROOT/libdress/include/dress/dress.h"           "$VENDOR/include/dress/"
-    cp "$ROOT/libdress/include/dress/delta_dress.h"     "$VENDOR/include/dress/"
+    cp "$ROOT/libdress/include/dress/omp/dress_omp.h"   "$VENDOR/include/dress/omp/"
+    cp "$ROOT/libdress/include/dress/omp/dress.h"       "$VENDOR/include/dress/omp/"
     cp "$ROOT/libdress/src/dress.c"                     "$VENDOR/src/"
     cp "$ROOT/libdress/src/delta_dress.c"               "$VENDOR/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.c"          "$VENDOR/src/"
     cp "$ROOT/libdress/src/delta_dress_impl.h"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/dress_histogram.c"           "$VENDOR/src/"
+    cp "$ROOT/libdress/src/dress_histogram.h"           "$VENDOR/src/"
+    cp "$ROOT/libdress/src/omp/dress_omp.c"             "$VENDOR/src/omp/"
+    cp "$ROOT/libdress/src/omp/delta_dress_omp.c"       "$VENDOR/src/omp/"
+    cp "$ROOT/libdress/src/nabla_dress.c"               "$VENDOR/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.c"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/nabla_dress_impl.h"          "$VENDOR/src/"
+    cp "$ROOT/libdress/src/omp/nabla_dress_omp.c"       "$VENDOR/src/omp/"
     echo "  ✓ C sources vendored into julia/vendor/"
 
     if [[ $INSTALL_LOCAL -eq 1 ]]; then
@@ -492,24 +555,36 @@ publish_go() {
     _vendor_go_sources() {
         local DEST="$1"
         mkdir -p "$DEST/include/dress/cuda" "$DEST/include/dress/mpi" \
-                 "$DEST/src/cuda" "$DEST/src/mpi"
+                 "$DEST/include/dress/omp" \
+                 "$DEST/src/cuda" "$DEST/src/mpi" "$DEST/src/omp"
         # Headers
         cp "$ROOT/libdress/include/dress/dress.h"            "$DEST/include/dress/"
-        cp "$ROOT/libdress/include/dress/delta_dress.h"      "$DEST/include/dress/"
         cp "$ROOT/libdress/include/dress/cuda/dress_cuda.h"  "$DEST/include/dress/cuda/" 2>/dev/null || true
+        cp "$ROOT/libdress/include/dress/omp/dress_omp.h"    "$DEST/include/dress/omp/"
+        cp "$ROOT/libdress/include/dress/omp/dress.h"        "$DEST/include/dress/omp/"
         cp "$ROOT/libdress/include/dress/mpi/dress_mpi.h"    "$DEST/include/dress/mpi/"  2>/dev/null || true
         # C sources
         cp "$ROOT/libdress/src/dress.c"                      "$DEST/src/"
+        cp "$ROOT/libdress/src/dress_histogram.c"            "$DEST/src/"
+        cp "$ROOT/libdress/src/dress_histogram.h"            "$DEST/src/"
         cp "$ROOT/libdress/src/delta_dress.c"                "$DEST/src/"
         cp "$ROOT/libdress/src/delta_dress_impl.c"           "$DEST/src/"
         cp "$ROOT/libdress/src/delta_dress_impl.h"           "$DEST/src/"
+        cp "$ROOT/libdress/src/nabla_dress.c"                  "$DEST/src/"
+        cp "$ROOT/libdress/src/nabla_dress_impl.c"             "$DEST/src/"
+        cp "$ROOT/libdress/src/nabla_dress_impl.h"             "$DEST/src/"
+        # OMP sources
+        cp "$ROOT/libdress/src/omp/dress_omp.c"              "$DEST/src/omp/"
+        cp "$ROOT/libdress/src/omp/delta_dress_omp.c"        "$DEST/src/omp/"
+        cp "$ROOT/libdress/src/omp/nabla_dress_omp.c"        "$DEST/src/omp/"
         # CUDA sources
         cp "$ROOT/libdress/src/cuda/delta_dress_cuda.c"      "$DEST/src/cuda/"  2>/dev/null || true
+        cp "$ROOT/libdress/src/cuda/nabla_dress_cuda.c"      "$DEST/src/cuda/"  2>/dev/null || true
         # MPI sources
         cp "$ROOT/libdress/src/mpi/dress_mpi.c"              "$DEST/src/mpi/"   2>/dev/null || true
     }
 
-    for mod_dir in "$ROOT/go" "$ROOT/go/cuda" "$ROOT/go/mpi" "$ROOT/go/mpi/cuda"; do
+    for mod_dir in "$ROOT/go" "$ROOT/go/omp" "$ROOT/go/cuda" "$ROOT/go/mpi" "$ROOT/go/mpi/omp" "$ROOT/go/mpi/cuda"; do
         _vendor_go_sources "$mod_dir/vendor"
         echo "  ✓ vendored into $(basename "$(dirname "$mod_dir")")/$(basename "$mod_dir")/vendor/"
     done
@@ -546,7 +621,7 @@ publish_go() {
     fi
 
     # Sub-module tags (required by Go module proxy)
-    for sub in cuda mpi mpi/cuda; do
+    for sub in omp cuda mpi mpi/omp mpi/cuda; do
         SUB_TAG="go/${sub}/${TAG}"
         if ! git tag -l "$SUB_TAG" | grep -q .; then
             git tag "$SUB_TAG"
@@ -555,12 +630,12 @@ publish_go() {
     done
 
     git push origin "$GO_TAG"
-    for sub in cuda mpi mpi/cuda; do
+    for sub in omp cuda mpi mpi/omp mpi/cuda; do
         git push origin "go/${sub}/${TAG}"
     done
 
     # Cleanup vendored sources
-    for mod_dir in "$ROOT/go" "$ROOT/go/cuda" "$ROOT/go/mpi" "$ROOT/go/mpi/cuda"; do
+    for mod_dir in "$ROOT/go" "$ROOT/go/omp" "$ROOT/go/cuda" "$ROOT/go/mpi" "$ROOT/go/mpi/omp" "$ROOT/go/mpi/cuda"; do
         rm -rf "$mod_dir/vendor"
     done
 

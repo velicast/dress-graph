@@ -1,8 +1,8 @@
 /**
  * dress/cuda/dress.h — GPU-accelerated DRESS via include-based switching.
  *
- * Drop-in replacement for dress/dress.h + dress/delta_dress.h.
- * Including this header redirects dress_fit() and delta_dress_fit()
+ * Drop-in replacement for dress/dress.h.
+ * Including this header redirects dress_fit() and dress_delta_fit()
  * to their CUDA implementations — no source changes required:
  *
  *   // CPU
@@ -25,7 +25,9 @@
 
 /* Redirect CPU symbols to CUDA implementations. */
 #define dress_fit       dress_fit_cuda
-#define delta_dress_fit delta_dress_fit_cuda
-#define delta_dress_fit_strided delta_dress_fit_cuda_strided
+#define dress_delta_fit dress_delta_fit_cuda
+#define dress_delta_fit_strided dress_delta_fit_cuda_strided
+#define dress_nabla_fit dress_nabla_fit_cuda
+#define dress_nabla_fit_strided dress_nabla_fit_cuda_strided
 
 #endif /* DRESS_CUDA_REDIRECT_H */

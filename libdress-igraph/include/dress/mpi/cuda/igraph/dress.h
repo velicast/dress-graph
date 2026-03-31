@@ -3,7 +3,7 @@
  *                                  wrapper via include-based switching.
  *
  * Drop-in replacement for dress/igraph/dress.h.
- * Including this single header redirects delta_dress_fit() to
+ * Including this single header redirects dress_delta_fit() to
  * the CUDA + MPI backend — no source changes required.
  *
  * Equivalent to:

@@ -2,9 +2,9 @@
 
 Drop-in replacement for ``dress.networkx`` — just change the import::
 
-    from dress.mpi.cuda.networkx import dress_graph, delta_dress_graph, NxDRESS
+    from dress.mpi.cuda.networkx import dress_graph, delta_fit, NxDRESS
 
-    delta = delta_dress_graph(G, k=1)
+    delta = delta_fit(G, k=1)
 
     with NxDRESS(G) as dg:   # fit() on GPU, delta_fit() MPI+GPU
         dg.fit()
@@ -20,24 +20,28 @@ from dress.networkx import (
     NxDRESS as _BaseNxDRESS,
 )
 
-__all__ = ["dress_graph", "delta_dress_graph", "NxDRESS"]
+__all__ = ["dress_graph", "delta_fit", "nabla_fit", "NxDRESS"]
 
 
-def delta_dress_graph(
+def delta_fit(
     G,
     *,
     k: int = 0,
     variant: Variant = UNDIRECTED,
     weight: str = "weight",
+    node_weight: str = "node_weight",
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute: bool = False,
     keep_multisets: bool = False,
     comm=None,
+    n_samples: int = 0,
+    seed: int = 0,
+    compute_histogram: bool = True,
 ) -> DeltaDRESSResult:
     """Compute the Δ^k-DRESS histogram on a NetworkX graph (MPI+CUDA).
 
-    Same interface as :func:`dress.networkx.delta_dress_graph` but
+    Same interface as :func:`dress.networkx.delta_fit` but
     distributes subgraph processing across MPI ranks with
     GPU-accelerated DRESS on each rank.
 
@@ -66,14 +70,16 @@ def delta_dress_graph(
     -------
     DeltaDRESSResult
     """
-    from dress.mpi.cuda import delta_dress_fit
+    from dress.mpi.cuda import delta_fit
     return _delta_dress_graph_impl(
-        delta_dress_fit, G,
-        k=k, variant=variant, weight=weight,
+        delta_fit, G,
+        k=k, variant=variant, weight=weight, node_weight=node_weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
         keep_multisets=keep_multisets,
         comm=comm,
+        n_samples=n_samples, seed=seed,
+        compute_histogram=compute_histogram,
     )
 
 
@@ -82,6 +88,7 @@ def dress_graph(
     *,
     variant: Variant = UNDIRECTED,
     weight: str = "weight",
+    node_weight: str = "node_weight",
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute_intercepts: bool = False,
@@ -89,15 +96,45 @@ def dress_graph(
 ) -> DRESSResult:
     """Compute DRESS similarity on a NetworkX graph (CUDA).
 
-    ``fit()`` runs on GPU.  Same interface as :func:`dress.networkx.dress_graph`.
+    ``fit()`` runs on GPU.  Same interface as :func:`dress.networkx.fit`.
     """
-    from dress.cuda import dress_fit
+    from dress.cuda import fit
     return _dress_graph_impl(
-        dress_fit, G,
-        variant=variant, weight=weight,
+        fit, G,
+        variant=variant, weight=weight, node_weight=node_weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute_intercepts=precompute_intercepts,
         set_attributes=set_attributes,
+    )
+
+
+def nabla_fit(
+    G,
+    *,
+    k: int = 0,
+    variant: Variant = UNDIRECTED,
+    weight: str = "weight",
+    node_weight: str = "node_weight",
+    max_iterations: int = 100,
+    epsilon: float = 1e-6,
+    precompute: bool = False,
+    keep_multisets: bool = False,
+    comm=None,
+    n_samples: int = 0,
+    seed: int = 0,
+    compute_histogram: bool = True,
+):
+    """Compute the nabla^k-DRESS histogram on a NetworkX graph (MPI+CUDA)."""
+    from dress.mpi.cuda import nabla_fit
+    return _delta_dress_graph_impl(
+        nabla_fit, G,
+        k=k, variant=variant, weight=weight, node_weight=node_weight,
+        max_iterations=max_iterations, epsilon=epsilon,
+        precompute=precompute,
+        keep_multisets=keep_multisets,
+        comm=comm,
+        n_samples=n_samples, seed=seed,
+        compute_histogram=compute_histogram,
     )
 
 

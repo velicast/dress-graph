@@ -11,6 +11,7 @@
  */
 
 #include "dress/dress.hpp"
+using namespace dress;
 
 #include <cassert>
 #include <cmath>
@@ -76,6 +77,29 @@ static void test_weighted_construction()
     ASSERT_NEAR(g.edgeWeight(0), 2.0, 1e-12, "w[0] == 2.0");
     ASSERT_NEAR(g.edgeWeight(1), 4.0, 1e-12, "w[1] == 4.0");
     ASSERT_NEAR(g.edgeWeight(2), 6.0, 1e-12, "w[2] == 6.0");
+}
+
+static void test_node_weights_default()
+{
+    std::printf("test_node_weights_default\n");
+
+    int N = 3;
+    std::vector<int> src = {0, 1, 0}, dst = {1, 2, 2};
+
+    // 1. Default (implicit All-1 node weights)
+    DRESS g1(N, src, dst);
+    g1.fit(100, 1e-12);
+
+    // 2. Explicit All-1 node weights
+    std::vector<double> nw = {1.0, 1.0, 1.0};
+    DRESS g2(N, src, dst, {}, nw);
+    g2.fit(100, 1e-12);
+
+    ASSERT_EQ(g1.numEdges(), g2.numEdges(), "E1 == E2");
+    for (int i = 0; i < g1.numEdges(); ++i) {
+        ASSERT_NEAR(g1.edgeDress(i), g2.edgeDress(i), 1e-12,
+                    "default vs explicit node weights match (edge_dress)");
+    }
 }
 
 static void test_all_variants()
@@ -371,6 +395,7 @@ int main()
     /* construction */
     test_unweighted_triangle();
     test_weighted_construction();
+    test_node_weights_default();
     test_all_variants();
     test_precompute_intercepts();
     test_mismatched_sizes();

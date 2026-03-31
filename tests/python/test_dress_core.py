@@ -8,15 +8,15 @@ Run from the repo root:
 import math
 import pytest
 
-from dress.core import dress_fit, DRESS, DRESSResult, Variant
+from dress.core import fit, DRESS, DRESSResult, Variant
 from dress.core import UNDIRECTED, DIRECTED, FORWARD, BACKWARD
 
 
 # ── helpers ──────────────────────────────────────────────────────────
 
 def _fit(n, src, tgt, **kwargs):
-    """Short-hand: dress_fit returning a DRESSResult."""
-    return dress_fit(n, src, tgt, **kwargs)
+    """Short-hand: fit returning a DRESSResult."""
+    return fit(n, src, tgt, **kwargs)
 
 
 # ── construction / validation ────────────────────────────────────────
@@ -31,6 +31,22 @@ class TestConstruction:
     def test_weighted(self):
         r = _fit(3, [0, 1, 0], [1, 2, 2], weights=[1.0, 2.0, 3.0])
         assert len(r.edge_dress) == 3
+
+    def test_node_weights_default(self):
+        """Passing all 1.0 node weights should match default behavior."""
+        src = [0, 1, 0, 1]
+        tgt = [1, 2, 2, 3]
+        n = 4
+
+        # 1. Default (implicit All-1 node weights)
+        r1 = _fit(n, src, tgt)
+
+        # 2. Explicit All-1 node weights
+        nw = [1.0] * n
+        r2 = _fit(n, src, tgt, node_weights=nw)
+
+        for d1, d2 in zip(r1.edge_dress, r2.edge_dress):
+            assert abs(d1 - d2) < 1e-12, "Explicit node_weights=1.0 differs from default"
 
     def test_all_variants(self):
         for v in (UNDIRECTED, DIRECTED, FORWARD, BACKWARD):

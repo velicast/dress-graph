@@ -1,5 +1,5 @@
-\name{dress_fit}
-\alias{dress_fit}
+\name{fit}
+\alias{fit}
 \alias{DRESS_UNDIRECTED}
 \alias{DRESS_DIRECTED}
 \alias{DRESS_FORWARD}
@@ -11,9 +11,10 @@ Build a DRESS graph from an edge list and run iterative fitting to
 compute per-edge structural similarity values.
 }
 \usage{
-dress_fit(n_vertices, sources, targets, weights = NULL,
-          variant = DRESS_UNDIRECTED, max_iterations = 100L,
-          epsilon = 1e-6, precompute_intercepts = FALSE)
+fit(n_vertices, sources, targets, weights = NULL,
+          node_weights = NULL, variant = DRESS_UNDIRECTED,
+          max_iterations = 100L, epsilon = 1e-6,
+          precompute_intercepts = FALSE)
 
 dress_version()
 
@@ -29,6 +30,8 @@ DRESS_BACKWARD
   \item{targets}{Integer vector of length E -- edge target endpoints (0-based).}
   \item{weights}{Optional numeric vector of length E -- per-edge weights.
     \code{NULL} (default) gives every edge weight 1.}
+  \item{node_weights}{Optional numeric vector of length N -- per-node weights.
+    \code{NULL} (default) gives every node weight 1.}
   \item{variant}{Graph variant (default \code{DRESS_UNDIRECTED}).
     One of \code{DRESS_UNDIRECTED} (0), \code{DRESS_DIRECTED} (1),
     \code{DRESS_FORWARD} (2), \code{DRESS_BACKWARD} (3).}
@@ -47,10 +50,11 @@ A list with components:
   \item{node_dress}{Numeric vector [N] -- per-node norm.}
   \item{iterations}{Integer -- number of iterations performed.}
   \item{delta}{Numeric -- final max per-edge change.}
+  \item{node_weights}{Numeric vector [N] -- node weights (if provided).}
 }
 \examples{
 # Triangle + pendant: 0-1, 1-2, 2-0, 2-3
-res <- dress_fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
+res <- fit(4L, c(0L,1L,2L,2L), c(1L,2L,0L,3L))
 res$edge_dress
 }
 \references{

@@ -85,6 +85,24 @@ catch e
     fprintf('FAIL: precompute intercepts: %s\n', e.message);
 end
 
+% -- node weights default --
+try
+    % 1. Default (implicit All-1 node weights)
+    r1 = dress_fit(3, int32([0;1;0]), int32([1;2;2]));
+    
+    % 2. Explicit All-1 node weights
+    nw = [1.0; 1.0; 1.0];
+    r2 = dress_fit(3, int32([0;1;0]), int32([1;2;2]), 'NodeWeights', nw);
+    
+    assert_near(r1.edge_dress, r2.edge_dress, 1e-12, 'edge_dress match');
+    assert_near(r1.node_dress, r2.node_dress, 1e-12, 'node_dress match');
+    passed = passed + 1;
+    fprintf('PASS: node weights default\n');
+catch e
+    failed = failed + 1;
+    fprintf('FAIL: node weights default: %s\n', e.message);
+end
+
 %% === Fitting ===
 
 % -- triangle convergence --

@@ -64,11 +64,12 @@ static void test_unweighted_triangle(void)
     int src[] = {0, 1, 0};
     int dst[] = {1, 2, 2};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
-    ASSERT(g != NULL, "init_dress_graph returned NULL");
+    ASSERT(g != NULL, "dress_init_graph returned NULL");
     ASSERT_EQ_INT(g->N, 3, "N == 3");
     ASSERT_EQ_INT(g->E, 3, "E == 3");
     ASSERT_EQ_INT(g->variant, DRESS_VARIANT_UNDIRECTED, "variant == UNDIRECTED");
@@ -79,7 +80,7 @@ static void test_unweighted_triangle(void)
     ASSERT_EQ_INT(g->U[1], 1, "U[1] == 1");
     ASSERT_EQ_INT(g->V[1], 2, "V[1] == 2");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_weighted_triangle(void)
@@ -90,11 +91,12 @@ static void test_weighted_triangle(void)
     int    dst[] = {1, 2, 2};
     double wts[] = {1.0, 2.0, 3.0};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        dup_double(wts, 3), DRESS_VARIANT_UNDIRECTED, 0);
+        dup_double(wts, 3), NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
-    ASSERT(g != NULL, "init_dress_graph returned NULL");
+    ASSERT(g != NULL, "dress_init_graph returned NULL");
     ASSERT_EQ_INT(g->E, 3, "E == 3");
 
     /* Weighted undirected edges get doubled weight (w(u,v)+w(v,u)) */
@@ -102,7 +104,7 @@ static void test_weighted_triangle(void)
     ASSERT_NEAR(g->edge_weight[1], 4.0, 1e-12, "w[1] == 4.0");
     ASSERT_NEAR(g->edge_weight[2], 6.0, 1e-12, "w[2] == 6.0");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_all_variants(void)
@@ -120,13 +122,13 @@ static void test_all_variants(void)
     int dst[] = {1, 2, 2};
 
     for (int i = 0; i < 4; i++) {
-        p_dress_graph_t g = init_dress_graph(
+        p_dress_graph_t g = dress_init_graph(
             3, 3, dup_int(src, 3), dup_int(dst, 3),
-            NULL, variants[i], 0);
-        ASSERT(g != NULL, "init_dress_graph succeeded for variant");
+            NULL, NULL, variants[i], 0);
+        ASSERT(g != NULL, "dress_init_graph succeeded for variant");
         ASSERT_EQ_INT(g->variant, variants[i], "variant stored correctly");
         ASSERT_EQ_INT(g->E, 3, "E == 3");
-        free_dress_graph(g);
+        dress_free_graph(g);
     }
 }
 
@@ -137,15 +139,16 @@ static void test_precompute_intercepts(void)
     int src[] = {0, 1, 0};
     int dst[] = {1, 2, 2};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 1);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 1);
 
-    ASSERT(g != NULL, "init_dress_graph returned NULL");
+    ASSERT(g != NULL, "dress_init_graph returned NULL");
     ASSERT_EQ_INT(g->precompute_intercepts, 1, "intercepts enabled");
     ASSERT(g->intercept_offset != NULL, "intercept_offset allocated");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 /* ── test: fitting ─────────────────────────────────────────────────── */
@@ -157,9 +160,10 @@ static void test_triangle_convergence(void)
     int src[] = {0, 1, 0};
     int dst[] = {1, 2, 2};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     int    iters = 0;
     double delta = 0.0;
@@ -168,7 +172,49 @@ static void test_triangle_convergence(void)
     ASSERT_GT(iters, 0, "iterations > 0");
     ASSERT_GT(delta, -1.0, "delta is non-negative (or nearly zero)");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
+}
+
+static void test_node_weights_default(void)
+{
+    printf("test_node_weights_default\n");
+
+    int src[] = {0, 1, 0};
+    int dst[] = {1, 2, 2};
+    int N = 3, E = 3;
+
+    // 1. Default (implicit All-1 node weights)
+    p_dress_graph_t g1 = dress_init_graph(
+        N, E, dup_int(src, E), dup_int(dst, E),
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
+
+    dress_fit(g1, 100, 1e-8, NULL, NULL);
+
+    // 2. Explicit All-1 node weights
+    double nw[] = {1.0, 1.0, 1.0};
+    double *nw_copy = (double *)malloc(N * sizeof(double));
+    memcpy(nw_copy, nw, N * sizeof(double));
+
+    p_dress_graph_t g2 = dress_init_graph(
+        N, E, dup_int(src, E), dup_int(dst, E),
+        NULL, nw_copy,
+        DRESS_VARIANT_UNDIRECTED, 0);
+
+    dress_fit(g2, 100, 1e-8, NULL, NULL);
+
+    int i;
+    for (i = 0; i < E; i++) {
+        ASSERT_NEAR(g1->edge_dress[i], g2->edge_dress[i], 1e-12,
+                    "default vs explicit node weights match (edge_dress)");
+    }
+    for (i = 0; i < N; i++) {
+        ASSERT_NEAR(g1->node_dress[i], g2->node_dress[i], 1e-12,
+                    "default vs explicit node weights match (node_dress)");
+    }
+
+    dress_free_graph(g1);
+    dress_free_graph(g2);
 }
 
 static void test_triangle_equal_dress(void)
@@ -178,9 +224,10 @@ static void test_triangle_equal_dress(void)
     int src[] = {0, 1, 0};
     int dst[] = {1, 2, 2};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g, 100, 1e-8, NULL, NULL);
 
@@ -191,7 +238,7 @@ static void test_triangle_equal_dress(void)
     ASSERT_NEAR(g->edge_dress[2], d0, 1e-6,
                 "edge 2 dress == edge 0 dress");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_path_positive_dress(void)
@@ -202,9 +249,10 @@ static void test_path_positive_dress(void)
     int src[] = {0, 1, 2};
     int dst[] = {1, 2, 3};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         4, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g, 100, 1e-6, NULL, NULL);
 
@@ -213,7 +261,7 @@ static void test_path_positive_dress(void)
         ASSERT_LT(g->edge_dress[e], 2.0, "path edge dress < 2");
     }
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_path_symmetry(void)
@@ -223,9 +271,10 @@ static void test_path_symmetry(void)
     int src[] = {0, 1, 2};
     int dst[] = {1, 2, 3};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         4, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g, 100, 1e-6, NULL, NULL);
 
@@ -233,7 +282,7 @@ static void test_path_symmetry(void)
     ASSERT_NEAR(g->edge_dress[0], g->edge_dress[2], 1e-10,
                 "endpoint edges have same dress");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_fit_with_intercepts(void)
@@ -244,13 +293,15 @@ static void test_fit_with_intercepts(void)
     int dst[] = {1, 2, 2};
 
     /* Build graph with precomputed intercepts */
-    p_dress_graph_t g1 = init_dress_graph(
+    p_dress_graph_t g1 = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 1);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 1);
     /* Build same graph without intercepts */
-    p_dress_graph_t g2 = init_dress_graph(
+    p_dress_graph_t g2 = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g1, 100, 1e-10, NULL, NULL);
     dress_fit(g2, 100, 1e-10, NULL, NULL);
@@ -261,8 +312,8 @@ static void test_fit_with_intercepts(void)
                     "intercept results match non-intercept");
     }
 
-    free_dress_graph(g1);
-    free_dress_graph(g2);
+    dress_free_graph(g1);
+    dress_free_graph(g2);
 }
 
 static void test_node_dress(void)
@@ -272,9 +323,10 @@ static void test_node_dress(void)
     int src[] = {0, 1, 0};
     int dst[] = {1, 2, 2};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g, 100, 1e-8, NULL, NULL);
 
@@ -285,7 +337,7 @@ static void test_node_dress(void)
     ASSERT_NEAR(g->node_dress[0], g->node_dress[2], 1e-6,
                 "node_dress[0] == node_dress[2]");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_weighted_fit(void)
@@ -296,9 +348,10 @@ static void test_weighted_fit(void)
     int    dst[] = {1, 2, 2};
     double wts[] = {1.0, 2.0, 3.0};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 3, dup_int(src, 3), dup_int(dst, 3),
-        dup_double(wts, 3), DRESS_VARIANT_UNDIRECTED, 0);
+        dup_double(wts, 3), NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     int iters = 0;
     dress_fit(g, 100, 1e-6, &iters, NULL);
@@ -314,7 +367,7 @@ static void test_weighted_fit(void)
     ASSERT_GT(d_max - d_min, 1e-6,
               "asymmetric weights produce different dress values");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_single_edge(void)
@@ -324,9 +377,10 @@ static void test_single_edge(void)
     int src[] = {0};
     int dst[] = {1};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         2, 1, dup_int(src, 1), dup_int(dst, 1),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     ASSERT(g != NULL, "single edge graph created");
     ASSERT_EQ_INT(g->N, 2, "N == 2");
@@ -338,7 +392,7 @@ static void test_single_edge(void)
        self-loop constant and should be small and positive. */
     ASSERT_GT(g->edge_dress[0], 0.0, "single edge dress > 0");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_complete_graph_k4(void)
@@ -349,9 +403,10 @@ static void test_complete_graph_k4(void)
     int src[] = {0, 0, 0, 1, 1, 2};
     int dst[] = {1, 2, 3, 2, 3, 3};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         4, 6, dup_int(src, 6), dup_int(dst, 6),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g, 200, 1e-10, NULL, NULL);
 
@@ -368,7 +423,7 @@ static void test_complete_graph_k4(void)
                     "K4 nodes have equal dress norm");
     }
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_star_graph(void)
@@ -379,9 +434,10 @@ static void test_star_graph(void)
     int src[] = {0, 0, 0, 0};
     int dst[] = {1, 2, 3, 4};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         5, 4, dup_int(src, 4), dup_int(dst, 4),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g, 100, 1e-8, NULL, NULL);
 
@@ -392,7 +448,7 @@ static void test_star_graph(void)
                     "star edges have equal dress");
     }
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_fit_null_out_params(void)
@@ -402,16 +458,17 @@ static void test_fit_null_out_params(void)
     int src[] = {0, 1};
     int dst[] = {1, 2};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         3, 2, dup_int(src, 2), dup_int(dst, 2),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     /* Should not crash when iters and delta are NULL. */
     dress_fit(g, 10, 1e-6, NULL, NULL);
 
     ASSERT_GT(g->edge_dress[0], 0.0, "dress computed even with NULL out params");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 /* ── test: label-independence (sort+KBN) ───────────────────────────── */
@@ -490,9 +547,10 @@ static void test_relabel_petersen(void)
     int dst[] = {1,4,5, 2,6, 3,7, 4,8, 9, 7,8,9,9,5};
     int N = 10, E = 15;
 
-    p_dress_graph_t g1 = init_dress_graph(
+    p_dress_graph_t g1 = dress_init_graph(
         N, E, dup_int(src, E), dup_int(dst, E),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g1, 200, 1e-12, NULL, NULL);
 
     /* Random-looking permutation */
@@ -500,16 +558,17 @@ static void test_relabel_petersen(void)
     int *ps, *pd;
     permute_edges(src, dst, E, perm, &ps, &pd);
 
-    p_dress_graph_t g2 = init_dress_graph(
+    p_dress_graph_t g2 = dress_init_graph(
         N, E, ps, pd,
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g2, 200, 1e-12, NULL, NULL);
 
     assert_fingerprint_equal(g1, g2,
         "Petersen relabeled: sorted fingerprint must be bitwise identical");
 
-    free_dress_graph(g1);
-    free_dress_graph(g2);
+    dress_free_graph(g1);
+    dress_free_graph(g2);
 }
 
 static void test_relabel_weighted(void)
@@ -522,25 +581,27 @@ static void test_relabel_weighted(void)
     double wts[] = {1.0, 3.0, 2.0, 5.0, 4.0, 7.0};
     int N = 5, E = 6;
 
-    p_dress_graph_t g1 = init_dress_graph(
+    p_dress_graph_t g1 = dress_init_graph(
         N, E, dup_int(src, E), dup_int(dst, E),
-        dup_double(wts, E), DRESS_VARIANT_UNDIRECTED, 0);
+        dup_double(wts, E), NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g1, 200, 1e-12, NULL, NULL);
 
     int perm[] = {3, 0, 4, 1, 2};
     int *ps, *pd;
     permute_edges(src, dst, E, perm, &ps, &pd);
 
-    p_dress_graph_t g2 = init_dress_graph(
+    p_dress_graph_t g2 = dress_init_graph(
         N, E, ps, pd,
-        dup_double(wts, E), DRESS_VARIANT_UNDIRECTED, 0);
+        dup_double(wts, E), NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g2, 200, 1e-12, NULL, NULL);
 
     assert_fingerprint_equal(g1, g2,
         "weighted relabeled: sorted fingerprint must be bitwise identical");
 
-    free_dress_graph(g1);
-    free_dress_graph(g2);
+    dress_free_graph(g1);
+    dress_free_graph(g2);
 }
 
 static void test_edge_reorder(void)
@@ -555,12 +616,14 @@ static void test_edge_reorder(void)
     int dst2[] = {3, 4, 3, 2, 1};
     int N = 5, E = 5;
 
-    p_dress_graph_t g1 = init_dress_graph(
+    p_dress_graph_t g1 = dress_init_graph(
         N, E, dup_int(src1, E), dup_int(dst1, E),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
-    p_dress_graph_t g2 = init_dress_graph(
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
+    p_dress_graph_t g2 = dress_init_graph(
         N, E, dup_int(src2, E), dup_int(dst2, E),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     dress_fit(g1, 200, 1e-12, NULL, NULL);
     dress_fit(g2, 200, 1e-12, NULL, NULL);
@@ -568,8 +631,8 @@ static void test_edge_reorder(void)
     assert_fingerprint_equal(g1, g2,
         "edge-reordered: sorted fingerprint must be bitwise identical");
 
-    free_dress_graph(g1);
-    free_dress_graph(g2);
+    dress_free_graph(g1);
+    dress_free_graph(g2);
 }
 
 static void test_relabel_with_intercepts(void)
@@ -581,25 +644,27 @@ static void test_relabel_with_intercepts(void)
     int dst[] = {1,4,5, 2,6, 3,7, 4,8, 9, 7,8,9,9,5};
     int N = 10, E = 15;
 
-    p_dress_graph_t g1 = init_dress_graph(
+    p_dress_graph_t g1 = dress_init_graph(
         N, E, dup_int(src, E), dup_int(dst, E),
-        NULL, DRESS_VARIANT_UNDIRECTED, 1);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 1);
     dress_fit(g1, 200, 1e-12, NULL, NULL);
 
     int perm[] = {7, 2, 5, 0, 9, 1, 8, 4, 3, 6};
     int *ps, *pd;
     permute_edges(src, dst, E, perm, &ps, &pd);
 
-    p_dress_graph_t g2 = init_dress_graph(
+    p_dress_graph_t g2 = dress_init_graph(
         N, E, ps, pd,
-        NULL, DRESS_VARIANT_UNDIRECTED, 1);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 1);
     dress_fit(g2, 200, 1e-12, NULL, NULL);
 
     assert_fingerprint_equal(g1, g2,
         "intercept relabeled: sorted fingerprint must be bitwise identical");
 
-    free_dress_graph(g1);
-    free_dress_graph(g2);
+    dress_free_graph(g1);
+    dress_free_graph(g2);
 }
 
 static void test_relabel_directed(void)
@@ -616,18 +681,18 @@ static void test_relabel_directed(void)
                                DRESS_VARIANT_BACKWARD};
 
     for (int vi = 0; vi < 3; vi++) {
-        p_dress_graph_t g1 = init_dress_graph(
+        p_dress_graph_t g1 = dress_init_graph(
             N, E, dup_int(src, E), dup_int(dst, E),
-            NULL, dvars[vi], 0);
+            NULL, NULL, dvars[vi], 0);
         dress_fit(g1, 200, 1e-12, NULL, NULL);
 
         int perm[] = {2, 0, 1};
         int *ps, *pd;
         permute_edges(src, dst, E, perm, &ps, &pd);
 
-        p_dress_graph_t g2 = init_dress_graph(
+        p_dress_graph_t g2 = dress_init_graph(
             N, E, ps, pd,
-            NULL, dvars[vi], 0);
+            NULL, NULL, dvars[vi], 0);
         dress_fit(g2, 200, 1e-12, NULL, NULL);
 
         char msg[128];
@@ -636,8 +701,8 @@ static void test_relabel_directed(void)
                  names[vi]);
         assert_fingerprint_equal(g1, g2, msg);
 
-        free_dress_graph(g1);
-        free_dress_graph(g2);
+        dress_free_graph(g1);
+        dress_free_graph(g2);
     }
 }
 
@@ -652,9 +717,10 @@ static void test_dress_get_existing_edge(void)
     int dst[] = {1, 2, 3, 2, 3, 3};
     int N = 4, E = 6;
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         N, E, dup_int(src, E), dup_int(dst, E),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g, 200, 1e-12, NULL, NULL);
 
     for (int e = 0; e < E; e++) {
@@ -667,7 +733,7 @@ static void test_dress_get_existing_edge(void)
                       "dress_get(v,u) == edge_dress for existing edge");
     }
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_dress_get_virtual_edge(void)
@@ -678,9 +744,10 @@ static void test_dress_get_virtual_edge(void)
     int src[] = {0, 1, 2};
     int dst[] = {1, 2, 3};
 
-    p_dress_graph_t g = init_dress_graph(
+    p_dress_graph_t g = dress_init_graph(
         4, 3, dup_int(src, 3), dup_int(dst, 3),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g, 200, 1e-12, NULL, NULL);
 
     double d03 = dress_get(g, 0, 3, 200, 1e-12, 1.0);
@@ -693,7 +760,7 @@ static void test_dress_get_virtual_edge(void)
     double d02 = dress_get(g, 0, 2, 200, 1e-12, 1.0);
     ASSERT_GT(d02, d03, "virtual edge with common neighbor > without");
 
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 static void test_virtual_edge_relabel_invariance(void)
@@ -706,18 +773,20 @@ static void test_virtual_edge_relabel_invariance(void)
     int dst[] = {1, 2, 3, 4, 0};
     int N = 5, E = 5;
 
-    p_dress_graph_t g1 = init_dress_graph(
+    p_dress_graph_t g1 = dress_init_graph(
         N, E, dup_int(src, E), dup_int(dst, E),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g1, 200, 1e-12, NULL, NULL);
 
     int perm[] = {4, 3, 2, 1, 0};
     int *ps, *pd;
     permute_edges(src, dst, E, perm, &ps, &pd);
 
-    p_dress_graph_t g2 = init_dress_graph(
+    p_dress_graph_t g2 = dress_init_graph(
         N, E, ps, pd,
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     dress_fit(g2, 200, 1e-12, NULL, NULL);
 
     /* Collect all virtual-edge dress values for both graphs, sort, memcmp. */
@@ -743,8 +812,8 @@ static void test_virtual_edge_relabel_invariance(void)
     free(v1);
     free(v2);
 
-    free_dress_graph(g1);
-    free_dress_graph(g2);
+    dress_free_graph(g1);
+    dress_free_graph(g2);
 }
 
 /* ── main ──────────────────────────────────────────────────────────── */
@@ -761,6 +830,7 @@ int main(void)
 
     /* fitting */
     test_triangle_convergence();
+    test_node_weights_default();
     test_triangle_equal_dress();
     test_path_positive_dress();
     test_path_symmetry();

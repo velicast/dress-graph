@@ -73,6 +73,11 @@ update julia/Project.toml \
     '^version = ".*"' \
     "version = \"$NEW\""
 
+# MATLAB — Contents.m
+update matlab/Contents.m \
+    '^% Version .*' \
+    "% Version $NEW ($(date +%Y-%m-%d))"
+
 # Octave — DESCRIPTION
 update octave/DESCRIPTION \
     '^Version: .*' \

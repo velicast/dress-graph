@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 
 # ── libdress (static + shared) ──────────────────────────────────────
 
-add_library(dress_static STATIC src/dress.c src/delta_dress.c src/delta_dress_impl.c)
+add_library(dress_static STATIC src/dress.c src/dress_histogram.c src/delta_dress.c src/delta_dress_impl.c src/nabla_dress.c src/nabla_dress_impl.c)
 target_include_directories(dress_static
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -13,7 +13,7 @@ target_include_directories(dress_static
 )
 set_target_properties(dress_static PROPERTIES OUTPUT_NAME dress)
 
-add_library(dress_shared SHARED src/dress.c src/delta_dress.c src/delta_dress_impl.c)
+add_library(dress_shared SHARED src/dress.c src/dress_histogram.c src/delta_dress.c src/delta_dress_impl.c src/nabla_dress.c src/nabla_dress_impl.c)
 target_include_directories(dress_shared
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -25,6 +25,8 @@ target_link_libraries(dress_shared PRIVATE m)
 # OpenMP (optional)
 find_package(OpenMP)
 if(OpenMP_C_FOUND)
+    target_sources(dress_static PRIVATE src/omp/dress_omp.c src/omp/delta_dress_omp.c src/omp/nabla_dress_omp.c)
+    target_sources(dress_shared PRIVATE src/omp/dress_omp.c src/omp/delta_dress_omp.c src/omp/nabla_dress_omp.c)
     target_link_libraries(dress_static PUBLIC OpenMP::OpenMP_C)
     target_link_libraries(dress_shared PUBLIC OpenMP::OpenMP_C)
 endif()

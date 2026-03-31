@@ -24,9 +24,9 @@ func main() {
 	k33T := []int32{3, 0, 4, 0, 5, 0, 3, 1, 4, 1, 5, 1, 3, 2, 4, 2, 5, 2}
 
 	// Construct persistent graph objects
-	prism, _ := dress.NewDRESS(6, prismS, prismT, nil, dress.Undirected, false)
+	prism, _ := dress.NewDRESS(6, prismS, prismT, nil, nil, dress.Undirected, false)
 	defer prism.Close()
-	k33, _ := dress.NewDRESS(6, k33S, k33T, nil, dress.Undirected, false)
+	k33, _ := dress.NewDRESS(6, k33S, k33T, nil, nil, dress.Undirected, false)
 	defer k33.Close()
 
 	// Fit (runs on GPU)

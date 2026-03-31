@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include "dress/mpi/cuda/dress.hpp"
+using namespace dress;
 
 static std::vector<int> rook_s = {0,1,0,4,0,2,0,8,0,3,0,12,1,5,1,2,1,9,1,3,1,13,2,6,2,10,2,3,2,14,3,7,3,11,3,15,4,5,4,6,4,8,4,7,4,12,5,6,5,9,5,7,5,13,6,10,6,7,6,14,7,11,7,15,8,9,8,10,8,11,8,12,9,10,9,11,9,13,10,11,10,14,11,15,12,13,12,14,12,15,13,14,13,15,14,15};
 static std::vector<int> rook_t = {1,0,4,0,2,0,8,0,3,0,12,0,5,1,2,1,9,1,3,1,13,1,6,2,10,2,3,2,14,2,7,3,11,3,15,3,5,4,6,4,8,4,7,4,12,4,6,5,9,5,7,5,13,5,10,6,7,6,14,6,11,7,15,7,9,8,10,8,11,8,12,8,10,9,11,9,13,9,11,10,14,10,15,11,13,12,14,12,15,12,14,13,15,13,15,14};
@@ -23,13 +24,13 @@ int main(int argc, char **argv) {
     mpi::cuda::DRESS rook(16, rook_s, rook_t);
     mpi::cuda::DRESS shri(16, shri_s, shri_t);
 
-    auto dr = rook.deltaFit(1, 100, 1e-6, true);
-    auto ds = shri.deltaFit(1, 100, 1e-6, true);
+    auto dr = rook.deltaFit(1, 100, 1e-6, 0, 0, true);
+    auto ds = shri.deltaFit(1, 100, 1e-6, 0, 0, true);
 
     if (rank == 0) {
-        std::cout << "Rook:       " << dr.hist_size << " bins, "
+        std::cout << "Rook:       " << dr.histogram.size() << " bins, "
                   << dr.num_subgraphs << " subgraphs\n";
-        std::cout << "Shrikhande: " << ds.hist_size << " bins, "
+        std::cout << "Shrikhande: " << ds.histogram.size() << " bins, "
                   << ds.num_subgraphs << " subgraphs\n";
         std::cout << "Histograms differ:  "
                   << (dr.histogram != ds.histogram ? "yes" : "no") << "\n";

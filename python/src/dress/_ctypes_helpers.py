@@ -20,6 +20,7 @@ class _DressGraph(ctypes.Structure):
         ("edge_dress",             ctypes.POINTER(ctypes.c_double)),
         ("edge_dress_next",        ctypes.POINTER(ctypes.c_double)),
         ("node_dress",             ctypes.POINTER(ctypes.c_double)),
+        ("NW",                     ctypes.POINTER(ctypes.c_double)),
         ("precompute_intercepts",  ctypes.c_int),
         ("intercept_offset",       ctypes.POINTER(ctypes.c_int)),
         ("intercept_edge_ux",      ctypes.POINTER(ctypes.c_int)),
@@ -28,6 +29,13 @@ class _DressGraph(ctypes.Structure):
 
 
 _p_dress_graph_t = ctypes.POINTER(_DressGraph)
+
+
+class _DressHistPair(ctypes.Structure):
+    _fields_ = [
+        ("value", ctypes.c_double),
+        ("count", ctypes.c_int64),
+    ]
 
 # libc handle for malloc-compatible allocation
 _libc = ctypes.CDLL(None)
@@ -38,7 +46,7 @@ _libc.malloc.argtypes = [ctypes.c_size_t]
 def _malloc_array(arr, ctype):
     """Allocate a C malloc'd array and copy data into it.
 
-    The C library (free_dress_graph) will call free() on these pointers,
+    The C library (dress_free_graph) will call free() on these pointers,
     so they MUST be allocated with C malloc — not Python ctypes arrays.
     """
     n = len(arr)

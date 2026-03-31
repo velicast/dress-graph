@@ -1,4 +1,4 @@
-function result = dress_fit(n_vertices, sources, targets, varargin)
+function result = fit(n_vertices, sources, targets, varargin)
 % DRESS_FIT  Compute DRESS edge similarity on a graph.
 %
 %   result = DRESS_FIT(n_vertices, sources, targets)
@@ -34,15 +34,15 @@ function result = dress_fit(n_vertices, sources, targets, varargin)
 %
 %   Examples:
 %     % Triangle + pendant: 0-1, 1-2, 2-0, 2-3
-%     r = dress_fit(4, int32([0;1;2;2]), int32([1;2;0;3]));
+%     r = fit(4, int32([0;1;2;2]), int32([1;2;0;3]));
 %     disp(r.edge_dress);
 %
 %     % Weighted, directed
-%     r = dress_fit(4, [0;1;2;2], [1;2;0;3], ...
+%     r = fit(4, [0;1;2;2], [1;2;0;3], ...
 %                   'Weights', [1;2;1;0.5], 'Variant', 1);
 %
 %     % With precomputed intercepts (faster for large/dense graphs)
-%     r = dress_fit(4, [0;1;2;2], [1;2;0;3], 'PrecomputeIntercepts', true);
+%     r = fit(4, [0;1;2;2], [1;2;0;3], 'PrecomputeIntercepts', true);
 %
 %   See also: dress_mex, dress_to_table
 

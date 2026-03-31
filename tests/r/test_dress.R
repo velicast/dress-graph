@@ -71,6 +71,20 @@ assert("triangle nodes equal dress",
 assert("edge_dress > 0", all(res$edge_dress > 0))
 
 # =======================================================================
+cat("\n== Node weights (Default vs Explicit 1.0) ==\n")
+# =======================================================================
+
+# 1. Default (implicit All-1 node weights)
+r1 <- dress_fit(3L, c(0L, 1L, 0L), c(1L, 2L, 2L))
+
+# 2. Explicit All-1 node weights
+nw <- c(1.0, 1.0, 1.0)
+r2 <- dress_fit(3L, c(0L, 1L, 0L), c(1L, 2L, 2L), node_weights=nw)
+
+assert_equal("edge_dress match", r1$edge_dress, r2$edge_dress, tol=1e-12)
+assert_equal("node_dress match", r1$node_dress, r2$node_dress, tol=1e-12)
+
+# =======================================================================
 cat("\n== Path 0-1-2-3 (unweighted, undirected) ==\n")
 # =======================================================================
 

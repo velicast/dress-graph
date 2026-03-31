@@ -20,8 +20,8 @@ static void run(const char *name, int N, int E,
     memcpy(U, src, E * sizeof(int));
     memcpy(V, dst, E * sizeof(int));
 
-    p_dress_graph_t g = init_dress_graph(N, E, U, V, NULL,
-                                         DRESS_VARIANT_UNDIRECTED, 0);
+    p_dress_graph_t g = dress_init_graph(N, E, U, V, NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     int iters; double delta;
     dress_fit(g, 100, 1e-6, &iters, &delta);
 
@@ -34,7 +34,7 @@ static void run(const char *name, int N, int E,
     printf("\n");
 
     free(vals);
-    free_dress_graph(g);
+    dress_free_graph(g);
 }
 
 int main(void) {

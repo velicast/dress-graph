@@ -7,6 +7,8 @@ classdef DRESS < handle
 %   Methods:
 %     g.fit()                            — run CUDA DRESS fitting
 %     g.fit('MaxIterations', 100, 'Epsilon', 1e-6)
+%     res = g.delta_fit('K', 2)          — CUDA Δ^k-DRESS
+%     res = g.nabla_fit('K', 2)          — CUDA ∇^k-DRESS
 %     val = g.get(u, v)                  — query existing/virtual edge (CPU)
 %     res = g.result()                   — extract current results
 %     g.close()                          — explicitly free C graph
@@ -56,6 +58,38 @@ classdef DRESS < handle
             result = dress_fit_cuda_obj_mex(obj.ptr, ...
                                             int32(p.Results.MaxIterations), ...
                                             double(p.Results.Epsilon));
+        end
+
+        function result = delta_fit(obj, varargin)
+        % DELTA_FIT  CUDA Δ^k-DRESS on this persistent graph.
+            p = inputParser;
+            addParameter(p, 'K',              0,     @(x) isscalar(x) && isnumeric(x) && x >= 0);
+            addParameter(p, 'MaxIterations',  100,   @(x) isscalar(x) && isnumeric(x) && x >= 1);
+            addParameter(p, 'Epsilon',        1e-6,  @(x) isscalar(x) && isnumeric(x) && x > 0);
+            addParameter(p, 'KeepMultisets',  false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
+            parse(p, varargin{:});
+
+            result = delta_dress_cuda_obj_mex(obj.ptr, ...
+                                              int32(p.Results.K), ...
+                                              int32(p.Results.MaxIterations), ...
+                                              double(p.Results.Epsilon), ...
+                                              int32(logical(p.Results.KeepMultisets)));
+        end
+
+        function result = nabla_fit(obj, varargin)
+        % NABLA_FIT  CUDA ∇^k-DRESS on this persistent graph.
+            p = inputParser;
+            addParameter(p, 'K',              0,     @(x) isscalar(x) && isnumeric(x) && x >= 0);
+            addParameter(p, 'MaxIterations',  100,   @(x) isscalar(x) && isnumeric(x) && x >= 1);
+            addParameter(p, 'Epsilon',        1e-6,  @(x) isscalar(x) && isnumeric(x) && x > 0);
+            addParameter(p, 'KeepMultisets',  false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
+            parse(p, varargin{:});
+
+            result = nabla_dress_cuda_obj_mex(obj.ptr, ...
+                                              int32(p.Results.K), ...
+                                              int32(p.Results.MaxIterations), ...
+                                              double(p.Results.Epsilon), ...
+                                              int32(logical(p.Results.KeepMultisets)));
         end
 
         function val = get(obj, u, v, varargin)

@@ -16,7 +16,7 @@ import pytest
 core = pytest.importorskip("dress.core", reason="pure-Python backend not found")
 _core = pytest.importorskip("dress._core", reason="C extension not built")
 
-from dress.core import dress_fit as py_dress_fit, Variant as PyVariant
+from dress.core import fit as py_dress_fit, Variant as PyVariant
 from dress._core import DRESS as CDRESS
 
 # Map pure-Python variant enum to C variant enum
@@ -42,7 +42,7 @@ def _compare(n, sources, targets, weights=None, variant=PyVariant.UNDIRECTED):
     # C
     cv = _C_VARIANTS[variant]
     if weights is not None:
-        cg = CDRESS(n, sources, targets, list(weights), cv)
+        cg = CDRESS(n, sources, targets, list(weights), [], cv)
     else:
         cg = CDRESS(n, sources, targets, cv)
     cg.fit(MAX_ITER, EPS)

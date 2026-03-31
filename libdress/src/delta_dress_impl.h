@@ -4,7 +4,7 @@
  *
  * The actual code lives in delta_dress_impl.c.  This header is included
  * by delta_dress.c and cuda/delta_dress_cuda.c so they can call
- * delta_dress_fit_impl() with different fit-function pointers.
+ * dress_delta_fit_impl_flat() with different fit-function pointers.
  */
 
 #ifndef DELTA_DRESS_IMPL_H
@@ -20,17 +20,32 @@ typedef void (*dress_fit_fn)(p_dress_graph_t, int, double, int *, double *);
  * Core Δ^k-DRESS: enumerate C(N,k) deletion subsets, fit each subgraph
  * using `fit_fn`, and accumulate the pooled histogram.
  *
+ * Returns a flat packed array [val_bits, count, val_bits, count, ...].
+ * hist_size is set to the total length (2 * distinct_count).
+ *
  * offset/stride control which subgraphs to process:
  *   offset=0, stride=1  →  all subgraphs (default, non-MPI)
  *   offset=rank, stride=nprocs  →  round-robin MPI distribution
+ *
+ * n_samples controls random sampling of deletion subsets:
+ *   n_samples=0  →  enumerate all C(N,k) subsets (full)
+ *   n_samples>0  →  randomly sample n_samples subsets from this stride
+ *   seed         →  random seed for reproducibility
  */
-int64_t *delta_dress_fit_impl(p_dress_graph_t g, int k,
-                               int iterations, double epsilon,
-                               int *hist_size,
-                               int keep_multisets,
-                               double **multisets,
-                               int64_t *num_subgraphs,
-                               dress_fit_fn fit_fn,
-                               int offset, int stride);
+int64_t *dress_delta_fit_impl_flat(p_dress_graph_t g, int k,
+                                    int iterations, double epsilon,
+                                    int n_samples, unsigned int seed,
+                                    int *hist_size,
+                                    int keep_multisets,
+                                    double **multisets,
+                                    int64_t *num_subgraphs,
+                                    dress_fit_fn fit_fn,
+                                    int offset, int stride);
+
+/**
+ * Public binomial coefficient C(n, k).
+ * Exposed so that OMP/MPI wrappers can compute cnk without duplicating.
+ */
+int64_t dress_delta_binom(int n, int k);
 
 #endif /* DELTA_DRESS_IMPL_H */

@@ -2,7 +2,7 @@
  *
  * Same comparison as mpi.c but using igraph_t graphs and the
  * MPI-distributed igraph wrapper.  Including dress/mpi/igraph/dress.h
- * redirects delta_dress_fit() to the MPI implementation.
+ * redirects dress_delta_fit() to the MPI implementation.
  *
  * Build & run:
  *   mpicc -O2 -o mpi_igraph mpi_igraph.c -ldress \
@@ -11,10 +11,18 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <mpi.h>
 #include <igraph/igraph.h>
 #include <dress/mpi/igraph/dress.h>
+
+static int hist_equal(const dress_hist_pair_t *a, const dress_hist_pair_t *b,
+                      int hs_a, int hs_b) {
+    if (hs_a != hs_b) return 0;
+    for (int i = 0; i < hs_a; i++) {
+        if (a[i].value != b[i].value || a[i].count != b[i].count) return 0;
+    }
+    return 1;
+}
 
 static igraph_t make_graph(const int *edges, int n_edges) {
     igraph_t g;
@@ -44,18 +52,17 @@ int main(int argc, char **argv) {
     igraph_t shri = make_graph(shri_e, 96);
 
     delta_dress_result_igraph_t dr, ds;
-    delta_dress_fit(&rook, NULL, DRESS_VARIANT_UNDIRECTED,
-                    1, 100, 1e-6, 0, &dr);
-    delta_dress_fit(&shri, NULL, DRESS_VARIANT_UNDIRECTED,
-                    1, 100, 1e-6, 0, &ds);
+    dress_delta_fit(&rook, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
+                    1, 100, 1e-6, 0, 0, 0, 0, 1, &dr);
+    dress_delta_fit(&shri, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
+                    1, 100, 1e-6, 0, 0, 0, 0, 1, &ds);
 
     if (rank == 0) {
-        printf("Rook:       %d bins\n", dr.hist_size);
-        printf("Shrikhande: %d bins\n", ds.hist_size);
+        printf("Rook:       %d entries\n", dr.hist_size);
+        printf("Shrikhande: %d entries\n", ds.hist_size);
 
-        int same = (dr.hist_size == ds.hist_size) &&
-                   memcmp(dr.histogram, ds.histogram,
-                          (size_t)dr.hist_size * sizeof(int64_t)) == 0;
+        int same = hist_equal(dr.histogram, ds.histogram,
+                              dr.hist_size, ds.hist_size);
         printf("Histograms differ: %s\n", same ? "no" : "yes");
     }
 

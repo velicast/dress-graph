@@ -22,11 +22,15 @@
 #include "dress/mpi/dress_mpi.h"
 #include <mpi.h>
 
+namespace dress {
 namespace mpi {
 
-class DRESS : public ::DRESS {
+class DRESS : public dress::DRESS {
+private:
+    using dress::DRESS::fit;  // MPI classes expose only deltaFit/nablaFit.
+
 public:
-    using ::DRESS::DRESS;
+    using dress::DRESS::DRESS;
 
     /**
      * MPI-distributed Δ^k-DRESS.
@@ -42,7 +46,9 @@ public:
      * @param comm           MPI communicator (default MPI_COMM_WORLD).
      */
     DeltaFitResult deltaFit(int k, int maxIterations, double epsilon,
+                            int nSamples = 0, unsigned int seed = 0,
                             bool keepMultisets = false,
+                            bool computeHistogram = true,
                             MPI_Comm comm = MPI_COMM_WORLD) {
         ensureValid();
 
@@ -50,17 +56,21 @@ public:
         double *ms_ptr = nullptr;
         int64_t cnk = 0;
 
-        int64_t *h = ::delta_dress_fit_mpi(
-            raw(), k, maxIterations, epsilon, &hsize,
-            keepMultisets ? 1 : 0,
-            keepMultisets ? &ms_ptr : nullptr,
-            &cnk, comm);
-
-        if (!h) throw std::runtime_error("DRESS: delta_dress_fit_mpi returned NULL");
+        dress_hist_pair_t *h = ::dress_delta_fit_mpi(
+            raw(), k, maxIterations, epsilon,
+        nSamples, seed,
+        computeHistogram ? &hsize : nullptr,
+        keepMultisets ? 1 : 0,
+        keepMultisets ? &ms_ptr : nullptr,
+        &cnk, comm);
 
         DeltaFitResult result;
-        result.hist_size = hsize;
-        result.histogram.assign(h, h + hsize);
+        if (h && hsize > 0) {
+            for (int i = 0; i < hsize; i++) {
+                result.histogram.emplace_back(h[i].value, h[i].count);
+            }
+            std::free(h);
+        }
         result.num_subgraphs = cnk;
 
         if (keepMultisets && ms_ptr) {
@@ -68,12 +78,67 @@ public:
             result.multisets.assign(ms_ptr, ms_ptr + cnk * E);
             std::free(ms_ptr);
         }
+        return result;
+    }
 
-        std::free(h);
+    // MPI-distributed ∇^k-DRESS.
+    NablaFitResult nablaFit(int k, int maxIterations, double epsilon,
+                            int nSamples = 0, unsigned int seed = 0,
+                            bool keepMultisets = false,
+                            bool computeHistogram = true,
+                            MPI_Comm comm = MPI_COMM_WORLD) {
+        ensureValid();
+
+        int hsize = 0;
+        double *ms_ptr = nullptr;
+        int64_t pnk = 0;
+
+        dress_hist_pair_t *h = ::dress_nabla_fit_mpi(
+            raw(), k, maxIterations, epsilon,
+        nSamples, seed,
+        computeHistogram ? &hsize : nullptr,
+        keepMultisets ? 1 : 0,
+        keepMultisets ? &ms_ptr : nullptr,
+        &pnk, comm);
+
+        NablaFitResult result;
+        if (h && hsize > 0) {
+            for (int i = 0; i < hsize; i++) {
+                result.histogram.emplace_back(h[i].value, h[i].count);
+            }
+            std::free(h);
+        }
+        result.num_tuples = pnk;
+
+        if (keepMultisets && ms_ptr) {
+            int E = raw()->E;
+            result.multisets.assign(ms_ptr, ms_ptr + pnk * E);
+            std::free(ms_ptr);
+        }
         return result;
     }
 };
 
+// Standalone one-shot functions (MPI)
+inline DRESS::DeltaFitResult delta_fit(int N, const std::vector<int>& U, const std::vector<int>& V,
+                                              int k = 0, int maxIterations = 100, double epsilon = 1e-6,
+                                              int nSamples = 0, unsigned int seed = 0,
+                                              bool keepMultisets = false, bool computeHistogram = true,
+                                              MPI_Comm comm = MPI_COMM_WORLD) {
+    DRESS d(N, U, V);
+    return d.deltaFit(k, maxIterations, epsilon, nSamples, seed, keepMultisets, computeHistogram, comm);
+}
+
+inline DRESS::NablaFitResult nabla_fit(int N, const std::vector<int>& U, const std::vector<int>& V,
+                                              int k = 0, int maxIterations = 100, double epsilon = 1e-6,
+                                              int nSamples = 0, unsigned int seed = 0,
+                                              bool keepMultisets = false, bool computeHistogram = true,
+                                              MPI_Comm comm = MPI_COMM_WORLD) {
+    DRESS d(N, U, V);
+    return d.nablaFit(k, maxIterations, epsilon, nSamples, seed, keepMultisets, computeHistogram, comm);
+}
+
 } // namespace mpi
+} // namespace dress
 
 #endif // DRESS_MPI_HPP

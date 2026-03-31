@@ -267,6 +267,7 @@ kernel_node_dress(const int    item_start,
                   const double* __restrict__ edge_weight,
                   const double* __restrict__ edge_dress,
                   double      * __restrict__ node_dress,
+                  const double* __restrict__ NW,
                   const size_t* __restrict__ work_offset,
                   double      * __restrict__ d_work)
 {
@@ -281,7 +282,7 @@ kernel_node_dress(const int    item_start,
 
     double *buf = d_work + work_offset[tid];
 
-    buf[0] = 4.0;  /* self-loop contribution */
+    buf[0] = 4.0 * (NW ? NW[u] : 1.0);  /* self-loop contribution */
     for (int i = 0; i < deg; i++) {
         int ei = adj_edge_idx[base + i];
         buf[i + 1] = edge_weight[ei] * edge_dress[ei];
@@ -290,6 +291,40 @@ kernel_node_dress(const int    item_start,
     int n = deg + 1;
     sort_d(buf, n);
     node_dress[u] = sqrt(kbn_sum_d(buf, n));
+}
+
+/* ------------------------------------------------------------------ */
+/*  Shared tail: self-loop term, sort+KBN, normalize, store, track     */
+/* ------------------------------------------------------------------ */
+
+static __device__ __forceinline__
+void edge_finalize(int e, int u, int v, int variant,
+                   const double* __restrict__ edge_weight,
+                   const double* __restrict__ edge_dress,
+                   const double* __restrict__ node_dress,
+                   const double* __restrict__ NW,
+                   double* __restrict__ edge_dress_next,
+                   unsigned long long* __restrict__ d_max_delta,
+                   double* buf, int n)
+{
+    double uv = edge_weight[e] * edge_dress[e];
+    double nw_u = NW ? NW[u] : 1.0;
+    double nw_v = NW ? NW[v] : 1.0;
+    if (variant == 2 /* FORWARD */ || variant == 3 /* BACKWARD */) {
+        buf[n++] = 4.0 * nw_u + uv;
+    } else {
+        buf[n++] = 4.0 * nw_u + 4.0 * nw_v + 2.0 * uv;
+    }
+
+    sort_d(buf, n);
+    double numerator = kbn_sum_d(buf, n);
+
+    double denom = node_dress[u] * node_dress[v];
+    double dress_uv = (denom > 0.0) ? (numerator / denom) : 0.0;
+    edge_dress_next[e] = dress_uv;
+
+    double diff = fabs(edge_dress[e] - dress_uv);
+    atomicMaxDouble(d_max_delta, diff);
 }
 
 /* ------------------------------------------------------------------ */
@@ -311,6 +346,7 @@ kernel_edge_dress_intercept(
         const double* __restrict__ edge_weight,
         const double* __restrict__ edge_dress,
         const double* __restrict__ node_dress,
+        const double* __restrict__ NW,
         const int   * __restrict__ intercept_offset,
         const int   * __restrict__ intercept_edge_ux,
         const int   * __restrict__ intercept_edge_vx,
@@ -340,24 +376,8 @@ kernel_edge_dress_intercept(
                  + edge_weight[ev] * edge_dress[ev];
     }
 
-    /* Self-loop + edge cross-terms */
-    double uv = edge_weight[e] * edge_dress[e];
-    if (variant == 2 /* FORWARD */ || variant == 3 /* BACKWARD */) {
-        buf[n++] = 4.0 + uv;
-    } else {
-        buf[n++] = 8.0 + 2.0 * uv;
-    }
-
-    sort_d(buf, n);
-    double numerator = kbn_sum_d(buf, n);
-
-    double denom = node_dress[u] * node_dress[v];
-    double dress_uv = (denom > 0.0) ? (numerator / denom) : 0.0;
-    edge_dress_next[e] = dress_uv;
-
-    /* Convergence tracking */
-    double diff = fabs(edge_dress[e] - dress_uv);
-    atomicMaxDouble(d_max_delta, diff);
+    edge_finalize(e, u, v, variant, edge_weight, edge_dress,
+                  node_dress, NW, edge_dress_next, d_max_delta, buf, n);
 }
 
 /* ------------------------------------------------------------------ */
@@ -378,6 +398,7 @@ kernel_edge_dress_merge(
         const double* __restrict__ edge_weight,
         const double* __restrict__ edge_dress,
         const double* __restrict__ node_dress,
+        const double* __restrict__ NW,
         const int   * __restrict__ adj_offset,
         const int   * __restrict__ adj_target,
         const int   * __restrict__ adj_edge_idx,
@@ -400,7 +421,7 @@ kernel_edge_dress_merge(
     int iu     = adj_offset[u], iu_end = adj_offset[u + 1];
     int iv     = adj_offset[v], iv_end = adj_offset[v + 1];
 
-    /* Sorted-merge walk — O(deg_u + deg_v) */
+    /* Sorted-merge walk — branchless pointer advance */
     while (iu < iu_end && iv < iv_end) {
         int x = adj_target[iu], y = adj_target[iv];
         if (x == y) {
@@ -408,32 +429,13 @@ kernel_edge_dress_merge(
             int ev = adj_edge_idx[iv];
             buf[n++] = edge_weight[eu] * edge_dress[eu]
                      + edge_weight[ev] * edge_dress[ev];
-            ++iu; ++iv;
-        } else if (x < y) {
-            ++iu;
-        } else {
-            ++iv;
         }
+        iu += (x <= y);
+        iv += (x >= y);
     }
 
-    /* Self-loop + edge cross-terms */
-    double uv = edge_weight[e] * edge_dress[e];
-    if (variant == 2 /* FORWARD */ || variant == 3 /* BACKWARD */) {
-        buf[n++] = 4.0 + uv;
-    } else {
-        buf[n++] = 8.0 + 2.0 * uv;
-    }
-
-    sort_d(buf, n);
-    double numerator = kbn_sum_d(buf, n);
-
-    double denom = node_dress[u] * node_dress[v];
-    double dress_uv = (denom > 0.0) ? (numerator / denom) : 0.0;
-    edge_dress_next[e] = dress_uv;
-
-    /* Convergence tracking */
-    double diff = fabs(edge_dress[e] - dress_uv);
-    atomicMaxDouble(d_max_delta, diff);
+    edge_finalize(e, u, v, variant, edge_weight, edge_dress,
+                  node_dress, NW, edge_dress_next, d_max_delta, buf, n);
 }
 
 /* ------------------------------------------------------------------ */
@@ -506,6 +508,13 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
     /* Node array */
     double *d_node_dress;
     CUDA_CHECK(cudaMalloc(&d_node_dress, N * sizeof(double)));
+
+    /* Node weights (optional) */
+    double *d_NW = NULL;
+    if (g->NW != NULL) {
+        CUDA_CHECK(cudaMalloc(&d_NW, N * sizeof(double)));
+        CUDA_CHECK(cudaMemcpy(d_NW, g->NW, N * sizeof(double), cudaMemcpyHostToDevice));
+    }
 
     /* Convergence scalar */
     unsigned long long *d_max_delta;
@@ -601,6 +610,7 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
                 d_adj_offset, d_adj_edge_idx,
                 d_edge_weight, d_edge_dress,
                 d_node_dress,
+                d_NW,
                 node_plan.d_item_offset + item_start,
                 d_work);
         }
@@ -620,6 +630,7 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
                     item_start, item_count, variant,
                     d_U, d_V,
                     d_edge_weight, d_edge_dress, d_node_dress,
+                    d_NW,
                     d_intercept_offset,
                     d_intercept_edge_ux, d_intercept_edge_vx,
                     d_edge_dress_next,
@@ -631,6 +642,7 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
                     item_start, item_count, variant,
                     d_U, d_V,
                     d_edge_weight, d_edge_dress, d_node_dress,
+                    d_NW,
                     d_adj_offset, d_adj_target, d_adj_edge_idx,
                     d_edge_dress_next,
                     d_max_delta,
@@ -687,6 +699,7 @@ cleanup:
     cudaFree(d_edge_dress);
     cudaFree(d_edge_dress_next);
     cudaFree(d_node_dress);
+    if (d_NW) cudaFree(d_NW);
     cudaFree(d_max_delta);
     if (d_work) cudaFree(d_work);
     free_work_batch_plan(&node_plan);

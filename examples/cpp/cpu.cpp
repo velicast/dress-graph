@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <vector>
 #include "dress/dress.hpp"
+using namespace dress;
 
 int main() {
     // Prism (C₃ □ K₂)

@@ -5,8 +5,8 @@ classdef DRESS < handle
 %   g = mpi.cuda.DRESS(n_vertices, sources, targets, 'Weights', w, ...)
 %
 %   Methods:
-%     g.fit()                            — run CUDA DRESS fitting
 %     res = g.delta_fit('K', 2)          — MPI+CUDA Δ^k-DRESS
+%     res = g.nabla_fit('K', 2)          — MPI+CUDA ∇^k-DRESS
 %     val = g.get(u, v)                  — query existing/virtual edge (CPU)
 %     res = g.result()                   — extract current results
 %     g.close()                          — explicitly free C graph
@@ -15,7 +15,6 @@ classdef DRESS < handle
 %
 %   Example:
 %     g = mpi.cuda.DRESS(4, int32([0;1;2;2]), int32([1;2;0;3]));
-%     g.fit();
 %     dr = g.delta_fit('K', 1);
 %     g.close();
 
@@ -46,23 +45,36 @@ classdef DRESS < handle
                                      weights, variant, precompute);
         end
 
-        function result = fit(obj, varargin)
-            p = inputParser;
-            addParameter(p, 'MaxIterations', 100,  @(x) isscalar(x) && isnumeric(x) && x >= 1);
-            addParameter(p, 'Epsilon',       1e-6, @(x) isscalar(x) && isnumeric(x) && x > 0);
-            parse(p, varargin{:});
-
-            result = dress_fit_cuda_obj_mex(obj.ptr, ...
-                                            int32(p.Results.MaxIterations), ...
-                                            double(p.Results.Epsilon));
-        end
-
         function result = delta_fit(obj, varargin)
         % DELTA_FIT  MPI+CUDA distributed Δ^k-DRESS on this persistent graph.
-        %
-        %  Requires MPI+CUDA MEX support.  Build with MPI+CUDA first.
-            error('mpi:cuda:notBuilt', ...
-                  'MPI+CUDA delta_fit requires delta_dress_mpi_cuda_mex. Build with MPI+CUDA support first.');
+            p = inputParser;
+            addParameter(p, 'K',              0,     @(x) isscalar(x) && isnumeric(x) && x >= 0);
+            addParameter(p, 'MaxIterations',  100,   @(x) isscalar(x) && isnumeric(x) && x >= 1);
+            addParameter(p, 'Epsilon',        1e-6,  @(x) isscalar(x) && isnumeric(x) && x > 0);
+            addParameter(p, 'KeepMultisets',  false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
+            parse(p, varargin{:});
+
+            result = delta_dress_mpi_cuda_obj_mex(obj.ptr, ...
+                                                  int32(p.Results.K), ...
+                                                  int32(p.Results.MaxIterations), ...
+                                                  double(p.Results.Epsilon), ...
+                                                  int32(logical(p.Results.KeepMultisets)));
+        end
+
+        function result = nabla_fit(obj, varargin)
+        % NABLA_FIT  MPI+CUDA distributed ∇^k-DRESS on this persistent graph.
+            p = inputParser;
+            addParameter(p, 'K',              0,     @(x) isscalar(x) && isnumeric(x) && x >= 0);
+            addParameter(p, 'MaxIterations',  100,   @(x) isscalar(x) && isnumeric(x) && x >= 1);
+            addParameter(p, 'Epsilon',        1e-6,  @(x) isscalar(x) && isnumeric(x) && x > 0);
+            addParameter(p, 'KeepMultisets',  false, @(x) isscalar(x) && (islogical(x) || isnumeric(x)));
+            parse(p, varargin{:});
+
+            result = nabla_dress_mpi_cuda_obj_mex(obj.ptr, ...
+                                                  int32(p.Results.K), ...
+                                                  int32(p.Results.MaxIterations), ...
+                                                  double(p.Results.Epsilon), ...
+                                                  int32(logical(p.Results.KeepMultisets)));
         end
 
         function val = get(obj, u, v, varargin)

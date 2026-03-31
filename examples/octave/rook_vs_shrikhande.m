@@ -14,12 +14,14 @@ rook_t = int32([1,0,4,0,2,0,8,0,3,0,12,0,5,1,2,1,9,1,3,1,13,1,6,2,10,2,3,2,14,2,
 shri_s = int32([0,4,0,12,0,1,0,3,0,5,0,15,1,5,1,13,1,2,1,6,1,12,2,6,2,14,2,3,2,7,2,13,3,7,3,15,3,4,3,14,4,8,4,5,4,7,4,9,5,9,5,6,5,10,6,10,6,7,6,11,7,11,7,8,8,12,8,9,8,11,8,13,9,13,9,10,9,14,10,14,10,11,10,15,11,15,11,12,12,13,12,15,13,14,14,15]);
 shri_t = int32([4,0,12,0,1,0,3,0,5,0,15,0,5,1,13,1,2,1,6,1,12,1,6,2,14,2,3,2,7,2,13,2,7,3,15,3,4,3,14,3,8,4,5,4,7,4,9,4,9,5,6,5,10,5,10,6,7,6,11,6,11,7,8,7,12,8,9,8,11,8,13,8,13,9,10,9,14,9,14,10,11,10,15,10,15,11,12,11,13,12,15,12,14,13,15,14]);
 
-dr = delta_dress_fit(16, rook_s, rook_t, 'K', 1, 'KeepMultisets', true);
-ds = delta_dress_fit(16, shri_s, shri_t, 'K', 1, 'KeepMultisets', true);
+dr = delta_fit(16, rook_s, rook_t, 'K', 1, 'KeepMultisets', true);
+ds = delta_fit(16, shri_s, shri_t, 'K', 1, 'KeepMultisets', true);
 
-fprintf('Rook:       %d bins, %d subgraphs\n', dr.hist_size, dr.num_subgraphs);
-fprintf('Shrikhande: %d bins, %d subgraphs\n', ds.hist_size, ds.num_subgraphs);
-fprintf('Histograms differ:  %s\n', mat2str(~isequal(dr.histogram, ds.histogram)));
+fprintf('Rook:       %d entries, %d subgraphs\n', numel(dr.histogram.count), dr.num_subgraphs);
+fprintf('Shrikhande: %d entries, %d subgraphs\n', numel(ds.histogram.count), ds.num_subgraphs);
+hist_same = isequal(dr.histogram.value, ds.histogram.value) && ...
+			isequal(dr.histogram.count, ds.histogram.count);
+fprintf('Histograms differ:  %s\n', mat2str(~hist_same));
 
 % Canonicalize: sort each row, then sort rows
 cr = sortrows(sort(dr.multisets, 2));

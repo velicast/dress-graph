@@ -12,7 +12,7 @@ dress = pytest.importorskip("dress", reason="dress package not installed")
 nx = pytest.importorskip("networkx", reason="networkx not installed")
 np = pytest.importorskip("numpy", reason="numpy not installed")
 
-from dress.networkx import dress_graph       # noqa: E402
+from dress.networkx import fit as dress_graph       # noqa: E402
 from dress.networkx import NxDRESS            # noqa: E402
 from dress.core import DRESSResult           # noqa: E402
 

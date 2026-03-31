@@ -9,7 +9,35 @@
 #include <R_ext/Rdynload.h>
 
 #include "dress/dress.h"
-#include "dress/delta_dress.h"
+
+static SEXP build_histogram_df(const dress_hist_pair_t *hist, int hist_size) {
+    SEXP df = PROTECT(allocVector(VECSXP, 2));
+    SEXP names = PROTECT(allocVector(STRSXP, 2));
+    SEXP values = PROTECT(allocVector(REALSXP, hist_size));
+    SEXP counts = PROTECT(allocVector(REALSXP, hist_size));
+    SEXP row_names = PROTECT(allocVector(INTSXP, 2));
+    SEXP class_name = PROTECT(mkString("data.frame"));
+
+    SET_STRING_ELT(names, 0, mkChar("value"));
+    SET_STRING_ELT(names, 1, mkChar("count"));
+    setAttrib(df, R_NamesSymbol, names);
+
+    for (int i = 0; i < hist_size; i++) {
+        REAL(values)[i] = hist[i].value;
+        REAL(counts)[i] = (double)hist[i].count;
+    }
+
+    SET_VECTOR_ELT(df, 0, values);
+    SET_VECTOR_ELT(df, 1, counts);
+
+    INTEGER(row_names)[0] = NA_INTEGER;
+    INTEGER(row_names)[1] = -hist_size;
+    setAttrib(df, R_RowNamesSymbol, row_names);
+    setAttrib(df, R_ClassSymbol, class_name);
+
+    UNPROTECT(6);
+    return df;
+}
 
 /* ------------------------------------------------------------------ */
 /*  dress_fit                                                          */
@@ -18,6 +46,7 @@ SEXP C_dress_fit(SEXP n_vertices_,
                  SEXP sources_,
                  SEXP targets_,
                  SEXP weights_,
+                 SEXP node_weights_,
                  SEXP variant_,
                  SEXP max_iterations_,
                  SEXP epsilon_,
@@ -31,10 +60,11 @@ SEXP C_dress_fit(SEXP n_vertices_,
     int precompute     = INTEGER(precompute_)[0];
 
     /* Allocate copies of sources/targets/weights with malloc
-       (init_dress_graph takes ownership and frees them). */
+       (dress_init_graph takes ownership and frees them). */
     int *U = (int *)malloc(E * sizeof(int));
     int *V = (int *)malloc(E * sizeof(int));
     double *W = NULL;
+    double *NW = NULL;
 
     if (!U || !V) {
         free(U); free(V);
@@ -50,11 +80,21 @@ SEXP C_dress_fit(SEXP n_vertices_,
         memcpy(W, REAL(weights_), E * sizeof(double));
     }
 
-    p_dress_graph_t g = init_dress_graph(N, E, U, V, W,
+    if (node_weights_ != R_NilValue) {
+        if (LENGTH(node_weights_) != N) {
+            free(U); free(V); if(W) free(W);
+            error("dress_fit: node_weights length mismatch");
+        }
+        NW = (double *)malloc(N * sizeof(double));
+        if (!NW) { free(U); free(V); if(W) free(W); error("dress_fit: memory allocation failed"); }
+        memcpy(NW, REAL(node_weights_), N * sizeof(double));
+    }
+
+    p_dress_graph_t g = dress_init_graph(N, E, U, V, W, NW,
                                          (dress_variant_t)variant,
                                          precompute);
     if (!g) {
-        error("dress_fit: init_dress_graph returned NULL");
+        error("dress_fit: dress_init_graph returned NULL");
     }
 
     int iterations = 0;
@@ -62,8 +102,8 @@ SEXP C_dress_fit(SEXP n_vertices_,
     dress_fit(g, max_iterations, epsilon, &iterations, &delta);
 
     /* Build result list */
-    SEXP result = PROTECT(allocVector(VECSXP, 7));
-    SEXP names  = PROTECT(allocVector(STRSXP, 7));
+    SEXP result = PROTECT(allocVector(VECSXP, g->NW ? 8 : 7));
+    SEXP names  = PROTECT(allocVector(STRSXP, g->NW ? 8 : 7));
 
     SET_STRING_ELT(names, 0, mkChar("sources"));
     SET_STRING_ELT(names, 1, mkChar("targets"));
@@ -72,6 +112,7 @@ SEXP C_dress_fit(SEXP n_vertices_,
     SET_STRING_ELT(names, 4, mkChar("node_dress"));
     SET_STRING_ELT(names, 5, mkChar("iterations"));
     SET_STRING_ELT(names, 6, mkChar("delta"));
+    if (g->NW) SET_STRING_ELT(names, 7, mkChar("node_weights"));
     setAttrib(result, R_NamesSymbol, names);
 
     SEXP r_sources    = PROTECT(allocVector(INTSXP,  g->E));
@@ -96,7 +137,14 @@ SEXP C_dress_fit(SEXP n_vertices_,
     SET_VECTOR_ELT(result, 5, r_iters);
     SET_VECTOR_ELT(result, 6, r_delta);
 
-    free_dress_graph(g);
+    if (g->NW) {
+        SEXP r_node_wt = PROTECT(allocVector(REALSXP, g->N));
+        memcpy(REAL(r_node_wt), g->NW, g->N * sizeof(double));
+        SET_VECTOR_ELT(result, 7, r_node_wt);
+        UNPROTECT(1);
+    }
+
+    dress_free_graph(g);
     UNPROTECT(9);
     return result;
 }
@@ -105,22 +153,26 @@ SEXP C_dress_fit(SEXP n_vertices_,
 /*  dress_version                                                      */
 /* ------------------------------------------------------------------ */
 SEXP C_dress_version(void) {
-    return ScalarString(mkChar("0.6.2"));
+    return ScalarString(mkChar("0.7.0"));
 }
 
 /* ------------------------------------------------------------------ */
-/*  delta_dress_fit                                                    */
+/*  dress_delta_fit                                                    */
 /* ------------------------------------------------------------------ */
 SEXP C_delta_dress_fit(SEXP n_vertices_,
                        SEXP sources_,
                        SEXP targets_,
                        SEXP weights_,
+                       SEXP node_weights_,
                        SEXP k_,
                        SEXP variant_,
                        SEXP max_iterations_,
                        SEXP epsilon_,
+                       SEXP n_samples_,
+                       SEXP seed_,
                        SEXP precompute_,
                        SEXP keep_multisets_,
+                       SEXP compute_histogram_,
                        SEXP offset_,
                        SEXP stride_) {
 
@@ -130,17 +182,20 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     int variant        = INTEGER(variant_)[0];
     int max_iterations = INTEGER(max_iterations_)[0];
     double epsilon     = REAL(epsilon_)[0];
+    int n_samples      = INTEGER(n_samples_)[0];
+    unsigned int seed  = (unsigned int)INTEGER(seed_)[0];
     int precompute     = INTEGER(precompute_)[0];
     int keep_ms        = INTEGER(keep_multisets_)[0];
+    int compute_hist   = INTEGER(compute_histogram_)[0];
     int offset         = INTEGER(offset_)[0];
     int stride         = INTEGER(stride_)[0];
 
-    /* Allocate copies (init_dress_graph takes ownership). */
+    /* Allocate copies (dress_init_graph takes ownership). */
     int *U = (int *)malloc(E * sizeof(int));
     int *V = (int *)malloc(E * sizeof(int));
     if (!U || !V) {
         free(U); free(V);
-        error("delta_dress_fit: memory allocation failed");
+        error("dress_delta_fit: memory allocation failed");
     }
     memcpy(U, INTEGER(sources_), E * sizeof(int));
     memcpy(V, INTEGER(targets_), E * sizeof(int));
@@ -148,48 +203,52 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     double *W = NULL;
     if (!isNull(weights_)) {
         W = (double *)malloc(E * sizeof(double));
-        if (!W) { free(U); free(V); error("delta_dress_fit: memory allocation failed"); }
+        if (!W) { free(U); free(V); error("dress_delta_fit: memory allocation failed"); }
         memcpy(W, REAL(weights_), E * sizeof(double));
     }
 
-    p_dress_graph_t g = init_dress_graph(N, E, U, V, W,
+    double *NW = NULL;
+    if (node_weights_ != R_NilValue) {
+        if (LENGTH(node_weights_) != N) {
+             free(U); free(V); if(W) free(W);
+             error("dress_delta_fit: node_weights length mismatch");
+        }
+        NW = (double *)malloc(N * sizeof(double));
+        memcpy(NW, REAL(node_weights_), N * sizeof(double));
+    }
+
+    p_dress_graph_t g = dress_init_graph(N, E, U, V, W, NW,
                                          (dress_variant_t)variant, precompute);
     if (!g) {
-        error("delta_dress_fit: init_dress_graph returned NULL");
+        error("dress_delta_fit: dress_init_graph returned NULL");
     }
 
     int hist_size = 0;
     double *ms_ptr = NULL;
     int64_t num_sub = 0;
-    int64_t *hist = delta_dress_fit_strided(g, k, max_iterations, epsilon,
-                              &hist_size,
-                              keep_ms,
-                              keep_ms ? &ms_ptr : NULL,
-                              keep_ms ? &num_sub : NULL,
-                              offset, stride);
+    dress_hist_pair_t *hist = dress_delta_fit_strided(g, k, max_iterations, epsilon,
+                                                      n_samples, seed,
+                                                      compute_hist ? &hist_size : NULL,
+                                                      keep_ms,
+                                                      keep_ms ? &ms_ptr : NULL,
+                                                      keep_ms ? &num_sub : NULL,
+                                                      offset, stride);
 
-    /* Build result list: histogram + hist_size [+ multisets + num_subgraphs] */
-    int n_fields = keep_ms ? 4 : 2;
+    /* Build result list */
+    int n_fields = keep_ms ? 3 : 1;
     SEXP result = PROTECT(allocVector(VECSXP, n_fields));
     SEXP names  = PROTECT(allocVector(STRSXP, n_fields));
 
     SET_STRING_ELT(names, 0, mkChar("histogram"));
-    SET_STRING_ELT(names, 1, mkChar("hist_size"));
     if (keep_ms) {
-        SET_STRING_ELT(names, 2, mkChar("multisets"));
-        SET_STRING_ELT(names, 3, mkChar("num_subgraphs"));
+        SET_STRING_ELT(names, 1, mkChar("multisets"));
+        SET_STRING_ELT(names, 2, mkChar("num_subgraphs"));
     }
     setAttrib(result, R_NamesSymbol, names);
 
-    /* histogram — numeric vector (R has no native int64) */
-    SEXP r_hist = PROTECT(allocVector(REALSXP, hist_size));
-    for (int i = 0; i < hist_size; i++) {
-        REAL(r_hist)[i] = (double)hist[i];
-    }
+    SEXP r_hist = PROTECT(build_histogram_df(hist, hist_size));
     SET_VECTOR_ELT(result, 0, r_hist);
-
-    /* hist_size — int scalar */
-    SET_VECTOR_ELT(result, 1, ScalarInteger(hist_size));
+    UNPROTECT(1); /* r_hist */
 
     /* multisets and num_subgraphs (when requested) */
     if (keep_ms) {
@@ -202,33 +261,153 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
             for (int64_t s = 0; s < num_sub; s++)
                 for (int e = 0; e < E; e++)
                     REAL(r_ms)[e * (int)num_sub + (int)s] = ms_ptr[s * E + e];
-            SET_VECTOR_ELT(result, 2, r_ms);
+            SET_VECTOR_ELT(result, 1, r_ms);
             UNPROTECT(1); /* r_ms */
             free(ms_ptr);
         } else {
-            SET_VECTOR_ELT(result, 2, allocMatrix(REALSXP, 0, 0));
+            SET_VECTOR_ELT(result, 1, allocMatrix(REALSXP, 0, 0));
         }
-        SET_VECTOR_ELT(result, 3, ScalarInteger((int)num_sub));
+        SET_VECTOR_ELT(result, 2, ScalarInteger((int)num_sub));
     }
 
     free(hist);
-    free_dress_graph(g);
+    dress_free_graph(g);
+    UNPROTECT(3);
+    return result;
+}
+
+SEXP C_nabla_dress_fit(SEXP n_vertices_,
+                       SEXP sources_,
+                       SEXP targets_,
+                       SEXP weights_,
+                       SEXP node_weights_,
+                       SEXP k_,
+                       SEXP variant_,
+                       SEXP max_iterations_,
+                       SEXP epsilon_,
+                       SEXP n_samples_,
+                       SEXP seed_,
+                       SEXP precompute_,
+                       SEXP keep_multisets_,
+                       SEXP compute_histogram_) {
+
+    int N  = INTEGER(n_vertices_)[0];
+    int E  = LENGTH(sources_);
+    int k              = INTEGER(k_)[0];
+    int variant        = INTEGER(variant_)[0];
+    int max_iterations = INTEGER(max_iterations_)[0];
+    double epsilon     = REAL(epsilon_)[0];
+    int n_samples      = INTEGER(n_samples_)[0];
+    unsigned int seed  = (unsigned int)INTEGER(seed_)[0];
+    int precompute     = INTEGER(precompute_)[0];
+    int keep_ms        = INTEGER(keep_multisets_)[0];
+    int compute_hist   = INTEGER(compute_histogram_)[0];
+
+    /* Allocate copies (dress_init_graph takes ownership). */
+    int *U = (int *)malloc(E * sizeof(int));
+    int *V = (int *)malloc(E * sizeof(int));
+    if (!U || !V) {
+        free(U); free(V);
+        error("dress_nabla_fit: memory allocation failed");
+    }
+    memcpy(U, INTEGER(sources_), E * sizeof(int));
+    memcpy(V, INTEGER(targets_), E * sizeof(int));
+
+    double *W = NULL;
+    if (!isNull(weights_)) {
+        W = (double *)malloc(E * sizeof(double));
+        if (!W) { free(U); free(V); error("dress_nabla_fit: memory allocation failed"); }
+        memcpy(W, REAL(weights_), E * sizeof(double));
+    }
+
+    double *NW = NULL;
+    if (node_weights_ != R_NilValue) {
+        if (LENGTH(node_weights_) != N) {
+             free(U); free(V); if(W) free(W);
+             error("dress_nabla_fit: node_weights length mismatch");
+        }
+        NW = (double *)malloc(N * sizeof(double));
+        memcpy(NW, REAL(node_weights_), N * sizeof(double));
+    }
+
+    p_dress_graph_t g = dress_init_graph(N, E, U, V, W, NW,
+                                         (dress_variant_t)variant, precompute);
+    if (!g) {
+        error("dress_nabla_fit: dress_init_graph returned NULL");
+    }
+
+    int hist_size = 0;
+    double *ms_ptr = NULL;
+    int64_t num_tuples = 0;
+    dress_hist_pair_t *hist = dress_nabla_fit(g, k, max_iterations, epsilon,
+                                              n_samples, seed,
+                                              compute_hist ? &hist_size : NULL,
+                                              keep_ms,
+                                              keep_ms ? &ms_ptr : NULL,
+                                              keep_ms ? &num_tuples : NULL);
+
+    /* Build result list */
+    int n_fields = keep_ms ? 3 : 1;
+    SEXP result = PROTECT(allocVector(VECSXP, n_fields));
+    SEXP names  = PROTECT(allocVector(STRSXP, n_fields));
+
+    SET_STRING_ELT(names, 0, mkChar("histogram"));
+    if (keep_ms) {
+        SET_STRING_ELT(names, 1, mkChar("multisets"));
+        SET_STRING_ELT(names, 2, mkChar("num_tuples"));
+    }
+    setAttrib(result, R_NamesSymbol, names);
+
+    SEXP r_hist = PROTECT(build_histogram_df(hist, hist_size));
+    SET_VECTOR_ELT(result, 0, r_hist);
+    UNPROTECT(1); /* r_hist */
+
+    /* multisets and num_tuples (when requested) */
+    if (keep_ms) {
+        if (ms_ptr && num_tuples > 0) {
+            SEXP r_ms = PROTECT(allocMatrix(REALSXP, (int)num_tuples, E));
+            for (int64_t s = 0; s < num_tuples; s++)
+                for (int e = 0; e < E; e++)
+                    REAL(r_ms)[e * (int)num_tuples + (int)s] = ms_ptr[s * E + e];
+            SET_VECTOR_ELT(result, 1, r_ms);
+            UNPROTECT(1); /* r_ms */
+            free(ms_ptr);
+        } else {
+            SET_VECTOR_ELT(result, 1, allocMatrix(REALSXP, 0, 0));
+        }
+        SET_VECTOR_ELT(result, 2, ScalarInteger((int)num_tuples));
+    }
+
+    free(hist);
+    dress_free_graph(g);
     UNPROTECT(3);
     return result;
 }
 
 #ifdef DRESS_CUDA
 /* CUDA bridge (defined in dress_cuda_r.c) */
-extern SEXP C_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
-extern SEXP C_delta_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_delta_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_nabla_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP C_dress_fit_cuda_obj(SEXP, SEXP, SEXP);
 #endif
 
+/* OMP bridge (defined in dress_omp_r.c) */
+extern SEXP C_dress_fit_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_delta_dress_fit_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_nabla_dress_fit_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+
 #ifdef DRESS_MPI
 /* MPI bridge (defined in dress_mpi_r.c) */
-extern SEXP C_delta_dress_fit_mpi(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_delta_dress_fit_mpi(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_nabla_dress_fit_mpi(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 #ifdef DRESS_CUDA
-extern SEXP C_delta_dress_fit_mpi_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_delta_dress_fit_mpi_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_nabla_dress_fit_mpi_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+#endif
+#ifdef _OPENMP
+extern SEXP C_delta_dress_fit_mpi_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_nabla_dress_fit_mpi_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 #endif
 #endif
 
@@ -239,7 +418,7 @@ extern SEXP C_delta_dress_fit_mpi_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP,
 static void dress_graph_finalizer(SEXP ptr) {
     p_dress_graph_t g = (p_dress_graph_t) R_ExternalPtrAddr(ptr);
     if (g) {
-        free_dress_graph(g);
+        dress_free_graph(g);
         R_ClearExternalPtr(ptr);
     }
 }
@@ -249,6 +428,7 @@ SEXP C_dress_init(SEXP n_vertices_,
                   SEXP sources_,
                   SEXP targets_,
                   SEXP weights_,
+                  SEXP node_weights_,
                   SEXP variant_,
                   SEXP precompute_) {
 
@@ -260,6 +440,7 @@ SEXP C_dress_init(SEXP n_vertices_,
     int *U = (int *)malloc(E * sizeof(int));
     int *V = (int *)malloc(E * sizeof(int));
     double *W = NULL;
+    double *NW = NULL;
 
     if (!U || !V) {
         free(U); free(V);
@@ -274,11 +455,20 @@ SEXP C_dress_init(SEXP n_vertices_,
         memcpy(W, REAL(weights_), E * sizeof(double));
     }
 
-    p_dress_graph_t g = init_dress_graph(N, E, U, V, W,
+    if (node_weights_ != R_NilValue) {
+        if (LENGTH(node_weights_) != N) {
+            free(U); free(V); if(W) free(W);
+            error("dress_init: node_weights length mismatch");
+        }
+        NW = (double *)malloc(N * sizeof(double));
+        memcpy(NW, REAL(node_weights_), N * sizeof(double));
+    }
+
+    p_dress_graph_t g = dress_init_graph(N, E, U, V, W, NW,
                                          (dress_variant_t)variant,
                                          precompute);
     if (!g) {
-        error("dress_init: init_dress_graph returned NULL");
+        error("dress_init: dress_init_graph returned NULL");
     }
 
     SEXP ptr = PROTECT(R_MakeExternalPtr(g, R_NilValue, R_NilValue));
@@ -375,7 +565,7 @@ SEXP C_dress_result(SEXP ptr_) {
 SEXP C_dress_close(SEXP ptr_) {
     p_dress_graph_t g = (p_dress_graph_t) R_ExternalPtrAddr(ptr_);
     if (g) {
-        free_dress_graph(g);
+        dress_free_graph(g);
         R_ClearExternalPtr(ptr_);
     }
     return R_NilValue;
@@ -385,23 +575,34 @@ SEXP C_dress_close(SEXP ptr_) {
 /*  Registration table                                                 */
 /* ------------------------------------------------------------------ */
 static const R_CallMethodDef callMethods[] = {
-    {"C_dress_fit",            (DL_FUNC) &C_dress_fit,            8},
-    {"C_delta_dress_fit",      (DL_FUNC) &C_delta_dress_fit,      12},
+    {"C_dress_fit",            (DL_FUNC) &C_dress_fit,            9},
+    {"C_delta_dress_fit",      (DL_FUNC) &C_delta_dress_fit,      13},
+    {"C_nabla_dress_fit",      (DL_FUNC) &C_nabla_dress_fit,      14},
     {"C_dress_version",        (DL_FUNC) &C_dress_version,        0},
-    {"C_dress_init",           (DL_FUNC) &C_dress_init,           6},
+    {"C_dress_init",           (DL_FUNC) &C_dress_init,           7},
     {"C_dress_fit_obj",        (DL_FUNC) &C_dress_fit_obj,        3},
     {"C_dress_get_obj",        (DL_FUNC) &C_dress_get_obj,        6},
     {"C_dress_result",         (DL_FUNC) &C_dress_result,         1},
     {"C_dress_close",          (DL_FUNC) &C_dress_close,          1},
+    {"C_dress_fit_omp",        (DL_FUNC) &C_dress_fit_omp,        9},
+    {"C_delta_dress_fit_omp",  (DL_FUNC) &C_delta_dress_fit_omp,  13},
+    {"C_nabla_dress_fit_omp",  (DL_FUNC) &C_nabla_dress_fit_omp,  14},
 #ifdef DRESS_CUDA
-    {"C_dress_fit_cuda",       (DL_FUNC) &C_dress_fit_cuda,       8},
-    {"C_delta_dress_fit_cuda", (DL_FUNC) &C_delta_dress_fit_cuda, 12},
+    {"C_dress_fit_cuda",       (DL_FUNC) &C_dress_fit_cuda,       9},
+    {"C_delta_dress_fit_cuda", (DL_FUNC) &C_delta_dress_fit_cuda, 13},
+    {"C_nabla_dress_fit_cuda", (DL_FUNC) &C_nabla_dress_fit_cuda, 14},
     {"C_dress_fit_cuda_obj",   (DL_FUNC) &C_dress_fit_cuda_obj,   3},
 #endif
 #ifdef DRESS_MPI
-    {"C_delta_dress_fit_mpi",  (DL_FUNC) &C_delta_dress_fit_mpi,  11},
+    {"C_delta_dress_fit_mpi",  (DL_FUNC) &C_delta_dress_fit_mpi,  12},
+    {"C_nabla_dress_fit_mpi",  (DL_FUNC) &C_nabla_dress_fit_mpi,  15},
 #ifdef DRESS_CUDA
-    {"C_delta_dress_fit_mpi_cuda", (DL_FUNC) &C_delta_dress_fit_mpi_cuda, 11},
+    {"C_delta_dress_fit_mpi_cuda", (DL_FUNC) &C_delta_dress_fit_mpi_cuda, 12},
+    {"C_nabla_dress_fit_mpi_cuda", (DL_FUNC) &C_nabla_dress_fit_mpi_cuda, 15},
+#endif
+#ifdef _OPENMP
+    {"C_delta_dress_fit_mpi_omp",  (DL_FUNC) &C_delta_dress_fit_mpi_omp,  12},
+    {"C_nabla_dress_fit_mpi_omp",  (DL_FUNC) &C_nabla_dress_fit_mpi_omp,  15},
 #endif
 #endif
     {NULL, NULL, 0}

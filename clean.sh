@@ -38,10 +38,10 @@ rm -f  libdress/src/cuda/libdress_cuda.so
 # .o files already cleaned by the global find above
 
 # C/C++ example binaries
-rm -f examples/c/cpu examples/c/cuda examples/c/mpi examples/c/mpi_cuda
-rm -f examples/c/cpu_igraph examples/c/cuda_igraph
-rm -f examples/c/mpi_igraph examples/c/mpi_cuda_igraph
-rm -f examples/cpp/cpu examples/cpp/cuda examples/cpp/mpi examples/cpp/mpi_cuda
+rm -f examples/c/cpu examples/c/cuda examples/c/omp examples/c/mpi examples/c/mpi_cuda examples/c/mpi_omp
+rm -f examples/c/cpu_igraph examples/c/cuda_igraph examples/c/omp_igraph
+rm -f examples/c/mpi_igraph examples/c/mpi_cuda_igraph examples/c/mpi_omp_igraph
+rm -f examples/cpp/cpu examples/cpp/cuda examples/cpp/omp examples/cpp/mpi examples/cpp/mpi_cuda examples/cpp/mpi_omp
 
 # Rust
 rm -rf rust/target/
@@ -84,10 +84,13 @@ rm -rf site/
 
 # Go (vendored C sources, created by publish.sh / run_examples.sh)
 rm -rf go/vendor/
+rm -rf go/omp/vendor/
 rm -rf go/cuda/vendor/
 rm -rf go/mpi/vendor/
+rm -rf go/mpi/omp/vendor/
 rm -rf go/mpi/cuda/vendor/
 rm -f  tests/go/go.sum
+rm -f  examples/go/*_bin
 
 # Julia (vendored C sources and compiled shared library)
 rm -rf julia/vendor/
@@ -106,7 +109,10 @@ rm -rf dress.Rcheck/
 rm -f  dress.graph_*.tar.gz
 # Vendored C sources copied into r/src/ at publish time
 rm -f  r/src/dress.c r/src/delta_dress.c r/src/delta_dress_impl.c r/src/delta_dress_impl.h
+rm -f  r/src/dress_histogram.c r/src/dress_histogram.h
+rm -f  r/src/dress_omp.c r/src/delta_dress_omp.c
 rm -f  r/src/dress_mpi.c r/src/delta_dress_cuda.c r/src/dress_cuda.cu r/src/dress_cuda.o
+rm -f  r/src/Makevars
 rm -rf r/src/dress/
 
 # LaTeX auxiliary files (research/)

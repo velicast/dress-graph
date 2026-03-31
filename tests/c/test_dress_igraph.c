@@ -75,7 +75,7 @@ static void test_unweighted_triangle(void)
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
 
     dress_result_igraph_t result;
-    int rc = dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    int rc = dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                                   100, 1e-8, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "compute returned 0");
@@ -109,7 +109,7 @@ static void test_weighted_triangle(void)
     }
 
     dress_result_igraph_t result;
-    int rc = dress_fit_igraph(&g, "weight", DRESS_VARIANT_UNDIRECTED,
+    int rc = dress_fit_igraph(&g, "weight", NULL, DRESS_VARIANT_UNDIRECTED,
                                   100, 1e-8, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "compute returned 0");
@@ -135,7 +135,7 @@ static void test_path(void)
     igraph_t g = make_graph(edges, 3, 4, IGRAPH_UNDIRECTED);
 
     dress_result_igraph_t result;
-    int rc = dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    int rc = dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                                   100, 1e-8, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "compute returned 0");
@@ -166,7 +166,7 @@ static void test_k4(void)
     igraph_t g = make_graph(edges, 6, 4, IGRAPH_UNDIRECTED);
 
     dress_result_igraph_t result;
-    int rc = dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    int rc = dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                                   100, 1e-8, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "compute returned 0");
@@ -194,9 +194,9 @@ static void test_precompute_intercepts(void)
 
     dress_result_igraph_t r_no, r_yes;
 
-    dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                          100, 1e-10, 0, &r_no);
-    dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                          100, 1e-10, 1, &r_yes);
 
     /* Both should give the same results */
@@ -229,7 +229,7 @@ static void test_directed_variants(void)
 
     for (int v = 0; v < 3; v++) {
         dress_result_igraph_t result;
-        int rc = dress_fit_igraph(&g, NULL, variants[v],
+        int rc = dress_fit_igraph(&g, NULL, NULL, variants[v],
                                       100, 1e-8, 0, &result);
         ASSERT_EQ_INT(rc, 0, "directed compute returned 0");
         ASSERT_EQ_INT(result.E, 3, "directed E == 3");
@@ -254,7 +254,7 @@ static void test_node_dress(void)
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
 
     dress_result_igraph_t result;
-    dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                          100, 1e-8, 0, &result);
 
     /* All node norms in a triangle should be equal and >= 2 */
@@ -280,7 +280,7 @@ static void test_to_vector(void)
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
 
     dress_result_igraph_t result;
-    dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                          100, 1e-8, 0, &result);
 
     igraph_vector_t vec;
@@ -311,7 +311,7 @@ static void test_empty_graph(void)
     igraph_empty(&g, 5, IGRAPH_UNDIRECTED);
 
     dress_result_igraph_t result;
-    int rc = dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    int rc = dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                                   100, 1e-8, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "compute on empty graph returned 0");
@@ -331,14 +331,14 @@ static void test_null_params(void)
     dress_result_igraph_t result;
     int rc;
 
-    rc = dress_fit_igraph(NULL, NULL, DRESS_VARIANT_UNDIRECTED,
+    rc = dress_fit_igraph(NULL, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                               100, 1e-8, 0, &result);
     ASSERT(rc != 0, "NULL graph returns error");
 
     igraph_t g;
     igraph_empty(&g, 3, IGRAPH_UNDIRECTED);
 
-    rc = dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    rc = dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                               100, 1e-8, 0, NULL);
     ASSERT(rc != 0, "NULL result returns error");
 
@@ -363,15 +363,16 @@ static void test_cross_validate_with_c_api(void)
     igraph_t g = make_graph(edges, 4, 4, IGRAPH_UNDIRECTED);
 
     dress_result_igraph_t ig_result;
-    dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                          100, 1e-12, 0, &ig_result);
 
     /* Build via raw C API with the same edge list */
     int src[] = {0, 1, 2, 0};
     int dst[] = {1, 2, 3, 2};
-    p_dress_graph_t dg = init_dress_graph(
+    p_dress_graph_t dg = dress_init_graph(
         4, 4, dup_int_arr(src, 4), dup_int_arr(dst, 4),
-        NULL, DRESS_VARIANT_UNDIRECTED, 0);
+        NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
 
     int iterations = 0;
     double delta = 0.0;
@@ -390,7 +391,7 @@ static void test_cross_validate_with_c_api(void)
                     "igraph matches raw C node dress");
     }
 
-    free_dress_graph(dg);
+    dress_free_graph(dg);
     dress_free_igraph(&ig_result);
     igraph_destroy(&g);
 }
@@ -405,7 +406,7 @@ static void test_star_graph(void)
     igraph_star(&g, 5, IGRAPH_STAR_UNDIRECTED, 0);
 
     dress_result_igraph_t result;
-    int rc = dress_fit_igraph(&g, NULL, DRESS_VARIANT_UNDIRECTED,
+    int rc = dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                                   100, 1e-8, 0, &result);
 
     ASSERT_EQ_INT(rc, 0, "star compute ok");

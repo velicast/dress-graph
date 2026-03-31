@@ -12,8 +12,8 @@ prism_t <- c(1L,0L,2L,1L,0L,2L,3L,0L,4L,1L,5L,2L,4L,3L,5L,4L,3L,5L)
 k33_s <- c(0L,3L,0L,4L,0L,5L,1L,3L,1L,4L,1L,5L,2L,3L,2L,4L,2L,5L)
 k33_t <- c(3L,0L,4L,0L,5L,0L,3L,1L,4L,1L,5L,1L,3L,2L,4L,2L,5L,2L)
 
-rp <- dress_fit(6L, prism_s, prism_t)
-rk <- dress_fit(6L, k33_s, k33_t)
+rp <- fit(6L, prism_s, prism_t)
+rk <- fit(6L, k33_s, k33_t)
 
 fp <- sort(rp$edge_dress)
 fk <- sort(rk$edge_dress)

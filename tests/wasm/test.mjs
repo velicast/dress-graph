@@ -7,7 +7,7 @@
  * Requires: dress_wasm.js + dress_wasm.wasm built by wasm/build.sh
  */
 
-import { dressFit, DRESS, Variant } from '../../wasm/dress.js';
+import { fit, DRESS, Variant } from '../../wasm/dress.js';
 
 function assert(cond, msg) {
     if (!cond) {
@@ -18,7 +18,7 @@ function assert(cond, msg) {
 
 async function testTriangle() {
     console.log('test: triangle …');
-    const r = await dressFit({
+    const r = await fit({
         numVertices: 3,
         sources: [0, 1, 0],
         targets: [1, 2, 2],
@@ -38,7 +38,7 @@ async function testTriangle() {
 
 async function testPath() {
     console.log('test: path (no triangles) …');
-    const r = await dressFit({
+    const r = await fit({
         numVertices: 4,
         sources: [0, 1, 2],
         targets: [1, 2, 3],
@@ -61,7 +61,7 @@ async function testPath() {
 async function testVariants() {
     console.log('test: all variants …');
     for (const [name, v] of Object.entries(Variant)) {
-        const r = await dressFit({
+        const r = await fit({
             numVertices: 3,
             sources: [0, 1, 0],
             targets: [1, 2, 2],
@@ -74,7 +74,7 @@ async function testVariants() {
 
 async function testWeighted() {
     console.log('test: weighted edges …');
-    const r = await dressFit({
+    const r = await fit({
         numVertices: 3,
         sources: [0, 1, 0],
         targets: [1, 2, 2],
@@ -118,15 +118,87 @@ async function testDRESS() {
     console.log('  OK');
 }
 
+async function testNodeWeightsDefault() {
+    console.log('test: node weights default …');
+    const n = 3;
+    const src = [0, 1, 0];
+    const tgt = [1, 2, 2];
+
+    // 1. Default (implicit All-1 node weights)
+    const r1 = await fit({
+        numVertices: n,
+        sources: src,
+        targets: tgt,
+    });
+
+    // 2. Explicit All-1 node weights
+    const nw = [1.0, 1.0, 1.0];
+    const r2 = await fit({
+        numVertices: n,
+        sources: src,
+        targets: tgt,
+        nodeWeights: nw,
+    });
+
+    for (let i = 0; i < r1.edgeDress.length; i++) {
+        assert(Math.abs(r1.edgeDress[i] - r2.edgeDress[i]) < 1e-12,
+            `edge ${i} dress diff ${Math.abs(r1.edgeDress[i] - r2.edgeDress[i])} > 1e-12`);
+    }
+    console.log('  OK');
+}
+
 async function main() {
     console.log('DRESS WASM tests\n');
     await testTriangle();
     await testPath();
     await testVariants();
     await testWeighted();
+    await testNodeWeightsDefault();
+    await testNodeWeights();
     await testDRESS();
     console.log('\nAll tests passed.');
 }
+
+async function testNodeWeights() {
+    console.log('test: node weights (K3) …');
+    // K3 with node weights [10, 1, 1].
+    // Node 0 is very heavy. Edges connected to 0 (0-1, 0-2) should have higher dress?
+    // Or lower?
+    // Dress is sum of geometric means of neighbors.
+    // Neighbors' weights matter.
+    const r = await fit({
+        numVertices: 3,
+        sources: [0, 1, 0],
+        targets: [1, 2, 2],
+        nodeWeights: [100.0, 1.0, 1.0],
+    });
+    // With equal edge weights (implicit 1.0), but custom node weights.
+    // Edge (1,2): neighbors are 1 and 2. Their weights are 1.0.
+    // Edge (0,1): neighbors are 0 and 1. Node 0 has weight 100.0.
+    // So edge (0,1) dress should be different from edge (1,2).
+    
+    // Actually, dress similarity S(e) depends on sum over common neighbors.
+    // For K3:
+    // (0,1): common neighbor is 2. w(2)=1.0.
+    // (1,2): common neighbor is 0. w(0)=100.0.
+    // So (1,2) should have much higher dress value because the common neighbor (0) is heavy.
+    
+    assert(r.edgeDress.length === 3, 'expected 3 edges');
+    // edge 0: (0,1), comm=2
+    // edge 1: (1,2), comm=0 <-- should be largest
+    // edge 2: (0,2), comm=1
+    
+    const d01 = r.edgeDress[0];
+    const d12 = r.edgeDress[1];
+    const d02 = r.edgeDress[2];
+
+    assert(d01 > d12, `edge(0,1) dress ${d01} should be > edge(1,2) ${d12}`);
+    assert(d02 > d12, `edge(0,2) dress ${d02} should be > edge(1,2) ${d12}`);
+    assert(Math.abs(d01 - d02) < 1e-6, `symmetry: edge(0,1) ~ edge(0,2)`);
+    
+    console.log('  OK');
+}
+
 
 main().catch(e => {
     console.error(e);

@@ -1,19 +1,19 @@
-function result = dress_fit(n_vertices, sources, targets, varargin)
-% CUDA.DRESS_FIT  GPU-accelerated DRESS edge similarity.
+function result = fit(n_vertices, sources, targets, varargin)
+% OMP.DRESS_FIT  OpenMP-parallel DRESS edge similarity.
 %
-%   result = cuda.dress_fit(n_vertices, sources, targets)
-%   result = cuda.dress_fit(n_vertices, sources, targets, Name, Value, ...)
+%   result = omp.fit(n_vertices, sources, targets)
+%   result = omp.fit(n_vertices, sources, targets, Name, Value, ...)
 %
-%   Same API as dress_fit(), but the iterative fitting loop runs on the
-%   GPU via CUDA.  Switch from CPU to GPU by adding the cuda. prefix:
+%   Same API as fit(), but the iterative fitting loop runs on the
+%   OpenMP.  Switch from CPU to GPU by adding the omp. prefix:
 %
 %     % CPU
-%     r = dress_fit(4, sources, targets);
+%     r = fit(4, sources, targets);
 %
-%     % CUDA (same call, different namespace)
-%     r = cuda.dress_fit(4, sources, targets);
+%     % OpenMP (same call, different namespace)
+%     r = omp.fit(4, sources, targets);
 %
-%   See also: dress_fit, dress_cuda_mex
+%   See also: fit, dress_omp_mex
 
     p = inputParser;
     addParameter(p, 'Weights',              [],    @(x) isempty(x) || (isnumeric(x) && isreal(x)));
@@ -30,11 +30,11 @@ function result = dress_fit(n_vertices, sources, targets, varargin)
     precompute     = int32(logical(p.Results.PrecomputeIntercepts));
 
     assert(isscalar(n_vertices) && n_vertices >= 1, ...
-           'cuda:invalidInput', 'n_vertices must be a positive scalar.');
+           'omp:invalidInput', 'n_vertices must be a positive scalar.');
     assert(numel(sources) == numel(targets), ...
-           'cuda:invalidInput', 'sources and targets must have the same length.');
+           'omp:invalidInput', 'sources and targets must have the same length.');
     assert(variant >= 0 && variant <= 3, ...
-           'cuda:invalidInput', 'Variant must be 0, 1, 2, or 3.');
+           'omp:invalidInput', 'Variant must be 0, 1, 2, or 3.');
 
     n_vertices = int32(n_vertices);
     sources    = int32(sources(:));
@@ -45,9 +45,9 @@ function result = dress_fit(n_vertices, sources, targets, varargin)
     else
         weights = double(weights(:));
         assert(numel(weights) == numel(sources), ...
-               'cuda:invalidInput', 'Weights must have the same length as sources.');
+               'omp:invalidInput', 'Weights must have the same length as sources.');
     end
 
-    result = dress_cuda_mex(n_vertices, sources, targets, weights, ...
+    result = dress_omp_mex(n_vertices, sources, targets, weights, ...
                             variant, max_iterations, epsilon, precompute);
 end

@@ -26,12 +26,12 @@ func main() {
 	shriS := []int32{0, 4, 0, 12, 0, 1, 0, 3, 0, 5, 0, 15, 1, 5, 1, 13, 1, 2, 1, 6, 1, 12, 2, 6, 2, 14, 2, 3, 2, 7, 2, 13, 3, 7, 3, 15, 3, 4, 3, 14, 4, 8, 4, 5, 4, 7, 4, 9, 5, 9, 5, 6, 5, 10, 6, 10, 6, 7, 6, 11, 7, 11, 7, 8, 8, 12, 8, 9, 8, 11, 8, 13, 9, 13, 9, 10, 9, 14, 10, 14, 10, 11, 10, 15, 11, 15, 11, 12, 12, 13, 12, 15, 13, 14, 14, 15}
 	shriT := []int32{4, 0, 12, 0, 1, 0, 3, 0, 5, 0, 15, 0, 5, 1, 13, 1, 2, 1, 6, 1, 12, 1, 6, 2, 14, 2, 3, 2, 7, 2, 13, 2, 7, 3, 15, 3, 4, 3, 14, 3, 8, 4, 5, 4, 7, 4, 9, 4, 9, 5, 6, 5, 10, 5, 10, 6, 7, 6, 11, 6, 11, 7, 8, 7, 12, 8, 9, 8, 11, 8, 13, 8, 13, 9, 10, 9, 14, 9, 14, 10, 11, 10, 15, 10, 15, 11, 12, 11, 13, 12, 15, 12, 14, 13, 15, 14}
 
-	dr, _ := dress.DeltaDressFit(16, rookS, rookT, nil, 1, dress.Undirected, 100, 1e-6, false, true)
-	ds, _ := dress.DeltaDressFit(16, shriS, shriT, nil, 1, dress.Undirected, 100, 1e-6, false, true)
+	dr, _ := dress.DeltaFit(16, rookS, rookT, nil, nil, 1, dress.Undirected, 100, 1e-6, 0, 0, false, true, true)
+	ds, _ := dress.DeltaFit(16, shriS, shriT, nil, nil, 1, dress.Undirected, 100, 1e-6, 0, 0, false, true, true)
 
 	// Only rank 0 prints (all ranks have the reduced result after MPI_Allreduce)
-	fmt.Printf("Rook:       %d bins, %d subgraphs\n", dr.HistSize, dr.NumSubgraphs)
-	fmt.Printf("Shrikhande: %d bins, %d subgraphs\n", ds.HistSize, ds.NumSubgraphs)
+	fmt.Printf("Rook:       %d bins, %d subgraphs\n", len(dr.Histogram), dr.NumSubgraphs)
+	fmt.Printf("Shrikhande: %d bins, %d subgraphs\n", len(ds.Histogram), ds.NumSubgraphs)
 
 	same := len(dr.Histogram) == len(ds.Histogram)
 	if same {

@@ -8,8 +8,12 @@
  */
 
 #include "mex.h"
-#if !defined(__OCTAVE__) && !defined(OCTAVE_MEX_FILE)
-#include "matrix.h"
+#if defined(__has_include)
+#  if __has_include("matrix.h")
+#    include "matrix.h"
+#  endif
+#else
+#  include "matrix.h"
 #endif
 #include "dress/dress.h"
 
@@ -25,6 +29,6 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     g = (p_dress_graph_t)(uintptr_t)(*((uint64_t *)mxGetData(prhs[0])));
     if (g) {
-        free_dress_graph(g);
+        dress_free_graph(g);
     }
 }

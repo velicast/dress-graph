@@ -14,11 +14,20 @@
 #include "dress/mpi/cuda/dress.h"
 
 typedef struct {
-    int64_t *hist;
+    dress_hist_pair_t *hist;
     int      hs;
     double  *multisets;
     int64_t  ns;
 } result_t;
+
+static int hist_equal(const dress_hist_pair_t *a, const dress_hist_pair_t *b,
+                      int hs_a, int hs_b) {
+    if (hs_a != hs_b) return 0;
+    for (int i = 0; i < hs_a; i++) {
+        if (a[i].value != b[i].value || a[i].count != b[i].count) return 0;
+    }
+    return 1;
+}
 
 static int cmp_dbl(const void *a, const void *b) {
     double x = *(const double *)a, y = *(const double *)b;
@@ -34,13 +43,12 @@ static result_t do_fit(int N, int E, const int *src, const int *dst) {
     memcpy(U, src, E * sizeof(int));
     memcpy(V, dst, E * sizeof(int));
 
-    p_dress_graph_t g = init_dress_graph(N, E, U, V, NULL,
-                                         DRESS_VARIANT_UNDIRECTED, 0);
+    p_dress_graph_t g = dress_init_graph(N, E, U, V, NULL, NULL,
+        DRESS_VARIANT_UNDIRECTED, 0);
     result_t r;
     r.multisets = NULL;
-    r.hist = delta_dress_fit(g, /*k=*/1, 100, 1e-6,
-                             &r.hs, 1, &r.multisets, &r.ns);
-    free_dress_graph(g);
+    r.hist = dress_delta_fit(g, /*k=*/1, 100, 1e-6, 0, 0, &r.hs, 1, &r.multisets, &r.ns);
+    dress_free_graph(g);
     return r;
 }
 
@@ -93,8 +101,7 @@ int main(int argc, char **argv) {
         printf("Rook:       %d bins, %ld subgraphs\n", dr.hs, (long)dr.ns);
         printf("Shrikhande: %d bins, %ld subgraphs\n", ds.hs, (long)ds.ns);
 
-        int hist_same = (dr.hs == ds.hs) &&
-                        memcmp(dr.hist, ds.hist, dr.hs * sizeof(int64_t)) == 0;
+        int hist_same = hist_equal(dr.hist, ds.hist, dr.hs, ds.hs);
         printf("Histograms differ:  %s\n", hist_same ? "no" : "yes");
 
         sort_multisets(dr.multisets, dr.ns, E);

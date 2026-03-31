@@ -11,7 +11,7 @@ Run:
 from mpi4py import MPI
 import numpy as np
 import networkx as nx
-from dress.mpi.networkx import delta_dress_graph
+from dress.mpi.networkx import delta_fit
 
 # Rook L₂(4) = K₄ □ K₄
 rook = nx.cartesian_product(nx.complete_graph(4), nx.complete_graph(4))
@@ -38,12 +38,12 @@ shrikhande_edges = [
 ]
 shrikhande.add_edges_from(shrikhande_edges)
 
-dr = delta_dress_graph(rook, k=1, keep_multisets=True)
-ds = delta_dress_graph(shrikhande, k=1, keep_multisets=True)
+dr = delta_fit(rook, k=1, keep_multisets=True)
+ds = delta_fit(shrikhande, k=1, keep_multisets=True)
 
 if MPI.COMM_WORLD.Get_rank() == 0:
-    print(f"Rook:       {dr.hist_size} bins, {dr.num_subgraphs} subgraphs")
-    print(f"Shrikhande: {ds.hist_size} bins, {ds.num_subgraphs} subgraphs")
+    print(f"Rook:       {len(dr.histogram)} bins, {dr.num_subgraphs} subgraphs")
+    print(f"Shrikhande: {len(ds.histogram)} bins, {ds.num_subgraphs} subgraphs")
     print(f"Histograms differ:  {dr.histogram != ds.histogram}")
 
     def canonicalize(ms):

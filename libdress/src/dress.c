@@ -143,7 +143,7 @@ static void build_raw_adjacency(p_dress_graph_t g,
     }
     free(cnt);
     // W ownership is retained by the graph (g->input_weight) and freed
-    // in free_dress_graph — do NOT free it here.
+    // in dress_free_graph — do NOT free it here.
     
     // Sort each node's segment by neighbor id for binary-search access
 #ifdef _OPENMP
@@ -323,9 +323,9 @@ static void compute_intercepts(p_dress_graph_t g)
 
         while (iu < iu_end && iv < iv_end) {
             int x = g->adj_target[iu], y = g->adj_target[iv];
-            if      (x == y) { cnt++; iu++; iv++; }
-            else if (x < y)  { iu++; }
-            else              { iv++; }
+            cnt += (x == y);
+            iu += (x <= y);
+            iv += (x >= y);
         }
         g->intercept_offset[e + 1] = cnt;
     }
@@ -354,12 +354,10 @@ static void compute_intercepts(p_dress_graph_t g)
             if (x == y) {
                 g->intercept_edge_ux[off] = g->adj_edge_idx[iu];
                 g->intercept_edge_vx[off] = g->adj_edge_idx[iv];
-                off++; iu++; iv++;
-            } else if (x < y) {
-                iu++;
-            } else {
-                iv++;
+                off++;
             }
+            iu += (x <= y);
+            iv += (x >= y);
         }
     }
 }
@@ -375,10 +373,11 @@ static void compute_intercepts(p_dress_graph_t g)
 // 3. Initializes all dress values to 2.0 (fixed-point identity).
 // 4. Optionally precomputes intercepts for faster iteration.
 //
-// Takes ownership of U, V, and W (all freed by free_dress_graph).
+// Takes ownership of U, V, and W (all freed by dress_free_graph).
 // W may be NULL for unweighted graphs.
-p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
-                                 double *W, dress_variant_t variant,
+p_dress_graph_t dress_init_graph(int N, int E, int *U, int *V,
+                                 double *W, double *NW,
+                                 dress_variant_t variant,
                                  int precompute_intercepts)
 {
     p_dress_graph_t g = (p_dress_graph_t)malloc(sizeof(dress_graph_t));
@@ -394,8 +393,17 @@ p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
 
     // Take ownership of W. delta_dress needs the raw input weights to
     // construct subgraphs correctly (edge_weight stores variant-specific
-    // weights that differ from the raw input). Freed in free_dress_graph.
+    // weights that differ from the raw input). Freed in dress_free_graph.
     g->W = W;  // NULL when unweighted
+
+    // Take ownership of NW (node weights). If NULL, allocate all-1.0
+    // so the hot loop avoids a branch per edge.
+    if (NW != NULL) {
+        g->NW = NW;
+    } else {
+        g->NW = (double *)malloc(N * sizeof(double));
+        for (int i = 0; i < N; i++) g->NW[i] = 1.0;
+    }
 
     // Build raw then variant adjacency (both use flat CSR internally)
     int *raw_offset;
@@ -439,21 +447,36 @@ p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
 // cross-term is w_uv·d_uv instead of 2·w_uv·d_uv.
 //
 // Writes the result into edge_dress_next[e] (double-buffer).
-static double fit_impl(p_dress_graph_t g, int e)
+
+// Shared tail: add self-loop/cross term, KBN sum, normalize, store.
+static inline double fit_finalize(p_dress_graph_t g, int e,
+                                  int u, int v, double denominator,
+                                  double *buf, double *stack_buf,
+                                  int n)
+{
+    double uv = g->edge_weight[e] * g->edge_dress[e];
+    double nw_u = g->NW[u];
+    double nw_v = g->NW[v];
+    if (g->variant == DRESS_VARIANT_FORWARD || g->variant == DRESS_VARIANT_BACKWARD) {
+        buf[n++] = 4.0 * nw_u + uv;
+    } else {
+        buf[n++] = 4.0 * nw_u + 4.0 * nw_v + 2.0 * uv;
+    }
+
+    double numerator = kbn_sorted_sum(buf, n);
+    if (buf != stack_buf) free(buf);
+
+    double dress_uv = denominator > 0.0 ? numerator / denominator : 0.0;
+    g->edge_dress_next[e] = dress_uv;
+    return dress_uv;
+}
+
+// ---- Intercept path (precomputed common-neighbor tables) ----
+static double fit_impl_intercept(p_dress_graph_t g, int e)
 {
     int    u = g->U[e], v = g->V[e];
     double denominator = g->node_dress[u] * g->node_dress[v];
-
-    // Collect numerator terms into a buffer, then sort+KBN sum.
-    // Max terms = |N[u]∩N[v]| common-neighbor pairs + 1 self/cross term.
-    int max_terms;
-    if (g->precompute_intercepts) {
-        max_terms = g->intercept_offset[e + 1] - g->intercept_offset[e] + 1;
-    } else {
-        int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
-        int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
-        max_terms = (deg_u < deg_v ? deg_u : deg_v) + 1;
-    }
+    int max_terms = g->intercept_offset[e + 1] - g->intercept_offset[e] + 1;
 
     double stack_buf[KBN_STACK_LIMIT];
     double *buf = (max_terms <= KBN_STACK_LIMIT)
@@ -461,63 +484,58 @@ static double fit_impl(p_dress_graph_t g, int e)
                 : (double *)malloc(max_terms * sizeof(double));
     int n = 0;
 
-    if (g->precompute_intercepts) {
-        int off = g->intercept_offset[e];
-        int end = g->intercept_offset[e + 1];
-        for (int k = off; k < end; k++) {
-            int eu = g->intercept_edge_ux[k];
-            int ev = g->intercept_edge_vx[k];
+    int off = g->intercept_offset[e];
+    int end = g->intercept_offset[e + 1];
+    for (int k = off; k < end; k++) {
+        int eu = g->intercept_edge_ux[k];
+        int ev = g->intercept_edge_vx[k];
+        buf[n++] = g->edge_weight[eu] * g->edge_dress[eu]
+                 + g->edge_weight[ev] * g->edge_dress[ev];
+    }
+
+    return fit_finalize(g, e, u, v, denominator, buf, stack_buf, n);
+}
+
+// ---- Merge-walk path (no precomputed intercepts) ----
+static double fit_impl_merge(p_dress_graph_t g, int e)
+{
+    int    u = g->U[e], v = g->V[e];
+    double denominator = g->node_dress[u] * g->node_dress[v];
+    int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
+    int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
+    int max_terms = (deg_u < deg_v ? deg_u : deg_v) + 1;
+
+    double stack_buf[KBN_STACK_LIMIT];
+    double *buf = (max_terms <= KBN_STACK_LIMIT)
+                ? stack_buf
+                : (double *)malloc(max_terms * sizeof(double));
+    int n = 0;
+
+    int iu = g->adj_offset[u], iu_end = g->adj_offset[u + 1];
+    int iv = g->adj_offset[v], iv_end = g->adj_offset[v + 1];
+    while (iu < iu_end && iv < iv_end) {
+        int x = g->adj_target[iu], y = g->adj_target[iv];
+        if (x == y) {
+            int eu = g->adj_edge_idx[iu];
+            int ev = g->adj_edge_idx[iv];
             buf[n++] = g->edge_weight[eu] * g->edge_dress[eu]
                      + g->edge_weight[ev] * g->edge_dress[ev];
         }
-    } else {
-        int iu = g->adj_offset[u], iu_end = g->adj_offset[u + 1];
-        int iv = g->adj_offset[v], iv_end = g->adj_offset[v + 1];
-
-        while (iu < iu_end && iv < iv_end) {
-            int x = g->adj_target[iu], y = g->adj_target[iv];
-            if (x == y) {
-                int eu = g->adj_edge_idx[iu];
-                int ev = g->adj_edge_idx[iv];
-                buf[n++] = g->edge_weight[eu] * g->edge_dress[eu]
-                         + g->edge_weight[ev] * g->edge_dress[ev];
-                ++iu; ++iv;
-            } else if (x < y) {
-                ++iu;
-            } else {
-                ++iv;
-            }
-        }
+        iu += (x <= y);
+        iv += (x >= y);
     }
 
-    // Add self-loop and edge cross-terms
-    double uv = g->edge_weight[e] * g->edge_dress[e];
-    if (g->variant == DRESS_VARIANT_FORWARD || g->variant == DRESS_VARIANT_BACKWARD) {
-        buf[n++] = 4.0 + uv;
-    } else {
-        buf[n++] = 8.0 + 2.0 * uv;
-    }
-
-    double numerator = kbn_sorted_sum(buf, n);
-
-    if (buf != stack_buf) free(buf);
-
-    double dress_uv = denominator > 0.0
-                    ? numerator / denominator
-                    : 0.0;
-
-    g->edge_dress_next[e] = dress_uv;
-    return dress_uv;
+    return fit_finalize(g, e, u, v, denominator, buf, stack_buf, n);
 }
 
 /* ------------------------------------------------------------------ */
 /*  Iterative fitting                                                  */
 /* ------------------------------------------------------------------ */
 
-// Run dress iterative fixed-point fitting.
+// Run dress iterative fixed-point fitting (sequential).
 //
 // Each iteration:
-//   1. Recompute node_dress[u] = sqrt(4 + ∑ w_ux · d_ux) for all u.
+//   1. Recompute node_dress[u] = sqrt(4*nw + ∑ w_ux · d_ux) for all u.
 //   2. Recompute edge_dress_next[e] = fit_impl(e) for all e.
 //   3. Swap edge_dress ↔ edge_dress_next (double-buffer).
 //   4. Stop if max |d_old - d_new| < epsilon.
@@ -535,9 +553,6 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
         int u, e;
 
         // Phase 1: compute per-node dress norm (sort+KBN for bitwise reproducibility)
-#ifdef _OPENMP
-        #pragma omp parallel for
-#endif
         for (u = 0; u < g->N; u++) {
             int base = g->adj_offset[u];
             int end  = g->adj_offset[u + 1];
@@ -548,7 +563,7 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
                         ? stack_buf
                         : (double *)malloc((deg + 1) * sizeof(double));
 
-            buf[0] = 4.0; // self-loop contribution
+            buf[0] = 4.0 * g->NW[u]; // self-loop contribution
             for (int i = 0; i < deg; i++) {
                 int ei = g->adj_edge_idx[base + i];
                 buf[i + 1] = g->edge_weight[ei] * g->edge_dress[ei];
@@ -559,15 +574,20 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
         }
 
         // Phase 2: compute next dress value for every edge
-#ifdef _OPENMP
-        #pragma omp parallel for reduction(max:max_delta)
-#endif
-        for (e = 0; e < g->E; e++) {
-            double prev = g->edge_dress[e];
-            double next = fit_impl(g, e);
-            double d    = fabs(prev - next);
-            if (d > max_delta)
-                max_delta = d;
+        if (g->precompute_intercepts) {
+            for (e = 0; e < g->E; e++) {
+                double prev = g->edge_dress[e];
+                double next = fit_impl_intercept(g, e);
+                double d    = fabs(prev - next);
+                if (d > max_delta) max_delta = d;
+            }
+        } else {
+            for (e = 0; e < g->E; e++) {
+                double prev = g->edge_dress[e];
+                double next = fit_impl_merge(g, e);
+                double d    = fabs(prev - next);
+                if (d > max_delta) max_delta = d;
+            }
         }
 
         // Phase 3: swap double-buffer pointers
@@ -592,7 +612,7 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
 /* ------------------------------------------------------------------ */
 
 // Free all heap memory owned by the dress graph, including U and V.
-void free_dress_graph(p_dress_graph_t g)
+void dress_free_graph(p_dress_graph_t g)
 {
     // CSR adjacency
     free(g->adj_offset);
@@ -607,6 +627,7 @@ void free_dress_graph(p_dress_graph_t g)
 
     // Per-node arrays
     free(g->node_dress);
+    free(g->NW);
 
     // Precomputed intercepts (conditional)
     if (g->precompute_intercepts) {
@@ -665,19 +686,18 @@ double dress_get(const p_dress_graph_t g, int u, int v,
                 int ev = g->adj_edge_idx[iv];
                 cn_buf[cn_n++] = g->edge_weight[eu] * g->edge_dress[eu]
                                + g->edge_weight[ev] * g->edge_dress[ev];
-                ++iu; ++iv;
-            } else if (x < y) {
-                ++iu;
-            } else {
-                ++iv;
             }
+            iu += (x <= y);
+            iv += (x >= y);
         }
     }
 
-    // Self-loop constant: 8.0 for UNDIRECTED/DIRECTED, 4.0 for FORWARD/BACKWARD.
+    // Self-loop constant: 4·nw(u)+4·nw(v) for UNDIRECTED/DIRECTED, 4·nw(u) for FORWARD/BACKWARD.
+    double nw_u = g->NW[u];
+    double nw_v = g->NW[v];
     double self_loop = (g->variant == DRESS_VARIANT_FORWARD ||
                         g->variant == DRESS_VARIANT_BACKWARD)
-                     ? 4.0 : 8.0;
+                     ? 4.0 * nw_u : 4.0 * nw_u + 4.0 * nw_v;
 
     cn_buf[cn_n++] = self_loop;
     double intercept = kbn_sorted_sum(cn_buf, cn_n);

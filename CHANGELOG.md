@@ -5,6 +5,69 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.7.0] - 2026-03-26
+
+### Added
+- **∇ᵏ-DRESS (Nabla)**: vertex individualization lifting operator across the entire codebase. Enumerates all P(N,k) ordered k-tuples, marks each with distinct generic weights (√primes), runs DRESS on each marked graph, and accumulates converged edge values into a sparse exact histogram. Available across all backends and all 9 language bindings:
+  - C: `dress_nabla_fit()`, `dress_nabla_fit_flat()`, `dress_nabla_fit_strided_flat()`
+  - C (OMP): `dress_nabla_fit_omp()`, `dress_nabla_fit_omp_strided()`
+  - C (CUDA): `dress_nabla_fit_cuda()`, `dress_nabla_fit_cuda_strided()`
+  - C (MPI): `dress_nabla_fit_mpi()`, `dress_nabla_fit_mpi_cuda()`, `dress_nabla_fit_mpi_omp()`
+  - C++: `DRESS::nablaFit()` method on all backend classes
+  - Python: `nabla_fit()` free function + `DRESS.nabla_fit()` method + NetworkX `nabla_fit()`
+  - Rust: `nabla_fit()` free function + `DRESS::nabla_fit()` method
+  - Go: `NablaFit()` free function + `DRESS.NablaFit()` method
+  - Julia: `nabla_fit()` free function + `nabla_fit!()` method on `DressGraph`
+  - R: `nabla_fit()` + `omp$nabla_fit()` + `cuda$nabla_fit()` + `mpi$nabla_fit()` + `mpi$cuda$nabla_fit()` + `mpi$omp$nabla_fit()`
+  - MATLAB/Octave: `nabla_fit()` + `nabla_dress_mex` / `nabla_dress_omp_mex` / `nabla_dress_cuda_mex` MEX entry points
+  - WASM: `nablaFit()` async function + `DRESS.nablaFit()` method
+- **Node weights** across the core API and language bindings: DRESS constructors and free-function wrappers now accept per-node weights while preserving the existing implicit all-ones default when node weights are omitted
+- **Sampled Δᵏ-DRESS** (`n_samples`, `seed`): all `dress_delta_fit` variants now accept optional random sampling parameters, placed immediately after `epsilon` in every API. When `n_samples > 0`, only a random subset of the C(N,k) deletion subsets is evaluated (DFS pick-filter with sorted dedup). Sampling is available across all backends (CPU, OMP, CUDA, MPI, MPI+OMP, MPI+CUDA) and all language bindings (C, C++, Python, Rust, Go, Julia, R, MATLAB/Octave, WASM, igraph). Defaults: `n_samples=0` (exhaustive), `seed=0`
+- **Optional histogram** (`compute_histogram`): all `dress_delta_fit` variants accept a flag to skip histogram construction when only multisets are needed. In the C API, passing `NULL` for `hist_size` skips all histogram work. Exposed as `compute_histogram` (default `true`) in C++, Python, Rust, Go, Julia, R, MATLAB/Octave, WASM, and igraph bindings
+- **igraph multisets**: `delta_dress_result_igraph_t` now includes `multisets` and `num_subgraphs` fields; `dress_delta_fit_igraph` and all MPI igraph variants accept `keep_multisets` and `compute_histogram` parameters
+- **OpenMP backend** (`dress/omp/`): new `dress_fit_omp` (edge-parallel) and `dress_delta_fit_omp` (subgraph-parallel) functions separate OpenMP parallelism from the sequential core. Available in all language bindings:
+  - C: `#include "dress/omp/dress.h"` — drop-in redirect header
+  - C++: `omp::DRESS` class in `dress/omp/dress.hpp`
+  - Python: `from dress.omp import DRESS` (+ NetworkX: `dress.omp.networkx`)
+  - Rust: `dress_graph::omp` module (feature `omp`)
+  - Go: `github.com/velicast/dress-graph/go/omp` package
+  - Julia: `using DRESS.OMP`
+  - R: `omp$fit()` / `omp$delta_fit()` / `omp$nabla_fit()`
+  - MATLAB/Octave: `omp.fit()` / `omp.delta_fit()` / `omp.nabla_fit()`
+- **MPI+OpenMP backend** (`dress/mpi/omp/`): new `dress_delta_fit_mpi_omp` and `dress_nabla_fit_mpi_omp` distribute subgraphs/tuples across MPI ranks with OpenMP intra-rank parallelism. Available in all language bindings
+- **Examples** for OMP and MPI+OMP added for all 9 languages (30 new example files under `examples/`)
+
+### Changed
+- **C API naming convention** (BREAKING): all public C functions now use `dress_` as a consistent prefix. Renames:
+  - `init_dress_graph` → `dress_init_graph`
+  - `free_dress_graph` → `dress_free_graph`
+  - `delta_dress_fit*` → `dress_delta_fit*`
+  - `nabla_dress_fit*` → `dress_nabla_fit*`
+  - `delta_binom_public` → `dress_delta_binom`
+  - `nabla_perm_count` → `dress_nabla_perm_count`
+  - Removed backward-compatibility macros (`fit()`, `delta_fit()`) and the `delta_dress.h` shim header
+  - All upstream wrappers (C++, Python ctypes, Rust FFI, Go CGo, Julia dlsym, R .Call, MATLAB MEX, WASM exports) updated to use new names
+- **Wrapper function naming** (BREAKING): removed redundant `dress_` prefix from scoped/namespaced standalone functions across all high-level language bindings:
+  - Python: `dress_fit` → `fit`, `delta_dress_fit` → `delta_fit`, `nabla_dress_fit` → `nabla_fit` (+ NetworkX: `dress_graph` → `fit`, `delta_dress_graph` → `delta_fit`)
+  - Rust: `pub fn dress_fit` → `pub fn fit`, `pub fn delta_dress_fit` → `pub fn delta_fit`, `pub fn nabla_dress_fit` → `pub fn nabla_fit`
+  - Go: `DressFit` → `Fit`, `DeltaDressFit` → `DeltaFit`, `NablaDressFit` → `NablaFit`
+  - Julia: `dress_fit` → `fit`, `delta_dress_fit` → `delta_fit`, `nabla_dress_fit` → `nabla_fit`
+  - R: `dress_fit` → `fit`, `delta_dress_fit` → `delta_fit`, `nabla_dress_fit` → `nabla_fit` (+ environment members: `omp$dress_fit` → `omp$fit`, etc.)
+  - MATLAB/Octave: files renamed (`dress_fit.m` → `fit.m`, `delta_dress_fit.m` → `delta_fit.m`, `nabla_dress_fit.m` → `nabla_fit.m`) across all backends
+  - WASM/JS: `dressFit` → `fit`, `deltaDressFit` → `deltaFit`, `nablaDressFit` → `nablaFit`
+- **Rust API redesign**: removed builder pattern (`DRESSBuilder`, `.build()`, `.build_and_fit()`) across all backends. New API uses `DRESS::new()`, `g.delta_fit()`, `g.nabla_fit()`, and module-level `fit()` / `delta_fit()` / `nabla_fit()` free functions
+- **C++ namespace**: all classes wrapped in `dress::` namespace (`dress::DRESS`, `dress::cuda::DRESS`, etc.)
+- **Removed offset/stride** from all public-facing APIs (Python, Rust, Go, Julia, R, MATLAB, WASM). Strided computation remains available in the internal C API for MPI distribution
+- **Sequential core** (`dress/dress.h`): `dress_fit` is now purely sequential — no OpenMP pragmas
+- **Histogram representation** for Δᵏ-DRESS and ∇ᵏ-DRESS results is now a sparse exact histogram of sorted `(value, count)` entries instead of dense epsilon-binned arrays
+- **R MPI `delta_fit` wrappers**: added missing `n_samples`, `seed`, `compute_histogram` parameters to `mpi$delta_fit`, `mpi$cuda$delta_fit`, and `mpi$omp$delta_fit` — fixes argument mismatch with the C glue layer
+
+### Fixed
+- **Octave MPI OO support**: `mpi.DRESS(...).delta_fit(...)` and `mpi.cuda.DRESS(...).delta_fit(...)` now work in packaged Octave builds instead of shipping placeholder wrappers that errored at runtime
+- **Octave package build/runtime parity**: the Octave package now vendors and builds the required MPI and MPI+CUDA MEX sources, and `run_examples.sh` rebuilds a fresh tarball and checks backend availability before running MPI examples
+- **Octave MPI+CUDA linking**: the MPI+CUDA object-delta MEX target now links the required core delta implementation, fixing the missing-symbol failure around `dress_delta_fit_strided_flat`
+- **R OpenMP flags**: `r/configure` now always passes `-fopenmp` to `PKG_CFLAGS`/`PKG_LIBS`, ensuring `_OPENMP` is defined for all source files (fixes MPI+OMP symbol registration on systems where `${SHLIB_OPENMP_CFLAGS}` is empty)
+
 ## [0.6.2] - 2026-03-22
 
 ### Fixed
@@ -85,24 +148,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 - **MPI support**: distributed Δᵏ-DRESS across all language bindings via import/include-based switching:
-  - C: `#include "dress/mpi/dress.h"` redirects `delta_dress_fit()` → `delta_dress_fit_mpi(..., MPI_COMM_WORLD)`; explicit `delta_dress_fit_mpi()` / `delta_dress_fit_mpi_fcomm()` available for custom communicators
+  - C: `#include "dress/mpi/dress.h"` redirects `dress_delta_fit()` → `dress_delta_fit_mpi(..., MPI_COMM_WORLD)`; explicit `dress_delta_fit_mpi()` / `dress_delta_fit_mpi_fcomm()` available for custom communicators
   - C: `#include "dress/mpi/cuda/dress.h"`: single convenience header for MPI + CUDA (GPU-distributed)
   - C++: `mpi::DRESS`, `mpi::cuda::DRESS` namespaces
-  - Python: `from dress.mpi import delta_dress_fit` (CPU), `from dress.mpi.cuda import delta_dress_fit` (GPU)
+  - Python: `from dress.mpi import dress_delta_fit` (CPU), `from dress.mpi.cuda import dress_delta_fit` (GPU)
   - Python NetworkX: `from dress.mpi.networkx import delta_dress_graph` / `from dress.mpi.cuda.networkx import delta_dress_graph`
-  - R: `mpi$delta_dress_fit()`, `mpi$cuda$delta_dress_fit()`
+  - R: `mpi$dress_delta_fit()`, `mpi$cuda$dress_delta_fit()`
   - Rust: `dress_graph::mpi::delta_fit()`, `dress_graph::mpi::cuda::delta_fit()`
   - Go: `go/mpi`, `go/mpi/cuda` import paths
   - Julia: `DRESS.MPI`, `DRESS.MPI.CUDA` modules
 - **igraph wrapper restructured** (`libdress-igraph`):
   - Headers moved to `dress/igraph/dress.h`, `dress/cuda/igraph/dress.h`, `dress/mpi/igraph/dress.h`, `dress/mpi/cuda/igraph/dress.h`
-  - **Convenience macros**: `dress_fit`, `dress_free`, `dress_to_vector`, `delta_dress_fit`, `delta_dress_free`, `delta_dress_to_vector` map to their `_igraph` counterparts; user code uses the same names as the core API
-  - MPI support: `dress/mpi/igraph/dress.h` redirects `delta_dress_fit()` to MPI backend (`delta_dress_fit_mpi_igraph` / `delta_dress_fit_mpi_cuda_igraph` + `_fcomm` FFI variants)
+  - **Convenience macros**: `dress_fit`, `dress_free`, `dress_to_vector`, `dress_delta_fit`, `delta_dress_free`, `delta_dress_to_vector` map to their `_igraph` counterparts; user code uses the same names as the core API
+  - MPI support: `dress/mpi/igraph/dress.h` redirects `dress_delta_fit()` to MPI backend (`dress_delta_fit_mpi_igraph` / `dress_delta_fit_mpi_cuda_igraph` + `_fcomm` FFI variants)
   - `dress/mpi/cuda/igraph/dress.h`: single header for MPI + CUDA igraph
   - `dress_igraph_mpi.c` implementation using shared `delta_dress_impl.h`
   - CMake targets: `dress_igraph_mpi_static`, `dress_igraph_mpi_shared`
   - Examples link against `libdress.a` instead of recompiling core sources
-- Octave CUDA support: `cuda.dress_fit()`, `cuda.delta_dress_fit()` via `+cuda` namespace
+- Octave CUDA support: `cuda.dress_fit()`, `cuda.dress_delta_fit()` via `+cuda` namespace
 
 ### Fixed
 - Static CUDA linking across all 9 language bindings (37/37 examples pass)
@@ -118,16 +181,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.4.0] - 2026-03-08
 
 ### Added
-- CUDA support for igraph wrapper via `#include <dress/cuda/igraph/dress.h>`: redirects `dress_fit()` / `delta_dress_fit()` to CUDA via macros
+- CUDA support for igraph wrapper via `#include <dress/cuda/igraph/dress.h>`: redirects `dress_fit()` / `dress_delta_fit()` to CUDA via macros
 - CUDA support via import-based switching across all language wrappers
-  - C: `#include "dress/cuda/dress.h"` redirects `dress_fit()` / `delta_dress_fit()` to CUDA via macros (also available as explicit `dress_fit_cuda()` in `dress/cuda/dress_cuda.h`)
+  - C: `#include "dress/cuda/dress.h"` redirects `dress_fit()` / `dress_delta_fit()` to CUDA via macros (also available as explicit `dress_fit_cuda()` in `dress/cuda/dress_cuda.h`)
   - C++: `dress::cuda::fit()`, `dress::cuda::delta_fit()`, same names as CPU, different namespace
-  - Python: `from dress.cuda import dress_fit, delta_dress_fit`
-  - R: `dress.graph::cuda$dress_fit()`, `dress.graph::cuda$delta_dress_fit()`
-  - Rust: `dress_graph::cuda::dress_fit()`, `dress_graph::cuda::delta_dress_fit()`
+  - Python: `from dress.cuda import dress_fit, dress_delta_fit`
+  - R: `dress.graph::cuda$dress_fit()`, `dress.graph::cuda$dress_delta_fit()`
+  - Rust: `dress_graph::cuda::dress_fit()`, `dress_graph::cuda::dress_delta_fit()`
   - Go: `dress.DressFit()` / `dress.DeltaDressFit()`. Switch by changing import path (`go/` → `go/cuda/`); old names `Fit`/`DeltaFit` kept as deprecated aliases
-  - Julia: `DRESS.CUDA.dress_fit()`, `DRESS.CUDA.delta_dress_fit()`
-  - MATLAB/Octave: `cuda.dress_fit()`, `cuda.delta_dress_fit()`, same names as CPU, different package (`+cuda`)
+  - Julia: `DRESS.CUDA.dress_fit()`, `DRESS.CUDA.dress_delta_fit()`
+  - MATLAB/Octave: `cuda.dress_fit()`, `cuda.dress_delta_fit()`, same names as CPU, different package (`+cuda`)
   - WASM: `dressFit()`, `deltaDressFit()` (CPU only, no CUDA in browser)
 - `dress.cuda.networkx` module: GPU-accelerated NetworkX helpers
 - `delta_dress_impl.h`: shared internal implementation for Δ^k-DRESS, parameterized by fit function pointer (eliminates code duplication between CPU and CUDA)
@@ -138,7 +201,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **igraph wrapper renamed**: `dress_igraph_compute` → `dress_fit_igraph`, `dress_igraph_free` → `dress_free_igraph`, `dress_igraph_to_vector` → `dress_to_vector_igraph`, `dress_igraph_result_t` → `dress_result_igraph_t` (and corresponding `delta_` variants)
 - Python NetworkX API: GPU-accelerated helpers moved to dedicated `dress.cuda.networkx` module
 - Python: `dress.cuda` converted from single file to package (`dress/cuda/`)
-- `delta_dress.c` and `delta_dress_cuda.c` refactored to thin wrappers delegating to `delta_dress_fit_impl()`
+- `delta_dress.c` and `delta_dress_cuda.c` refactored to thin wrappers delegating to `dress_delta_fit_impl()`
 - Vendoring (`build.sh`, `setup.py`, `build.rs`) updated to include `delta_dress_impl.h`
 
 ### Fixed

@@ -1,19 +1,21 @@
-function result = delta_dress_fit(n_vertices, sources, targets, varargin)
-% CUDA.DELTA_DRESS_FIT  GPU-accelerated Delta-k-DRESS histogram.
+function result = delta_fit(n_vertices, sources, targets, varargin)
+% OMP.DELTA_DRESS_FIT  OpenMP-parallel Delta-k-DRESS exact histogram.
 %
-%   result = cuda.delta_dress_fit(n_vertices, sources, targets)
-%   result = cuda.delta_dress_fit(n_vertices, sources, targets, Name, Value, ...)
+%   result = omp.delta_fit(n_vertices, sources, targets)
+%   result = omp.delta_fit(n_vertices, sources, targets, Name, Value, ...)
 %
-%   Same API as delta_dress_fit(), but each subgraph fitting runs on the
-%   GPU via CUDA.  Switch from CPU to GPU by adding the cuda. prefix:
+%   Same API as delta_fit(), but each subgraph fitting runs on the
+%   OpenMP. The returned histogram is sparse exact entries in
+%   result.histogram.value and result.histogram.count. Switch from CPU to
+%   GPU by adding the omp. prefix:
 %
 %     % CPU
-%     r = delta_dress_fit(4, sources, targets, 'K', 1);
+%     r = delta_fit(4, sources, targets, 'K', 1);
 %
-%     % CUDA (same call, different namespace)
-%     r = cuda.delta_dress_fit(4, sources, targets, 'K', 1);
+%     % OpenMP (same call, different namespace)
+%     r = omp.delta_fit(4, sources, targets, 'K', 1);
 %
-%   See also: delta_dress_fit, delta_dress_cuda_mex
+%   See also: delta_fit, delta_dress_omp_mex
 
     p = inputParser;
     addParameter(p, 'Weights',       [],    @(x) isempty(x) || (isnumeric(x) && isvector(x)));
@@ -34,21 +36,21 @@ function result = delta_dress_fit(n_vertices, sources, targets, varargin)
     keep_multisets = int32(logical(p.Results.KeepMultisets));
 
     assert(isscalar(n_vertices) && n_vertices >= 1, ...
-           'cuda:invalidInput', 'n_vertices must be a positive scalar.');
+           'omp:invalidInput', 'n_vertices must be a positive scalar.');
     assert(numel(sources) == numel(targets), ...
-           'cuda:invalidInput', 'sources and targets must have the same length.');
+           'omp:invalidInput', 'sources and targets must have the same length.');
     assert(variant >= 0 && variant <= 3, ...
-           'cuda:invalidInput', 'Variant must be 0, 1, 2, or 3.');
+           'omp:invalidInput', 'Variant must be 0, 1, 2, or 3.');
     if ~isempty(weights)
         assert(numel(weights) == numel(sources), ...
-               'cuda:invalidInput', 'weights must have the same length as sources.');
+               'omp:invalidInput', 'weights must have the same length as sources.');
     end
 
     n_vertices = int32(n_vertices);
     sources    = int32(sources(:));
     targets    = int32(targets(:));
 
-    result = delta_dress_cuda_mex(n_vertices, sources, targets, weights, k, ...
+    result = delta_dress_omp_mex(n_vertices, sources, targets, weights, k, ...
                                   variant, max_iterations, epsilon, precompute, ...
                                   keep_multisets);
 end

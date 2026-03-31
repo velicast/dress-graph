@@ -1,15 +1,18 @@
 /*
  * delta_dress_cuda_mex.c — MATLAB MEX gateway for GPU-accelerated Δ^k-DRESS.
  *
- * Same interface as delta_dress_mex.c but calls delta_dress_fit_cuda().
+ * Same interface as delta_dress_mex.c but calls dress_delta_fit_cuda().
  */
 
 #include "mex.h"
-#if !defined(__OCTAVE__) && !defined(OCTAVE_MEX_FILE)
-#include "matrix.h"
+#if defined(__has_include)
+#  if __has_include("matrix.h")
+#    include "matrix.h"
+#  endif
+#else
+#  include "matrix.h"
 #endif
 #include "dress/dress.h"
-#include "dress/delta_dress.h"
 #include "dress/cuda/dress_cuda.h"
 
 #include <string.h>
@@ -65,19 +68,41 @@ static int *to_int_array(const mxArray *arg, int expected_len, const char *name)
     return out;
 }
 
+static mxArray *build_histogram_struct(const dress_hist_pair_t *hist, int hist_size)
+{
+    const char *fields[] = { "value", "count" };
+    mxArray *result = mxCreateStructMatrix(1, 1, 2, fields);
+    mxArray *m_values = mxCreateDoubleMatrix(hist_size, 1, mxREAL);
+    mxArray *m_counts = mxCreateNumericMatrix(hist_size, 1, mxINT64_CLASS, mxREAL);
+    double *values = mxGetPr(m_values);
+    int64_t *counts = (int64_t *)mxGetData(m_counts);
+    int i;
+
+    for (i = 0; i < hist_size; i++) {
+        values[i] = hist[i].value;
+        counts[i] = hist[i].count;
+    }
+
+    mxSetFieldByNumber(result, 0, 0, m_values);
+    mxSetFieldByNumber(result, 0, 1, m_counts);
+    return result;
+}
+
 void mexFunction(int nlhs, mxArray *plhs[],
                  int nrhs, const mxArray *prhs[])
 {
     int N, E, k, variant_val, max_iterations, precompute, keep_ms;
+    int n_samples = 0;
+    unsigned int seed = 0;
+    int compute_hist = 1;
     double epsilon;
     int    *U, *V;
     double *W = NULL;
     p_dress_graph_t g;
     int    hist_size = 0;
-    int64_t *hist;
+    dress_hist_pair_t *hist;
     double *ms_ptr = NULL;
     int64_t num_sub = 0;
-    mxArray *m_hist, *m_hsize;
 
     if (nrhs < 8 || nrhs > 10)
         mexErrMsgIdAndTxt("delta_dress_cuda:nrhs",
@@ -117,35 +142,26 @@ void mexFunction(int nlhs, mxArray *plhs[],
         mexErrMsgIdAndTxt("delta_dress_cuda:invalidK", "k must be >= 0.");
     }
 
-    g = init_dress_graph(N, E, U, V, W,
-                         (dress_variant_t)variant_val, precompute);
+    g = dress_init_graph(N, E, U, V, W,
+                         NULL, (dress_variant_t)variant_val, precompute);
     if (!g)
         mexErrMsgIdAndTxt("delta_dress_cuda:initFailed",
-                          "init_dress_graph returned NULL.");
+                          "dress_init_graph returned NULL.");
 
-    hist = delta_dress_fit_cuda(g, k, max_iterations, epsilon, &hist_size,
+    hist = dress_delta_fit_cuda(g, k, max_iterations, epsilon,
+                                n_samples, seed,
+                                compute_hist ? &hist_size : NULL,
                                 keep_ms,
                                 keep_ms ? &ms_ptr : NULL,
-                                keep_ms ? &num_sub : NULL);
+                                &num_sub);
 
-    int n_fields = keep_ms ? 4 : 2;
-    const char *fields_basic[]  = { "histogram", "hist_size" };
-    const char *fields_full[]   = { "histogram", "hist_size", "multisets", "num_subgraphs" };
+    int n_fields = keep_ms ? 3 : 1;
+    const char *fields_basic[]  = { "histogram" };
+    const char *fields_full[]   = { "histogram", "multisets", "num_subgraphs" };
     plhs[0] = mxCreateStructMatrix(1, 1, n_fields,
                                    keep_ms ? fields_full : fields_basic);
 
-    m_hist = mxCreateDoubleMatrix(hist_size, 1, mxREAL);
-    {
-        double *dst = mxGetPr(m_hist);
-        int i;
-        for (i = 0; i < hist_size; i++)
-            dst[i] = (double)hist[i];
-    }
-    mxSetFieldByNumber(plhs[0], 0, 0, m_hist);
-
-    m_hsize = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
-    ((int *)mxGetData(m_hsize))[0] = hist_size;
-    mxSetFieldByNumber(plhs[0], 0, 1, m_hsize);
+    mxSetFieldByNumber(plhs[0], 0, 0, build_histogram_struct(hist, hist_size));
 
     if (keep_ms && ms_ptr) {
         mxArray *m_ms = mxCreateDoubleMatrix((mwSize)num_sub, (mwSize)E, mxREAL);
@@ -157,20 +173,20 @@ void mexFunction(int nlhs, mxArray *plhs[],
                 for (e = 0; e < E; e++)
                     dst[e * (mwSize)num_sub + s] = ms_ptr[s * E + e];
         }
-        mxSetFieldByNumber(plhs[0], 0, 2, m_ms);
+        mxSetFieldByNumber(plhs[0], 0, 1, m_ms);
 
         mxArray *m_nsub = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
         ((int *)mxGetData(m_nsub))[0] = (int)num_sub;
-        mxSetFieldByNumber(plhs[0], 0, 3, m_nsub);
+        mxSetFieldByNumber(plhs[0], 0, 2, m_nsub);
 
         free(ms_ptr);
     } else if (keep_ms) {
-        mxSetFieldByNumber(plhs[0], 0, 2, mxCreateDoubleMatrix(0, 0, mxREAL));
+        mxSetFieldByNumber(plhs[0], 0, 1, mxCreateDoubleMatrix(0, 0, mxREAL));
         mxArray *m_nsub = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);
         ((int *)mxGetData(m_nsub))[0] = 0;
-        mxSetFieldByNumber(plhs[0], 0, 3, m_nsub);
+        mxSetFieldByNumber(plhs[0], 0, 2, m_nsub);
     }
 
     free(hist);
-    free_dress_graph(g);
+    dress_free_graph(g);
 }

@@ -173,13 +173,13 @@ class TestNumpyViews:
         assert np.shares_memory(a, b)
 
 
-# ── dress_fit top-level function ─────────────────────────────────────
+# ── fit top-level function ─────────────────────────────────────
 
 class TestDressFit:
-    """Test the primary dress_fit() functional API."""
+    """Test the primary fit() functional API."""
 
     def test_basic(self):
-        r = dress.dress_fit(3, [0, 1, 0], [1, 2, 2])
+        r = dress.fit(3, [0, 1, 0], [1, 2, 2])
         assert isinstance(r, dress.DRESSResult)
         assert len(r.edge_dress) == 3
         assert len(r.node_dress) == 3
@@ -189,21 +189,21 @@ class TestDressFit:
         assert r.iterations > 0
 
     def test_triangle_value(self):
-        r = dress.dress_fit(3, [0, 1, 0], [1, 2, 2],
+        r = dress.fit(3, [0, 1, 0], [1, 2, 2],
                             max_iterations=500, epsilon=1e-12)
         assert abs(r.edge_dress[0] - 2.0) < 1e-6
 
     def test_weighted(self):
-        r = dress.dress_fit(3, [0, 1, 0], [1, 2, 2],
+        r = dress.fit(3, [0, 1, 0], [1, 2, 2],
                             weights=[1.0, 2.0, 3.0])
         assert r.iterations > 0
 
     def test_directed(self):
-        r = dress.dress_fit(3, [0, 1, 0], [1, 2, 2],
+        r = dress.fit(3, [0, 1, 0], [1, 2, 2],
                             variant=dress.DIRECTED)
         assert r.iterations >= 0
 
     def test_repr(self):
-        r = dress.dress_fit(3, [0, 1, 0], [1, 2, 2])
+        r = dress.fit(3, [0, 1, 0], [1, 2, 2])
         assert "DRESSResult" in repr(r)
         assert "edges=3" in repr(r)

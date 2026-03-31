@@ -27,8 +27,12 @@
  */
 
 #include "mex.h"
-#if !defined(__OCTAVE__) && !defined(OCTAVE_MEX_FILE)
-#include "matrix.h"
+#if defined(__has_include)
+#  if __has_include("matrix.h")
+#    include "matrix.h"
+#  endif
+#else
+#  include "matrix.h"
 #endif
 #include "dress/dress.h"
 
@@ -195,13 +199,13 @@ void mexFunction(int nlhs, mxArray *plhs[],
     }
 
     /* ---- build graph & fit ---- */
-    /* init_dress_graph takes ownership of U, V, W */
-    g = init_dress_graph(N, E, U, V, W,
-                         (dress_variant_t)variant_val,
+    /* dress_init_graph takes ownership of U, V, W */
+    g = dress_init_graph(N, E, U, V, W,
+                         NULL, (dress_variant_t)variant_val,
                          precompute);
     if (!g)
         mexErrMsgIdAndTxt("dress:initFailed",
-                          "init_dress_graph returned NULL.");
+                          "dress_init_graph returned NULL.");
 
     dress_fit(g, max_iterations, epsilon, &iterations, &delta);
 
@@ -243,5 +247,5 @@ void mexFunction(int nlhs, mxArray *plhs[],
     mxSetFieldByNumber(plhs[0], 0, 6, m_delta);
 
     /* ---- cleanup ---- */
-    free_dress_graph(g);
+    dress_free_graph(g);
 }

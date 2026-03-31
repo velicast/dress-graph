@@ -7,6 +7,13 @@
 extern "C" {
 #endif
 
+// Histogram pair for Δ^k-DRESS results.
+// Represents a (value, count) entry in the sparse histogram.
+typedef struct __dress_hist_pair_t {
+    double  value;
+    int64_t count;
+} dress_hist_pair_t;
+
 // dress graph variant: determines how adjacency lists are constructed
 // from the input edge list.
 //
@@ -55,6 +62,7 @@ typedef struct __dress_graph_t {
     double  *edge_dress_next;      // [E]   next-iteration dress values (double-buffer)
 
     // Per-node arrays — indexed by vertex id 0..N-1.
+    double  *NW;                   // [N]   per-node weight (NULL → all 1.0)
     double  *node_dress;           // [N]   sqrt of weighted dress sum for node
 
     // Precomputed intercepts (allocated only when precompute_intercepts == 1).
@@ -67,10 +75,11 @@ typedef struct __dress_graph_t {
 } dress_graph_t, *p_dress_graph_t;
 
 // Construct a dress graph from an edge list.
-// Takes ownership of U, V, W (all freed by free_dress_graph).
-// W may be NULL (unweighted).
-p_dress_graph_t init_dress_graph(int N, int E, int *U, int *V,
-                                 double *W, dress_variant_t variant,
+// Takes ownership of U, V, W, NW (all freed by dress_free_graph).
+// W may be NULL (unweighted).  NW may be NULL (all node weights = 1.0).
+p_dress_graph_t dress_init_graph(int N, int E, int *U, int *V,
+                                 double *W, double *NW,
+                                 dress_variant_t variant,
                                  int precompute_intercepts);
 
 // Run iterative dress fitting for at most max_iterations, stopping early
@@ -81,7 +90,7 @@ void   dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
                 int *iterations, double *delta);
 
 // Free all memory associated with the dress graph (including U, V).
-void   free_dress_graph(p_dress_graph_t g);
+void   dress_free_graph(p_dress_graph_t g);
 
 // Query the DRESS value for any vertex pair (u, v).
 //
@@ -96,13 +105,6 @@ void   free_dress_graph(p_dress_graph_t g);
 double dress_get(const p_dress_graph_t g, int u, int v,
                  int max_iterations, double epsilon,
                  double edge_weight);
-
-// Backward compatibility aliases (C only — disabled for C++ to avoid
-// collisions with member function names).
-#ifndef __cplusplus
-#define fit(g, max_iterations, epsilon, iterations, delta) \
-        dress_fit((g), (max_iterations), (epsilon), (iterations), (delta))
-#endif
 
 // ---- Δ^k-DRESS ----------------------------------------------------------
 
@@ -135,40 +137,113 @@ double dress_get(const p_dress_graph_t g, int u, int v,
 //   num_subgraphs - [out] if non-NULL, set to C(N,k) on return.
 //
 // Returns:
-//   A heap-allocated int64_t array of length floor(dmax / epsilon) + 1.
-//   hist[i] counts the number of converged edge values falling in bin
-//   i = floor(d / epsilon).  The top bin holds the maximum possible
+//   A heap-allocated array of dress_hist_pair_t of length *hist_size.
+//   Each entry holds a (value, count) pair.  The array is sorted by
 //   value.  The caller must free() the returned pointer.
 //
 // Complexity:
 //   O( C(N,k) * iterations * E * d_max )
 //   where d_max is the maximum degree.  Each subgraph is independent;
 //   the outer loop is embarrassingly parallel (not parallelised here).
-int64_t *delta_dress_fit(p_dress_graph_t g, int k, int iterations,
-                        double epsilon, int *hist_size,
-                        int keep_multisets, double **multisets,
-                        int64_t *num_subgraphs);
+dress_hist_pair_t *dress_delta_fit(p_dress_graph_t g, int k, int iterations,
+                                   double epsilon,
+                                   int n_samples, unsigned int seed,
+                                   int *hist_size,
+                                   int keep_multisets, double **multisets,
+                                   int64_t *num_subgraphs);
 
-// Strided variant of delta_dress_fit for distributed computation.
+// Flat variant — returns packed [bits, count, ...] int64_t array.
+// hist_size is set to the total length (2 * distinct_count).
+int64_t *dress_delta_fit_flat(p_dress_graph_t g, int k, int iterations,
+                              double epsilon,
+                              int n_samples, unsigned int seed,
+                              int *hist_size,
+                              int keep_multisets, double **multisets,
+                              int64_t *num_subgraphs);
+
+// Strided variant of dress_delta_fit for distributed computation.
 //
 // Processes only the subgraphs whose sequential index satisfies
 // index % stride == offset.  With offset=0, stride=1 this is
-// identical to delta_dress_fit (all subgraphs).
+// identical to dress_delta_fit (all subgraphs).
 //
 // Intended for MPI distribution: each rank calls with
 // offset=rank, stride=nprocs, then the per-rank histograms are
 // summed via MPI_Allreduce.
-int64_t *delta_dress_fit_strided(p_dress_graph_t g, int k, int iterations,
-                                 double epsilon, int *hist_size,
-                                 int keep_multisets, double **multisets,
-                                 int64_t *num_subgraphs,
-                                 int offset, int stride);
+dress_hist_pair_t *dress_delta_fit_strided(p_dress_graph_t g, int k, int iterations,
+                                           double epsilon,
+                                           int n_samples, unsigned int seed,
+                                           int *hist_size,
+                                           int keep_multisets, double **multisets,
+                                           int64_t *num_subgraphs,
+                                           int offset, int stride);
 
-// Backward compatibility alias (C only).
-#ifndef __cplusplus
-#define delta_fit(g, k, iterations, epsilon, hist_size, keep_multisets, multisets, num_subgraphs) \
-        delta_dress_fit((g), (k), (iterations), (epsilon), (hist_size), (keep_multisets), (multisets), (num_subgraphs))
-#endif
+// Flat strided variant — returns packed [bits, count, ...] int64_t array.
+int64_t *dress_delta_fit_strided_flat(p_dress_graph_t g, int k, int iterations,
+                                      double epsilon,
+                                      int n_samples, unsigned int seed,
+                                      int *hist_size,
+                                      int keep_multisets, double **multisets,
+                                      int64_t *num_subgraphs,
+                                      int offset, int stride);
+
+// ---- ∇^k-DRESS (Nabla-DRESS) -----------------------------------------------
+
+// Compute the ∇^k-DRESS histogram of a graph.
+//
+// Enumerates all P(N, k) ordered k-tuples of vertices, marks each
+// tuple with distinct generic node weights (sqrt of successive primes),
+// runs DRESS on the resulting weighted graph, and accumulates every
+// converged edge value into a single histogram.
+//
+// Parameters:
+//   g          - input dress graph (used for topology: N, E, U, V,
+//                variant).  Not modified.
+//   k          - individualization depth: number of vertices marked.
+//                k = 0 runs DRESS on the unmarked graph (∇^0).
+//   iterations - maximum DRESS iterations per marked graph.
+//   epsilon    - convergence tolerance for DRESS.
+//   n_samples  - if > 0, randomly sample this many tuples instead of
+//                enumerating all P(N,k).  0 = full enumeration.
+//   seed       - random seed for sampling reproducibility.
+//   hist_size  - [out] set to number of distinct histogram entries.
+//   keep_multisets - if non-zero, allocate and fill a flat matrix of
+//                per-tuple edge DRESS values.
+//   multisets  - [out] on return, *multisets points to a heap-allocated
+//                flat array of size P(N,k) * E.  Row r, edge e is at
+//                (*multisets)[r * E + e].
+//                The caller must free(*multisets).
+//   num_tuples - [out] if non-NULL, set to P(N,k) on return.
+//
+// Returns:
+//   A heap-allocated array of dress_hist_pair_t of length *hist_size.
+//   The caller must free() the returned pointer.
+//
+// Complexity:
+//   O( P(N,k) * iterations * E * d_max )
+dress_hist_pair_t *dress_nabla_fit(p_dress_graph_t g, int k, int iterations,
+                                   double epsilon,
+                                   int n_samples, unsigned int seed,
+                                   int *hist_size,
+                                   int keep_multisets, double **multisets,
+                                   int64_t *num_tuples);
+
+// Flat variant — returns packed [bits, count, ...] int64_t array.
+int64_t *dress_nabla_fit_flat(p_dress_graph_t g, int k, int iterations,
+                              double epsilon,
+                              int n_samples, unsigned int seed,
+                              int *hist_size,
+                              int keep_multisets, double **multisets,
+                              int64_t *num_tuples);
+
+// Strided variant for distributed computation (MPI).
+int64_t *dress_nabla_fit_strided_flat(p_dress_graph_t g, int k,
+                                      int iterations, double epsilon,
+                                      int n_samples, unsigned int seed,
+                                      int *hist_size,
+                                      int keep_multisets, double **multisets,
+                                      int64_t *num_tuples,
+                                      int offset, int stride);
 
 #ifdef __cplusplus
 }

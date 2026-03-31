@@ -8,8 +8,8 @@ rebuilding the graph each time.
 }
 \usage{
 DRESS(n_vertices, sources, targets, weights = NULL,
-           variant = DRESS_UNDIRECTED,
-           precompute_intercepts = FALSE)
+      node_weights = NULL, variant = DRESS_UNDIRECTED,
+      precompute_intercepts = FALSE)
 }
 \arguments{
   \item{n_vertices}{Integer. Number of vertices (vertex ids must be in
@@ -18,6 +18,8 @@ DRESS(n_vertices, sources, targets, weights = NULL,
   \item{targets}{Integer vector of length E -- edge target endpoints (0-based).}
   \item{weights}{Optional numeric vector of length E -- per-edge weights.
     \code{NULL} (default) gives every edge weight 1.}
+  \item{node_weights}{Optional numeric vector of length N -- per-node weights.
+    \code{NULL} (default) gives every node weight 1.}
   \item{variant}{Graph variant (default \code{DRESS_UNDIRECTED}).
     One of \code{DRESS_UNDIRECTED} (0), \code{DRESS_DIRECTED} (1),
     \code{DRESS_FORWARD} (2), \code{DRESS_BACKWARD} (3).}

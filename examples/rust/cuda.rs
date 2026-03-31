@@ -17,15 +17,17 @@ fn main() {
     let k33_s = vec![0,3,0,4,0,5,1,3,1,4,1,5,2,3,2,4,2,5];
     let k33_t = vec![3,0,4,0,5,0,3,1,4,1,5,1,3,2,4,2,5,2];
 
-    let rp = DRESS::builder(6, prism_s, prism_t)
-        .variant(Variant::Undirected)
-        .build_and_fit()
-        .unwrap();
+    let rp = {
+        let mut _g = DRESS::new(6, prism_s, prism_t, None, None, Variant::Undirected, false).unwrap();
+        _g.fit(100, 1e-6);
+        _g.result()
+    };
 
-    let rk = DRESS::builder(6, k33_s, k33_t)
-        .variant(Variant::Undirected)
-        .build_and_fit()
-        .unwrap();
+    let rk = {
+        let mut _g = DRESS::new(6, k33_s, k33_t, None, None, Variant::Undirected, false).unwrap();
+        _g.fit(100, 1e-6);
+        _g.result()
+    };
 
     let mut fp: Vec<f64> = rp.edge_dress.clone();
     let mut fk: Vec<f64> = rk.edge_dress.clone();

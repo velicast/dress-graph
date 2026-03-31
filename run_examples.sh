@@ -156,6 +156,26 @@ run_c() {
     else
         skip "C mpi_cuda (no MPI+CUDA)"
     fi
+
+    # omp
+    if gcc -O2 -fopenmp -o "$dir/omp" "$dir/omp.c" -I"$INC_C" -L"$LIBDIR" -ldress -lm 2>&1; then
+        out=$("$dir/omp" 2>&1) || true
+        verify_cpu "C omp" "$out"
+    else
+        fail "C omp (compile)"
+    fi
+
+    # mpi_omp
+    if [[ $HAS_MPI -eq 1 ]]; then
+        if mpicc -O2 -fopenmp -o "$dir/mpi_omp" "$dir/mpi_omp.c" -I"$INC_C" -L"$LIBDIR" -ldress -lm 2>&1; then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_omp" 2>&1) || true
+            verify_mpi "C mpi_omp" "$out"
+        else
+            fail "C mpi_omp (compile)"
+        fi
+    else
+        skip "C mpi_omp (no MPI)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -228,6 +248,33 @@ run_c_igraph() {
     else
         skip "C igraph mpi_cuda (no MPI+CUDA)"
     fi
+
+    # omp_igraph
+    if gcc -O2 -fopenmp -o "$dir/omp_igraph" "$dir/omp_igraph.c" \
+            $SRC_IGRAPH \
+            -I"$INC_C" -I"$INC_IGRAPH" \
+            $IGRAPH_CFLAGS -L"$LIBDIR" -ldress $IGRAPH_LIBS -lm -fopenmp 2>&1; then
+        out=$("$dir/omp_igraph" 2>&1) || true
+        verify_cpu "C igraph omp" "$out"
+    else
+        fail "C igraph omp (compile)"
+    fi
+
+    # mpi_omp_igraph
+    if [[ $HAS_MPI -eq 1 ]]; then
+        local SRC_MPI_IGRAPH="$ROOT/libdress-igraph/src/dress_igraph_mpi.c"
+        if mpicc -O2 -fopenmp -o "$dir/mpi_omp_igraph" "$dir/mpi_omp_igraph.c" \
+                $SRC_IGRAPH $SRC_MPI_IGRAPH \
+                -I"$INC_C" -I"$INC_IGRAPH" -I"$ROOT/libdress/src" \
+                $IGRAPH_CFLAGS -L"$LIBDIR" -ldress $IGRAPH_LIBS -lm -fopenmp 2>&1; then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_omp_igraph" 2>&1) || true
+            verify_mpi_igraph "C igraph mpi_omp" "$out"
+        else
+            fail "C igraph mpi_omp (compile)"
+        fi
+    else
+        skip "C igraph mpi_omp (no MPI)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -284,6 +331,28 @@ run_cpp() {
         fi
     else
         skip "C++ mpi_cuda (no MPI+CUDA)"
+    fi
+
+    # omp
+    if g++ -O2 -std=c++17 -fopenmp -o "$dir/omp" "$dir/omp.cpp" \
+            -I"$INC_C" -I"$INC_CPP" -L"$LIBDIR" -ldress -lm 2>&1; then
+        out=$("$dir/omp" 2>&1) || true
+        verify_cpu "C++ omp" "$out"
+    else
+        fail "C++ omp (compile)"
+    fi
+
+    # mpi_omp
+    if [[ $HAS_MPI -eq 1 ]]; then
+        if mpicxx -O2 -std=c++17 -fopenmp -o "$dir/mpi_omp" "$dir/mpi_omp.cpp" \
+                -I"$INC_C" -I"$INC_CPP" -L"$LIBDIR" -ldress -lm 2>&1; then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_omp" 2>&1) || true
+            verify_mpi "C++ mpi_omp" "$out"
+        else
+            fail "C++ mpi_omp (compile)"
+        fi
+    else
+        skip "C++ mpi_omp (no MPI)"
     fi
 }
 
@@ -409,6 +478,34 @@ run_python() {
     else
         skip "Python mpi_cuda_oo (no MPI+CUDA)"
     fi
+
+    # omp
+    out=$($PY "$dir/omp.py" 2>&1) || true
+    verify_cpu "Python omp" "$out"
+
+    # omp_oo
+    out=$($PY "$dir/omp_oo.py" 2>&1) || true
+    verify_cpu "Python omp_oo" "$out"
+
+    # omp_nx
+    out=$($PY "$dir/omp_nx.py" 2>&1) || true
+    verify_cpu "Python omp_nx" "$out"
+
+    # mpi_omp
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 $PY "$dir/mpi_omp.py" 2>&1) || true
+        verify_mpi "Python mpi_omp" "$out"
+    else
+        skip "Python mpi_omp (no MPI)"
+    fi
+
+    # mpi_omp_oo
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 $PY "$dir/mpi_omp_oo.py" 2>&1) || true
+        verify_mpi "Python mpi_omp_oo" "$out"
+    else
+        skip "Python mpi_omp_oo (no MPI)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -513,6 +610,28 @@ run_rust() {
     else
         skip "Rust mpi_cuda_oo (no MPI+CUDA)"
     fi
+
+    # omp
+    out=$(cd "$dir" && cargo run --release --example omp --features omp 2>&1) || true
+    verify_cpu "Rust omp" "$out"
+
+    # mpi_omp
+    if [[ $HAS_MPI -eq 1 ]]; then
+        if (cd "$dir" && cargo build --release --example mpi_omp --features "mpi omp" 2>&1); then
+            local bin_mpi_omp
+            bin_mpi_omp=$(find "$dir/target" -name mpi_omp -type f -executable 2>/dev/null | head -1)
+            if [[ -n "$bin_mpi_omp" ]]; then
+                out=$(mpirun --oversubscribe -np 4 "$bin_mpi_omp" 2>&1) || true
+                verify_mpi "Rust mpi_omp" "$out"
+            else
+                fail "Rust mpi_omp (binary not found)"
+            fi
+        else
+            fail "Rust mpi_omp (compile)"
+        fi
+    else
+        skip "Rust mpi_omp (no MPI)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -613,6 +732,23 @@ run_go() {
     else
         skip "Go mpi_cuda_oo (no MPI+CUDA)"
     fi
+
+    # omp
+    out=$(cd "$dir" && CGO_ENABLED=1 go run omp.go 2>&1) || true
+    verify_cpu "Go omp" "$out"
+
+    # mpi_omp
+    if [[ $HAS_MPI -eq 1 ]]; then
+        if (cd "$dir" && CGO_ENABLED=1 go build -o mpi_omp_bin mpi_omp.go 2>&1); then
+            out=$(mpirun --oversubscribe -np 4 "$dir/mpi_omp_bin" 2>&1) || true
+            verify_mpi "Go mpi_omp" "$out"
+            rm -f "$dir/mpi_omp_bin"
+        else
+            fail "Go mpi_omp (build)"
+        fi
+    else
+        skip "Go mpi_omp (no MPI)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -688,6 +824,18 @@ run_julia() {
         verify_mpi "Julia mpi_cuda_oo" "$out"
     else
         skip "Julia mpi_cuda_oo (no MPI+CUDA)"
+    fi
+
+    # omp
+    out=$(julia "$dir/omp.jl" 2>&1) || true
+    verify_cpu "Julia omp" "$out"
+
+    # mpi_omp
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 julia "$dir/mpi_omp.jl" 2>&1) || true
+        verify_mpi "Julia mpi_omp" "$out"
+    else
+        skip "Julia mpi_omp (no MPI)"
     fi
 }
 
@@ -775,6 +923,18 @@ run_r() {
     else
         skip "R mpi_cuda_oo (no MPI+CUDA)"
     fi
+
+    # omp
+    out=$(Rscript "$dir/omp.R" 2>&1) || true
+    verify_cpu "R omp" "$out"
+
+    # mpi_omp
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 Rscript "$dir/mpi_omp.R" 2>&1) || true
+        verify_mpi "R mpi_omp" "$out"
+    else
+        skip "R mpi_omp (no MPI)"
+    fi
 }
 
 # ═══════════════════════════════════════════════════════════════════
@@ -789,38 +949,67 @@ run_octave() {
     fi
 
     # Install octave package locally
-    local tarball="$ROOT/dress-graph-0.6.2.tar.gz"
-    if [[ ! -f "$tarball" ]]; then
-        echo "  Building Octave tarball ..."
-        bash "$ROOT/build.sh" octave 2>&1 | tail -1
-    fi
+    local version tarball pkg_base pkg_local pkg_arch
+    version=$(grep -oP '^Version: \K.*' "$ROOT/octave/DESCRIPTION")
+    tarball="$ROOT/dress-graph-${version}.tar.gz"
+    echo "  Building Octave tarball ..."
+    bash "$ROOT/build.sh" octave 2>&1 | tail -1
+    pkg_base=$(mktemp -d)
+    pkg_local="$pkg_base/local"
+    pkg_arch="$pkg_base/arch"
+    mkdir -p "$pkg_local" "$pkg_arch"
     echo "  Installing Octave package locally ..."
-    octave --eval "pkg install '$tarball'" 2>&1 | tail -3
+    octave --eval "pkg('prefix', '$pkg_local', '$pkg_arch'); pkg('install', '$tarball')" 2>&1 | tail -3
     echo "  ✓ installed locally"
 
     local dir="$ROOT/examples/octave"
     local out
+    local octave_has_cuda=0
+    local octave_has_mpi=0
+    local octave_has_mpi_cuda=0
+
+    if [[ $HAS_CUDA -eq 1 ]]; then
+        out=$(octave --no-gui --quiet --eval "
+            pkg('prefix', '$pkg_local', '$pkg_arch');
+            pkg load dress-graph;
+            fprintf('%d', exist('dress_cuda_mex', 'file') > 0);
+        " 2>&1) || true
+        [[ "$out" == *"1"* ]] && octave_has_cuda=1
+    fi
+
+    if [[ $HAS_MPI -eq 1 ]]; then
+        out=$(octave --no-gui --quiet --eval "
+            pkg('prefix', '$pkg_local', '$pkg_arch');
+            pkg load dress-graph;
+            fprintf('%d %d', exist('delta_dress_mpi_obj_mex', 'file') > 0, exist('delta_dress_mpi_cuda_obj_mex', 'file') > 0);
+        " 2>&1) || true
+        [[ "$out" == *"1"* ]] && octave_has_mpi=1
+        [[ "$out" == *"1 1"* ]] && octave_has_mpi_cuda=1
+    fi
 
     # cpu
     out=$(octave --no-gui --eval "
+        pkg('prefix', '$pkg_local', '$pkg_arch');
         pkg load dress-graph;
         run('$dir/cpu.m');
     " 2>&1) || true
     verify_cpu "Octave cpu" "$out"
 
     # cuda
-    if [[ $HAS_CUDA -eq 1 ]]; then
+    if [[ $HAS_CUDA -eq 1 && $octave_has_cuda -eq 1 ]]; then
         out=$(octave --no-gui --eval "
+            pkg('prefix', '$pkg_local', '$pkg_arch');
             pkg load dress-graph;
             run('$dir/cuda_example.m');
         " 2>&1) || true
         verify_cpu "Octave cuda" "$out"
     else
-        skip "Octave cuda (no CUDA)"
+        skip "Octave cuda (package has no CUDA MEX)"
     fi
 
     # rook vs shrikhande (delta-1)
     out=$(octave --no-gui --eval "
+        pkg('prefix', '$pkg_local', '$pkg_arch');
         pkg load dress-graph;
         run('$dir/rook_vs_shrikhande.m');
     " 2>&1) || true
@@ -830,10 +1019,37 @@ run_octave() {
 
     # cpu_oo
     out=$(octave --no-gui --eval "
+        pkg('prefix', '$pkg_local', '$pkg_arch');
         pkg load dress-graph;
         run('$dir/cpu_oo.m');
     " 2>&1) || true
     verify_cpu "Octave cpu_oo" "$out"
+
+    # mpi_oo
+    if [[ $HAS_MPI -eq 1 && $octave_has_mpi -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 octave --no-gui --eval "
+            pkg('prefix', '$pkg_local', '$pkg_arch');
+            pkg load dress-graph;
+            run('$dir/mpi_oo.m');
+        " 2>&1) || true
+        verify_mpi "Octave mpi_oo" "$out"
+    else
+        skip "Octave mpi_oo (package has no MPI MEX)"
+    fi
+
+    # mpi_cuda_oo
+    if [[ $HAS_MPI -eq 1 && $HAS_CUDA -eq 1 && $octave_has_cuda -eq 1 && $octave_has_mpi_cuda -eq 1 ]]; then
+        out=$(mpirun --oversubscribe -np 4 octave --no-gui --eval "
+            pkg('prefix', '$pkg_local', '$pkg_arch');
+            pkg load dress-graph;
+            run('$dir/mpi_cuda_oo.m');
+        " 2>&1) || true
+        verify_mpi "Octave mpi_cuda_oo" "$out"
+    else
+        skip "Octave mpi_cuda_oo (package has no MPI+CUDA MEX)"
+    fi
+
+    rm -rf "$pkg_base"
 }
 
 # ═══════════════════════════════════════════════════════════════════

@@ -8,8 +8,12 @@
  */
 
 #include "mex.h"
-#if !defined(__OCTAVE__) && !defined(OCTAVE_MEX_FILE)
-#include "matrix.h"
+#if defined(__has_include)
+#  if __has_include("matrix.h")
+#    include "matrix.h"
+#  endif
+#else
+#  include "matrix.h"
 #endif
 #include "dress/dress.h"
 
@@ -46,7 +50,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     E = (int)mxGetNumberOfElements(prhs[1]);
 
-    /* Allocate copies (init_dress_graph takes ownership). */
+    /* Allocate copies (dress_init_graph takes ownership). */
     U = (int *)malloc(E * sizeof(int));
     V = (int *)malloc(E * sizeof(int));
     if (!U || !V) {
@@ -73,11 +77,11 @@ void mexFunction(int nlhs, mxArray *plhs[],
         memcpy(W, mxGetPr(prhs[3]), E * sizeof(double));
     }
 
-    p_dress_graph_t g = init_dress_graph(N, E, U, V, W,
-                                         (dress_variant_t)variant_val,
+    p_dress_graph_t g = dress_init_graph(N, E, U, V, W,
+                                         NULL, (dress_variant_t)variant_val,
                                          precompute);
     if (!g) {
-        mexErrMsgIdAndTxt("dress:initFailed", "init_dress_graph returned NULL.");
+        mexErrMsgIdAndTxt("dress:initFailed", "dress_init_graph returned NULL.");
     }
 
     /* Return pointer as uint64 */

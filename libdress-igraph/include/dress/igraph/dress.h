@@ -61,6 +61,8 @@ typedef struct dress_result_igraph_t {
  *   weight_attr  — name of an edge attribute holding weights, or NULL
  *                  for unweighted graphs. If the attribute does not
  *                  exist on an edge, weight 1.0 is used.
+ *   node_weight_attr — name of a vertex attribute holding node weights,
+ *                  or NULL for uniform node weights (all 1.0).
  *   variant      — DRESS_VARIANT_UNDIRECTED / DIRECTED / FORWARD / BACKWARD
  *   max_iters    — maximum fitting iterations
  *   epsilon      — convergence threshold
@@ -71,6 +73,7 @@ typedef struct dress_result_igraph_t {
  */
 int dress_fit_igraph(const igraph_t *graph,
                      const char *weight_attr,
+                     const char *node_weight_attr,
                      dress_variant_t variant,
                      int max_iters,
                      double epsilon,
@@ -100,8 +103,10 @@ int dress_to_vector_igraph(const dress_result_igraph_t *result,
 /* ------------------------------------------------------------------ */
 
 typedef struct delta_dress_result_igraph_t {
-    int64_t *histogram;  /* [hist_size] bin counts (caller frees via delta_free) */
-    int      hist_size;  /* number of bins = floor(dmax/epsilon) + 1 (dmax=2 unweighted) */
+    dress_hist_pair_t *histogram;  /* [hist_size] sparse exact histogram entries */
+    int                hist_size;  /* number of exact histogram entries */
+    double            *multisets;  /* [num_subgraphs * E] row-major, NaN = removed; NULL when not requested */
+    int64_t            num_subgraphs; /* C(N,k) */
 } delta_dress_result_igraph_t;
 
 /* ------------------------------------------------------------------ */
@@ -109,29 +114,36 @@ typedef struct delta_dress_result_igraph_t {
 /* ------------------------------------------------------------------ */
 
 /*
- * delta_dress_fit_igraph
+ * dress_delta_fit_igraph
  *
  * Run Δ^k-DRESS on an igraph graph and write results into `result`.
  *
  * Parameters:
  *   graph        — pointer to a valid igraph_t (not modified)
  *   weight_attr  — name of an edge attribute holding weights, or NULL
+ *   node_weight_attr — name of a vertex attribute holding node weights,
+ *                  or NULL for uniform node weights (all 1.0).
  *   variant      — DRESS_VARIANT_UNDIRECTED / DIRECTED / FORWARD / BACKWARD
  *   k            — deletion depth: vertices removed per subset
  *   max_iters    — maximum DRESS iterations per subgraph
- *   epsilon      — convergence threshold and histogram bin width
+ *   epsilon      — convergence threshold for the per-subgraph DRESS fits
  *   precompute   — 1 to precompute neighborhood intercepts, 0 otherwise
  *   result       — output struct (caller-allocated, contents filled in)
  *
  * Returns 0 on success, non-zero on error.
  */
-int delta_dress_fit_igraph(const igraph_t *graph,
+int dress_delta_fit_igraph(const igraph_t *graph,
                            const char *weight_attr,
+                           const char *node_weight_attr,
                            dress_variant_t variant,
                            int k,
                            int max_iters,
                            double epsilon,
+                           int n_samples,
+                           unsigned int seed,
                            int precompute,
+                           int keep_multisets,
+                           int compute_histogram,
                            delta_dress_result_igraph_t *result);
 
 /*
@@ -145,9 +157,10 @@ void delta_dress_free_igraph(delta_dress_result_igraph_t *result);
 /*
  * delta_dress_to_vector_igraph
  *
- * Copy the histogram from a delta result into an igraph_vector_t,
- * ordered by bin index [0..hist_size-1].  The igraph_vector_t must be
- * initialized by the caller.
+ * Copy the sparse exact histogram from a delta result into an
+ * igraph_vector_t as interleaved value/count pairs:
+ *   [value0, count0, value1, count1, ...]
+ * The igraph_vector_t must be initialized by the caller.
  */
 int delta_dress_to_vector_igraph(const delta_dress_result_igraph_t *result,
                                  igraph_vector_t *out);
@@ -156,13 +169,13 @@ int delta_dress_to_vector_igraph(const delta_dress_result_igraph_t *result,
 }
 #endif
 
-/* ── Convenience macros — call dress_fit() / delta_dress_fit() etc.
+/* ── Convenience macros — call dress_fit() / dress_delta_fit() etc.
       as with the core API; the igraph backend is transparent. ───── */
 
 #define dress_fit             dress_fit_igraph
 #define dress_free            dress_free_igraph
 #define dress_to_vector       dress_to_vector_igraph
-#define delta_dress_fit       delta_dress_fit_igraph
+#define dress_delta_fit       dress_delta_fit_igraph
 #define delta_dress_free      delta_dress_free_igraph
 #define delta_dress_to_vector delta_dress_to_vector_igraph
 

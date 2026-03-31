@@ -16,7 +16,7 @@ Fortran communicator handle via ``comm.py2f()``.
 
 Module-level functions are also available::
 
-    from dress.mpi.cuda import delta_dress_fit
+    from dress.mpi.cuda import delta_fit
 """
 
 import ctypes
@@ -24,8 +24,8 @@ import os
 import numpy as np
 
 from dress import UNDIRECTED
-from dress.core import DeltaDRESSResult
-from dress._ctypes_helpers import _DressGraph, _p_dress_graph_t, _malloc_array
+from dress.core import DeltaDRESSResult, NablaDRESSResult
+from dress._ctypes_helpers import _DressGraph, _DressHistPair, _p_dress_graph_t, _malloc_array
 
 # ---------------------------------------------------------------------------
 #  Lazy-load libdress.so (with MPI + CUDA support)
@@ -103,8 +103,11 @@ def _build_cuda_so():
     cc = os.environ.get('CC', 'gcc')
     c_srcs = [
         os.path.join(src, 'dress.c'),
+        os.path.join(src, 'dress_histogram.c'),
         os.path.join(src, 'delta_dress.c'),
         os.path.join(src, 'delta_dress_impl.c'),
+        os.path.join(src, 'omp', 'dress_omp.c'),
+        os.path.join(src, 'omp', 'delta_dress_omp.c'),
         os.path.join(cuda_dir, 'delta_dress_cuda.c'),
         os.path.join(src, 'mpi', 'dress_mpi.c'),
     ]
@@ -122,7 +125,7 @@ def _build_cuda_so():
 def _has_mpi_symbols(lib):
     """Check if a loaded .so contains the MPI+CUDA entry point."""
     try:
-        lib.delta_dress_fit_mpi_cuda_fcomm
+        lib.dress_delta_fit_mpi_cuda_fcomm
         return True
     except AttributeError:
         return False
@@ -157,39 +160,60 @@ def _get_lib():
     # The .so contains everything (CPU + CUDA + MPI), so lib == _cuda_lib
     lib = _cuda_lib
 
-    lib.init_dress_graph.restype = _p_dress_graph_t
-    lib.init_dress_graph.argtypes = [
+    lib.dress_init_graph.restype = _p_dress_graph_t
+    lib.dress_init_graph.argtypes = [
         ctypes.c_int, ctypes.c_int,
         ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_double),
         ctypes.POINTER(ctypes.c_double),
         ctypes.c_int, ctypes.c_int,
     ]
 
-    _cuda_lib.delta_dress_fit_mpi_cuda_fcomm.restype = ctypes.POINTER(ctypes.c_int64)
-    _cuda_lib.delta_dress_fit_mpi_cuda_fcomm.argtypes = [
+    _cuda_lib.dress_delta_fit_mpi_cuda_fcomm.restype = ctypes.POINTER(_DressHistPair)
+    _cuda_lib.dress_delta_fit_mpi_cuda_fcomm.argtypes = [
         _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+        ctypes.c_int, ctypes.c_uint,
         ctypes.POINTER(ctypes.c_int), ctypes.c_int,
         ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
         ctypes.POINTER(ctypes.c_int64),
         ctypes.c_int,
     ]
 
-    lib.free_dress_graph.restype = None
-    lib.free_dress_graph.argtypes = [_p_dress_graph_t]
+    _cuda_lib.dress_nabla_fit_mpi_cuda_fcomm.restype = ctypes.POINTER(_DressHistPair)
+    _cuda_lib.dress_nabla_fit_mpi_cuda_fcomm.argtypes = [
+        _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+        ctypes.c_int, ctypes.c_uint,
+        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
+        ctypes.POINTER(ctypes.c_int64),
+        ctypes.c_int,
+    ]
+
+    lib.dress_free_graph.restype = None
+    lib.dress_free_graph.argtypes = [_p_dress_graph_t]
 
     _lib = lib
     return _lib
+
+
+def _decode_histogram(hist_ptr, size, lib):
+    if not hist_ptr or size == 0:
+        return []
+    pairs = np.ctypeslib.as_array(hist_ptr, shape=(size,)).copy()
+    lib.free(hist_ptr)
+    return [(float(pair["value"]), int(pair["count"])) for pair in pairs]
 
 
 # ---------------------------------------------------------------------------
 #  Public API
 # ---------------------------------------------------------------------------
 
-def delta_dress_fit(
+def delta_fit(
     n_vertices,
     sources,
     targets,
     weights=None,
+    node_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -197,6 +221,9 @@ def delta_dress_fit(
     precompute=False,
     keep_multisets=False,
     comm=None,
+    n_samples=0,
+    seed=0,
+    compute_histogram=True,
 ):
     """MPI-distributed Δ^k-DRESS (CUDA backend).
 
@@ -208,7 +235,7 @@ def delta_dress_fit(
     ----------
     comm : mpi4py.MPI.Comm, optional
         MPI communicator (default: ``MPI.COMM_WORLD``).
-    All other parameters are identical to :func:`dress.cuda.delta_dress_fit`.
+    All other parameters are identical to :func:`dress.cuda.dress_delta_fit`.
     """
     from mpi4py import MPI as MPI4PY
     if comm is None:
@@ -228,7 +255,12 @@ def delta_dress_fit(
     else:
         p_W = ctypes.POINTER(ctypes.c_double)()
 
-    g = lib.init_dress_graph(n_vertices, E, p_U, p_V, p_W,
+    if node_weights is not None:
+        p_NW = _malloc_array([float(x) for x in node_weights], ctypes.c_double)
+    else:
+        p_NW = ctypes.POINTER(ctypes.c_double)()
+
+    g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(int(variant)),
                              ctypes.c_int(int(precompute)))
 
@@ -236,9 +268,10 @@ def delta_dress_fit(
     num_subgraphs = ctypes.c_int64(0)
     multisets_ptr = ctypes.POINTER(ctypes.c_double)()
 
-    hist_ptr = _cuda_lib.delta_dress_fit_mpi_cuda_fcomm(
+    hist_ptr = _cuda_lib.dress_delta_fit_mpi_cuda_fcomm(
         g, k, max_iterations, ctypes.c_double(epsilon),
-        ctypes.byref(hist_size),
+        n_samples, ctypes.c_uint(seed),
+        ctypes.byref(hist_size) if compute_histogram else None,
         1 if keep_multisets else 0,
         ctypes.byref(multisets_ptr),
         ctypes.byref(num_subgraphs),
@@ -246,10 +279,7 @@ def delta_dress_fit(
 
     size = hist_size.value
     ns = num_subgraphs.value
-    histogram = []
-    if hist_ptr and size > 0:
-        histogram = np.ctypeslib.as_array(hist_ptr, shape=(size,)).copy().tolist()
-        lib.free(hist_ptr)
+    histogram = _decode_histogram(hist_ptr, size, lib)
 
     ms = None
     if keep_multisets and multisets_ptr and ns > 0:
@@ -258,13 +288,101 @@ def delta_dress_fit(
         ms = flat.reshape(ns, E)
         lib.free(multisets_ptr)
 
-    lib.free_dress_graph(g)
+    lib.dress_free_graph(g)
 
     return DeltaDRESSResult(
         histogram=histogram,
-        hist_size=size,
         multisets=ms,
         num_subgraphs=ns,
+    )
+
+
+def nabla_fit(
+    n_vertices,
+    sources,
+    targets,
+    weights=None,
+    node_weights=None,
+    k=0,
+    variant=UNDIRECTED,
+    max_iterations=100,
+    epsilon=1e-6,
+    precompute=False,
+    keep_multisets=False,
+    comm=None,
+    n_samples=0,
+    seed=0,
+    compute_histogram=True,
+):
+    """MPI-distributed ∇^k-DRESS (CUDA backend).
+
+    All MPI logic (stride partitioning + Allreduce) runs in C.
+    Each rank runs GPU-accelerated DRESS on its slice of tuples.
+    Uses ``comm.py2f()`` to pass the Fortran MPI handle.
+
+    Parameters
+    ----------
+    comm : mpi4py.MPI.Comm, optional
+        MPI communicator (default: ``MPI.COMM_WORLD``).
+    All other parameters are identical to :func:`dress.cuda.dress_nabla_fit`.
+    """
+    from mpi4py import MPI as MPI4PY
+    if comm is None:
+        comm = MPI4PY.COMM_WORLD
+    comm_f = comm.py2f()
+
+    lib = _get_lib()
+    sources = list(sources)
+    targets = list(targets)
+    E = len(sources)
+
+    p_U = _malloc_array([int(x) for x in sources], ctypes.c_int)
+    p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
+
+    if weights is not None:
+        p_W = _malloc_array([float(x) for x in weights], ctypes.c_double)
+    else:
+        p_W = ctypes.POINTER(ctypes.c_double)()
+
+    if node_weights is not None:
+        p_NW = _malloc_array([float(x) for x in node_weights], ctypes.c_double)
+    else:
+        p_NW = ctypes.POINTER(ctypes.c_double)()
+
+    g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
+                             ctypes.c_int(int(variant)),
+                             ctypes.c_int(int(precompute)))
+
+    hist_size = ctypes.c_int(0)
+    num_tuples = ctypes.c_int64(0)
+    multisets_ptr = ctypes.POINTER(ctypes.c_double)()
+
+    hist_ptr = _cuda_lib.dress_nabla_fit_mpi_cuda_fcomm(
+        g, k, max_iterations, ctypes.c_double(epsilon),
+        n_samples, ctypes.c_uint(seed),
+        ctypes.byref(hist_size) if compute_histogram else None,
+        1 if keep_multisets else 0,
+        ctypes.byref(multisets_ptr),
+        ctypes.byref(num_tuples),
+        ctypes.c_int(comm_f))
+
+    size = hist_size.value
+    ns = num_tuples.value
+    histogram = _decode_histogram(hist_ptr, size, lib)
+
+    ms = None
+    if keep_multisets and multisets_ptr and ns > 0:
+        total = ns * E
+        flat = np.ctypeslib.as_array(multisets_ptr, shape=(total,)).copy()
+        ms = flat.reshape(ns, E)
+        lib.free(multisets_ptr)
+
+    lib.dress_free_graph(g)
+
+    return NablaDRESSResult(
+        histogram=histogram,
+        multisets=ms,
+        num_tuples=ns,
     )
 
 
@@ -295,22 +413,42 @@ class DRESS(_BaseDRESS):
     _force_python_impl = True
 
     def fit(self, max_iterations=100, epsilon=1e-6):
-        from dress.cuda import dress_fit as _cuda_fit
+        from dress.cuda import fit as _cuda_fit
         result = _cuda_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
         )
         self._sync_hardware_fit(result)
         return _FitResult(iterations=result.iterations, delta=result.delta)
 
     def delta_fit(self, k=0, max_iterations=100, epsilon=1e-6,
-                  keep_multisets=False, comm=None):
-        return delta_dress_fit(
+                  n_samples=0, seed=0,
+                  keep_multisets=False, compute_histogram=True,
+                  comm=None):
+        return delta_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, k=k, variant=int(self._var),
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
+        )
+
+    def nabla_fit(self, k=0, max_iterations=100, epsilon=1e-6,
+                  n_samples=0, seed=0,
+                  keep_multisets=False, compute_histogram=True,
+                  comm=None):
+        return nabla_fit(
+            self._n_v, self._src, self._tgt,
+            weights=self._wgt, node_weights=self._nwgt,
+            k=k, variant=int(self._var),
+            max_iterations=max_iterations, epsilon=epsilon,
+            keep_multisets=keep_multisets, comm=comm,
+            n_samples=n_samples, seed=seed,
+            compute_histogram=compute_histogram,
         )
 
     def __repr__(self):

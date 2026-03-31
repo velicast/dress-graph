@@ -88,7 +88,7 @@
 <!-- Load Emscripten glue (must be built first: bash build.sh) -->
 <script src="dress_wasm.js"></script>
 <script type="module">
-import { dressFit, Variant } from './dress.js';
+import { fit, Variant } from './dress.js';
 
 const runBtn     = document.getElementById('runBtn');
 const statusEl   = document.getElementById('status');
@@ -99,7 +99,7 @@ const resultsEl  = document.getElementById('results');
 // Wait for WASM to be ready
 try {
     // Trigger module load
-    await dressFit({ numVertices: 2, sources: [0], targets: [1], maxIterations: 1 });
+    await fit({ numVertices: 2, sources: [0], targets: [1], maxIterations: 1 });
     runBtn.disabled = false;
     runBtn.textContent = 'Run DRESS';
     statusEl.textContent = 'WASM module loaded.';
@@ -138,7 +138,7 @@ runBtn.addEventListener('click', async () => {
         const N = (nv && nv > 0) ? nv : (Math.max(...sources, ...targets) + 1);
 
         const t0 = performance.now();
-        const r = await dressFit({
+        const r = await fit({
             numVertices: N,
             sources:     new Int32Array(sources),
             targets:     new Int32Array(targets),
