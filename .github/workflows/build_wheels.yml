@@ -25,12 +25,12 @@ jobs:
         shell: bash
         run: |
           VENDOR="python/src/dress/_vendored"
-          mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/src/cuda" "$VENDOR/src/mpi"
+          mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/include/dress/omp" "$VENDOR/src/cuda" "$VENDOR/src/mpi" "$VENDOR/src/omp"
 
           # C headers
           cp libdress/include/dress/dress.h             "$VENDOR/include/dress/"
-          cp libdress/include/dress/delta_dress.h       "$VENDOR/include/dress/"
           cp libdress/include/dress/cuda/dress_cuda.h   "$VENDOR/include/dress/cuda/"
+          cp libdress/include/dress/omp/dress_omp.h     "$VENDOR/include/dress/omp/"
 
           # C++ header-only wrapper
           cp libdress++/include/dress/dress.hpp         "$VENDOR/include/dress/"
@@ -40,10 +40,21 @@ jobs:
           cp libdress/src/delta_dress.c                 "$VENDOR/src/"
           cp libdress/src/delta_dress_impl.c            "$VENDOR/src/"
           cp libdress/src/delta_dress_impl.h            "$VENDOR/src/"
+          cp libdress/src/nabla_dress.c                 "$VENDOR/src/"
+          cp libdress/src/nabla_dress_impl.c            "$VENDOR/src/"
+          cp libdress/src/nabla_dress_impl.h            "$VENDOR/src/"
+          cp libdress/src/dress_histogram.c             "$VENDOR/src/"
+          cp libdress/src/dress_histogram.h             "$VENDOR/src/"
+
+          # OMP sources
+          cp libdress/src/omp/dress_omp.c               "$VENDOR/src/omp/"
+          cp libdress/src/omp/delta_dress_omp.c         "$VENDOR/src/omp/"
+          cp libdress/src/omp/nabla_dress_omp.c         "$VENDOR/src/omp/"
 
           # CUDA / MPI sources (for auto-build on user machines with nvcc)
           cp libdress/src/cuda/dress_cuda.cu            "$VENDOR/src/cuda/"
           cp libdress/src/cuda/delta_dress_cuda.c       "$VENDOR/src/cuda/"
+          cp libdress/src/cuda/nabla_dress_cuda.c       "$VENDOR/src/cuda/"
           cp libdress/src/mpi/dress_mpi.c               "$VENDOR/src/mpi/"
 
       - uses: actions/setup-python@v5
@@ -150,14 +161,27 @@ jobs:
       - name: Vendor C/C++ sources into python package
         run: |
           VENDOR="python/src/dress/_vendored"
-          mkdir -p "$VENDOR/include/dress" "$VENDOR/src"
+          mkdir -p "$VENDOR/include/dress/cuda" "$VENDOR/include/dress/omp" "$VENDOR/src/cuda" "$VENDOR/src/mpi" "$VENDOR/src/omp"
           cp libdress/include/dress/dress.h         "$VENDOR/include/dress/"
-          cp libdress/include/dress/delta_dress.h   "$VENDOR/include/dress/"
+          cp libdress/include/dress/cuda/dress_cuda.h "$VENDOR/include/dress/cuda/"
+          cp libdress/include/dress/omp/dress_omp.h "$VENDOR/include/dress/omp/"
           cp libdress++/include/dress/dress.hpp     "$VENDOR/include/dress/"
           cp libdress/src/dress.c                   "$VENDOR/src/"
           cp libdress/src/delta_dress.c             "$VENDOR/src/"
           cp libdress/src/delta_dress_impl.c        "$VENDOR/src/"
           cp libdress/src/delta_dress_impl.h        "$VENDOR/src/"
+          cp libdress/src/nabla_dress.c             "$VENDOR/src/"
+          cp libdress/src/nabla_dress_impl.c        "$VENDOR/src/"
+          cp libdress/src/nabla_dress_impl.h        "$VENDOR/src/"
+          cp libdress/src/dress_histogram.c         "$VENDOR/src/"
+          cp libdress/src/dress_histogram.h         "$VENDOR/src/"
+          cp libdress/src/omp/dress_omp.c           "$VENDOR/src/omp/"
+          cp libdress/src/omp/delta_dress_omp.c     "$VENDOR/src/omp/"
+          cp libdress/src/omp/nabla_dress_omp.c     "$VENDOR/src/omp/"
+          cp libdress/src/cuda/dress_cuda.cu        "$VENDOR/src/cuda/"
+          cp libdress/src/cuda/delta_dress_cuda.c   "$VENDOR/src/cuda/"
+          cp libdress/src/cuda/nabla_dress_cuda.c   "$VENDOR/src/cuda/"
+          cp libdress/src/mpi/dress_mpi.c           "$VENDOR/src/mpi/"
 
       - uses: actions/setup-python@v5
         with:
