@@ -185,7 +185,7 @@ class TestMultisets:
         ms = np.asarray(r.multisets)
         assert ms.shape == (3, 3)
         for row_i in range(3):
-            # Each row should have exactly 2 NaNs (edges connected to removed node)
+            # Each row should have exactly 2 NaNs (edges connected to removed vertex)
             nans = np.isnan(ms[row_i]).sum()
             assert nans == 2
 
@@ -199,7 +199,7 @@ class TestStringNodes:
         assert total == G.number_of_edges()
 
     def test_string_labels(self):
-        """Works with arbitrary string node labels."""
+        """Works with arbitrary string vertex labels."""
         G = nx.Graph()
         G.add_edges_from([("a", "b"), ("b", "c"), ("a", "c")])
         result = delta_dress_graph(G, k=0)

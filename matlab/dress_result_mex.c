@@ -7,7 +7,7 @@
  *
  * ptr is the uint64 handle from dress_init_mex.
  * Returns a struct with fields: sources, targets, edge_dress,
- *                               edge_weight, node_dress.
+ *                               edge_weight, vertex_dress.
  */
 
 #include "mex.h"
@@ -28,7 +28,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 {
     p_dress_graph_t g;
     const char *field_names[] = {
-        "sources", "targets", "edge_dress", "edge_weight", "node_dress"
+        "sources", "targets", "edge_dress", "edge_weight", "vertex_dress"
     };
     mxArray *m_src, *m_tgt, *m_dress, *m_weight, *m_node;
 
@@ -51,7 +51,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     memcpy(mxGetData(m_tgt),    g->V,          g->E * sizeof(int));
     memcpy(mxGetPr(m_dress),    g->edge_dress, g->E * sizeof(double));
     memcpy(mxGetPr(m_weight),   g->edge_weight,g->E * sizeof(double));
-    memcpy(mxGetPr(m_node),     g->node_dress, g->N * sizeof(double));
+    memcpy(mxGetPr(m_node),     g->vertex_dress, g->N * sizeof(double));
 
     mxSetFieldByNumber(plhs[0], 0, 0, m_src);
     mxSetFieldByNumber(plhs[0], 0, 1, m_tgt);

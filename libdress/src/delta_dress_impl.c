@@ -39,25 +39,25 @@ static p_dress_graph_t delta_build_subgraph(p_dress_graph_t g,
     int sub_N = N - k;
 
     /* Map old vertex id -> new id (-1 = deleted). */
-    int *node_map = (int *)malloc(N * sizeof(int));
+    int *vertex_map = (int *)malloc(N * sizeof(int));
     int di = 0, new_id = 0;
     for (int v = 0; v < N; v++) {
         if (di < k && v == del[di]) {
-            node_map[v] = -1;
+            vertex_map[v] = -1;
             di++;
         } else {
-            node_map[v] = new_id++;
+            vertex_map[v] = new_id++;
         }
     }
 
     /* Count surviving edges. */
     int sub_E = 0;
     for (int e = 0; e < E; e++) {
-        if (node_map[g->U[e]] >= 0 && node_map[g->V[e]] >= 0)
+        if (vertex_map[g->U[e]] >= 0 && vertex_map[g->V[e]] >= 0)
             sub_E++;
     }
 
-    free(node_map);
+    free(vertex_map);
 
     if (sub_E == 0) {
         if (edge_map) {
@@ -67,14 +67,14 @@ static p_dress_graph_t delta_build_subgraph(p_dress_graph_t g,
     }
 
     /* Rebuild mapping (two-pass keeps hot path lean). */
-    node_map = (int *)malloc(N * sizeof(int));
+    vertex_map = (int *)malloc(N * sizeof(int));
     di = 0; new_id = 0;
     for (int v = 0; v < N; v++) {
         if (di < k && v == del[di]) {
-            node_map[v] = -1;
+            vertex_map[v] = -1;
             di++;
         } else {
-            node_map[v] = new_id++;
+            vertex_map[v] = new_id++;
         }
     }
 
@@ -86,8 +86,8 @@ static p_dress_graph_t delta_build_subgraph(p_dress_graph_t g,
         sub_W = (double *)malloc(sub_E * sizeof(double));
     int idx = 0;
     for (int e = 0; e < E; e++) {
-        int mu = node_map[g->U[e]];
-        int mv = node_map[g->V[e]];
+        int mu = vertex_map[g->U[e]];
+        int mv = vertex_map[g->V[e]];
         if (mu >= 0 && mv >= 0) {
             sub_U[idx] = mu;
             sub_V[idx] = mv;
@@ -99,7 +99,7 @@ static p_dress_graph_t delta_build_subgraph(p_dress_graph_t g,
         }
     }
 
-    free(node_map);
+    free(vertex_map);
 
     return dress_init_graph(sub_N, sub_E, sub_U, sub_V,
                             sub_W, NULL, g->variant,
@@ -149,18 +149,7 @@ int64_t dress_delta_binom(int n, int k)
 
 /* ── Sampling helpers ─────────────────────────────────────────────── */
 
-/* Portable rand_r: MSVC lacks POSIX rand_r. */
-#ifdef _MSC_VER
-static int dress_rand_r(unsigned int *seed)
-{
-    *seed = *seed * 1103515245u + 12345u;
-    return (int)((*seed >> 16) & 0x7fff);
-}
-#else
-#define dress_rand_r rand_r
-#endif
-
-/* 64-bit random from two rand_r calls. */
+/* 64-bit random from two dress_rand_r calls. */
 static int64_t delta_rand64(unsigned int *seed, int64_t bound)
 {
     int64_t r = ((int64_t)dress_rand_r(seed) << 31) | (int64_t)dress_rand_r(seed);
@@ -203,9 +192,14 @@ int64_t *dress_delta_fit_impl_flat(p_dress_graph_t g, int k,
     int wants_ms = keep_multisets && multisets;
     double *ms = NULL;
     if (wants_ms) {
-        ms = (double *)calloc((size_t)cnk * E, sizeof(double));
-        *multisets = ms;
-        if (!ms) wants_ms = 0;
+        size_t ms_len = (size_t)cnk * E;
+        ms = (double *)malloc(ms_len * sizeof(double));
+        if (ms) {
+            for (size_t i = 0; i < ms_len; i++) ms[i] = NAN;
+            *multisets = ms;
+        } else {
+            wants_ms = 0;
+        }
     }
 
     /* ── k = 0: Δ^0 — run DRESS on the full graph ──────────────── */

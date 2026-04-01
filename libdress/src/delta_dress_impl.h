@@ -13,6 +13,17 @@
 #include "dress/dress.h"
 #include <stdint.h>
 
+/* ── Portable thread-safe RNG ────────────────────────────────────
+ * Replaces POSIX rand_r to avoid CRAN NOTE about system RNGs and
+ * to work on Windows MSVC.  Defined in the header (static inline)
+ * so both delta and nabla impl files share a single definition
+ * even when compiled into the same translation unit (Go CGo). */
+static inline int dress_rand_r(unsigned int *seed)
+{
+    *seed = *seed * 1103515245u + 12345u;
+    return (int)((*seed >> 16) & 0x7fff);
+}
+
 /* Fit-function signature: same as dress_fit / dress_fit_cuda. */
 typedef void (*dress_fit_fn)(p_dress_graph_t, int, double, int *, double *);
 

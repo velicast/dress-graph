@@ -38,7 +38,7 @@ omp <- local({
                             sources,
                             targets,
                             weights              = NULL,
-                            node_weights         = NULL,
+                            vertex_weights         = NULL,
                             variant              = DRESS_UNDIRECTED,
                             max_iterations       = 100L,
                             epsilon              = 1e-6,
@@ -63,13 +63,13 @@ omp <- local({
       stopifnot(length(weights) == length(sources))
     }
 
-    if (!is.null(node_weights)) {
-      node_weights <- as.double(node_weights)
-      stopifnot(length(node_weights) == n_vertices)
+    if (!is.null(vertex_weights)) {
+      vertex_weights <- as.double(vertex_weights)
+      stopifnot(length(vertex_weights) == n_vertices)
     }
 
     .Call(C_dress_fit_omp,
-          n_vertices, sources, targets, weights, node_weights,
+          n_vertices, sources, targets, weights, vertex_weights,
           variant, max_iterations, epsilon, precompute)
   }
 
@@ -77,7 +77,7 @@ omp <- local({
                                   sources,
                                   targets,
                                   weights          = NULL,
-                                  node_weights     = NULL,
+                                  vertex_weights     = NULL,
                                   k                = 0L,
                                   variant          = DRESS_UNDIRECTED,
                                   max_iterations   = 100L,
@@ -89,7 +89,7 @@ omp <- local({
     sources        <- as.integer(sources)
     targets        <- as.integer(targets)
     if (!is.null(weights)) weights <- as.double(weights)
-    if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+    if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
     k              <- as.integer(k)
     variant        <- as.integer(variant)
     max_iterations <- as.integer(max_iterations)
@@ -99,7 +99,7 @@ omp <- local({
 
     stopifnot(length(sources) == length(targets))
     if (!is.null(weights)) stopifnot(length(weights) == length(sources))
-    if (!is.null(node_weights)) stopifnot(length(node_weights) == n_vertices)
+    if (!is.null(vertex_weights)) stopifnot(length(vertex_weights) == n_vertices)
     stopifnot(n_vertices >= 1L)
     stopifnot(k >= 0L)
     stopifnot(variant >= 0L && variant <= 3L)
@@ -107,7 +107,7 @@ omp <- local({
     stopifnot(epsilon > 0)
 
     .Call(C_delta_dress_fit_omp,
-          n_vertices, sources, targets, weights, node_weights,
+          n_vertices, sources, targets, weights, vertex_weights,
           k, variant, max_iterations, epsilon,
           precompute, keep_multisets,
           0L, 1L)
@@ -117,7 +117,7 @@ omp <- local({
                                   sources,
                                   targets,
                                   weights          = NULL,
-                                  node_weights     = NULL,
+                                  vertex_weights     = NULL,
                                   k                = 0L,
                                   variant          = DRESS_UNDIRECTED,
                                   max_iterations   = 100L,
@@ -132,7 +132,7 @@ omp <- local({
     sources        <- as.integer(sources)
     targets        <- as.integer(targets)
     if (!is.null(weights)) weights <- as.double(weights)
-    if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+    if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
     k              <- as.integer(k)
     variant        <- as.integer(variant)
     max_iterations <- as.integer(max_iterations)
@@ -145,7 +145,7 @@ omp <- local({
 
     stopifnot(length(sources) == length(targets))
     if (!is.null(weights)) stopifnot(length(weights) == length(sources))
-    if (!is.null(node_weights)) stopifnot(length(node_weights) == n_vertices)
+    if (!is.null(vertex_weights)) stopifnot(length(vertex_weights) == n_vertices)
     stopifnot(n_vertices >= 1L)
     stopifnot(k >= 0L)
     stopifnot(variant >= 0L && variant <= 3L)
@@ -153,7 +153,7 @@ omp <- local({
     stopifnot(epsilon > 0)
 
     .Call(C_nabla_dress_fit_omp,
-          n_vertices, sources, targets, weights, node_weights,
+          n_vertices, sources, targets, weights, vertex_weights,
           k, variant, max_iterations, epsilon,
           n_samples, seed,
           precompute, keep_multisets,

@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.0] - 2026-03-31
+
+### Changed
+- **Terminology: node → vertex** (BREAKING): renamed all "node" references to "vertex" across the entire codebase for consistency with graph-theoretic convention. Affects all 9 language bindings, the C struct, C++ methods, docs, tests, and examples:
+  - C struct: `node_dress` → `vertex_dress`, `node_weights` → `vertex_weights` (in `dress_graph_t`)
+  - C++: `nodeDress()` → `vertexDress()`, `nodeDressValues()` → `vertexDressValues()`
+  - Python: `node_dress` → `vertex_dress`, `node_weights` → `vertex_weights`, `node_dress_values` → `vertex_dress_values` (result fields + DRESS class properties)
+  - Rust: `node_dress` → `vertex_dress`, `node_weights` → `vertex_weights` (in `DressResult`)
+  - Go: `NodeDress` → `VertexDress`, `NodeWeights` → `VertexWeights` (in `Result`)
+  - Julia: `node_dress` → `vertex_dress`, `node_weights` → `vertex_weights` (in `DRESSResult`)
+  - R: `node_dress` → `vertex_dress`, `node_weights` → `vertex_weights` (in result lists and function parameters)
+  - MATLAB/Octave: `.node_dress` → `.vertex_dress` (in result structs)
+  - WASM/JS: `nodeDress` → `vertexDress`, `nodeWeights` → `vertexWeights` (in result objects and options)
+  - igraph: `node_weight_attr` → `vertex_weight_attr`
+  - NetworkX: `dress_norm` attribute → `vertex_dress` attribute (written by `fit(G, set_attributes=True)`)
+  - All docs, comments, and docstrings updated: "per-node" → "per-vertex"
+
+### Fixed
+- **Windows MSVC wheel build**: added portable `rand_r` shim (`dress_rand_r`) for `delta_dress_impl.c` and `nabla_dress_impl.c` — POSIX `rand_r()` does not exist on Windows, causing linker failure `LNK2001: unresolved external symbol rand_r`
+- **CI wheel vendor step**: updated `build_wheels.yml` to include nabla sources (`nabla_dress.c`, `nabla_dress_impl.*`), histogram sources (`dress_histogram.*`), OMP sources, and removed deleted `delta_dress.h` — fixes wheel build failures on all three platforms
+- **R docs**: removed duplicated `\alias{dress_version}` from `fit.Rd` (now only in `dress_version.Rd`); removed stale `offset`/`stride` parameters from `delta_fit.Rd`
+- **Δᵏ-DRESS multiset NaN initialization**: the multisets matrix for `dress_delta_fit` is now initialized with `NaN` instead of zero (`calloc`), matching the `nabla` implementation. Previously, unsampled rows (when using `n_samples`) contained zeros, which were indistinguishable from legitimate edge values. Now unsampled rows are all-`NaN`, consistent with deleted-edge markers within sampled rows
+
 ## [0.7.0] - 2026-03-26
 
 ### Added
@@ -21,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   - R: `nabla_fit()` + `omp$nabla_fit()` + `cuda$nabla_fit()` + `mpi$nabla_fit()` + `mpi$cuda$nabla_fit()` + `mpi$omp$nabla_fit()`
   - MATLAB/Octave: `nabla_fit()` + `nabla_dress_mex` / `nabla_dress_omp_mex` / `nabla_dress_cuda_mex` MEX entry points
   - WASM: `nablaFit()` async function + `DRESS.nablaFit()` method
-- **Node weights** across the core API and language bindings: DRESS constructors and free-function wrappers now accept per-node weights while preserving the existing implicit all-ones default when node weights are omitted
+- **Node weights** across the core API and language bindings: DRESS constructors and free-function wrappers now accept per-vertex weights while preserving the existing implicit all-ones default when node weights are omitted
 - **Sampled Δᵏ-DRESS** (`n_samples`, `seed`): all `dress_delta_fit` variants now accept optional random sampling parameters, placed immediately after `epsilon` in every API. When `n_samples > 0`, only a random subset of the C(N,k) deletion subsets is evaluated (DFS pick-filter with sorted dedup). Sampling is available across all backends (CPU, OMP, CUDA, MPI, MPI+OMP, MPI+CUDA) and all language bindings (C, C++, Python, Rust, Go, Julia, R, MATLAB/Octave, WASM, igraph). Defaults: `n_samples=0` (exhaustive), `seed=0`
 - **Optional histogram** (`compute_histogram`): all `dress_delta_fit` variants accept a flag to skip histogram construction when only multisets are needed. In the C API, passing `NULL` for `hist_size` skips all histogram work. Exposed as `compute_histogram` (default `true`) in C++, Python, Rust, Go, Julia, R, MATLAB/Octave, WASM, and igraph bindings
 - **igraph multisets**: `delta_dress_result_igraph_t` now includes `multisets` and `num_subgraphs` fields; `dress_delta_fit_igraph` and all MPI igraph variants accept `keep_multisets` and `compute_histogram` parameters

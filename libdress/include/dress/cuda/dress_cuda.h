@@ -8,7 +8,7 @@
  *
  *   p_dress_graph_t g = dress_init_graph(N, E, U, V, W, variant, precompute);
  *   dress_fit_cuda(g, max_iterations, epsilon, &iterations, &delta);
- *   // g->edge_dress and g->node_dress are now populated
+ *   // g->edge_dress and g->vertex_dress are now populated
  *   dress_free_graph(g);
  *
  * Graph construction (dress_init_graph) stays on the CPU.
@@ -30,7 +30,7 @@ extern "C" {
  *
  * Same signature and semantics as the CPU dress_fit() in dress.h.
  * Uploads arrays to GPU, runs the iteration loop with CUDA kernels,
- * downloads edge_dress and node_dress back to the host.
+ * downloads edge_dress and vertex_dress back to the host.
  *
  * Supports all four variants (UNDIRECTED, DIRECTED, FORWARD, BACKWARD)
  * and both intercept / non-intercept code paths.

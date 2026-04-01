@@ -59,8 +59,8 @@ type Result struct {
 	Targets     []int32
 	EdgeWeight  []float64
 	EdgeDress   []float64
-	NodeDress   []float64
-	NodeWeights []float64
+	VertexDress   []float64
+	VertexWeights []float64
 	Iterations  int
 	Delta       float64
 }
@@ -114,7 +114,7 @@ func (r *NablaResult) String() string {
 // to MPI+OMP by changing only the import path. MPI distributes
 // subgraphs across ranks; within each rank, OpenMP threads
 // parallelise the subgraph slice.
-func DeltaFit(n int, sources, targets []int32, weights []float64, nodeWeights []float64,
+func DeltaFit(n int, sources, targets []int32, weights []float64, vertexWeights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	nSamples int, seed uint32,
 	precompute bool, keepMultisets bool, computeHistogram bool) (*DeltaResult, error) {
@@ -143,14 +143,14 @@ func DeltaFit(n int, sources, targets []int32, weights []float64, nodeWeights []
 	}
 
 	var nwPtr *C.double
-	if len(nodeWeights) > 0 {
-		if len(nodeWeights) != n {
-			return nil, fmt.Errorf("dress: node weights length (%d) != node count (%d)", len(nodeWeights), n)
+	if len(vertexWeights) > 0 {
+		if len(vertexWeights) != n {
+			return nil, fmt.Errorf("dress: vertex weights length (%d) != node count (%d)", len(vertexWeights), n)
 		}
 		nwPtr = (*C.double)(C.malloc(C.size_t(n) * C.size_t(unsafe.Sizeof(C.double(0)))))
 		nwSlice := unsafe.Slice(nwPtr, n)
 		for i := 0; i < n; i++ {
-			nwSlice[i] = C.double(nodeWeights[i])
+			nwSlice[i] = C.double(vertexWeights[i])
 		}
 	}
 
@@ -218,7 +218,7 @@ func DeltaFit(n int, sources, targets []int32, weights []float64, nodeWeights []
 // to MPI+OMP by changing only the import path. MPI distributes
 // tuples across ranks; within each rank, OpenMP threads
 // parallelise the tuple slice.
-func NablaFit(n int, sources, targets []int32, weights []float64, nodeWeights []float64,
+func NablaFit(n int, sources, targets []int32, weights []float64, vertexWeights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	nSamples int, seed uint32,
 	precompute bool, keepMultisets bool, computeHistogram bool) (*NablaResult, error) {
@@ -247,14 +247,14 @@ func NablaFit(n int, sources, targets []int32, weights []float64, nodeWeights []
 	}
 
 	var nwPtr *C.double
-	if len(nodeWeights) > 0 {
-		if len(nodeWeights) != n {
-			return nil, fmt.Errorf("dress: node weights length (%d) != node count (%d)", len(nodeWeights), n)
+	if len(vertexWeights) > 0 {
+		if len(vertexWeights) != n {
+			return nil, fmt.Errorf("dress: vertex weights length (%d) != node count (%d)", len(vertexWeights), n)
 		}
 		nwPtr = (*C.double)(C.malloc(C.size_t(n) * C.size_t(unsafe.Sizeof(C.double(0)))))
 		nwSlice := unsafe.Slice(nwPtr, n)
 		for i := 0; i < n; i++ {
-			nwSlice[i] = C.double(nodeWeights[i])
+			nwSlice[i] = C.double(vertexWeights[i])
 		}
 	}
 

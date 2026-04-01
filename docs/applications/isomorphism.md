@@ -74,7 +74,7 @@ This has three practical consequences:
 1. **Metric output.**  2-WL says "same or different"; DRESS says "how
    similar."  Every binary same/different test becomes a similarity
    query, and every color histogram becomes a real-valued distribution.
-2. **Edge granularity.**  2-WL assigns one color per node pair; DRESS assigns
+2. **Edge granularity.**  2-WL assigns one color per vertex pair; DRESS assigns
    one value per edge, giving a compact structural fingerprint.
 3. **Downstream utility.**  Continuous values can be thresholded, ranked,
    clustered, or fed directly into ML pipelines - none of which is possible

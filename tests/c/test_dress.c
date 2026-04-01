@@ -175,15 +175,15 @@ static void test_triangle_convergence(void)
     dress_free_graph(g);
 }
 
-static void test_node_weights_default(void)
+static void test_vertex_weights_default(void)
 {
-    printf("test_node_weights_default\n");
+    printf("test_vertex_weights_default\n");
 
     int src[] = {0, 1, 0};
     int dst[] = {1, 2, 2};
     int N = 3, E = 3;
 
-    // 1. Default (implicit All-1 node weights)
+    // 1. Default (implicit All-1 vertex weights)
     p_dress_graph_t g1 = dress_init_graph(
         N, E, dup_int(src, E), dup_int(dst, E),
         NULL, NULL,
@@ -191,7 +191,7 @@ static void test_node_weights_default(void)
 
     dress_fit(g1, 100, 1e-8, NULL, NULL);
 
-    // 2. Explicit All-1 node weights
+    // 2. Explicit All-1 vertex weights
     double nw[] = {1.0, 1.0, 1.0};
     double *nw_copy = (double *)malloc(N * sizeof(double));
     memcpy(nw_copy, nw, N * sizeof(double));
@@ -206,11 +206,11 @@ static void test_node_weights_default(void)
     int i;
     for (i = 0; i < E; i++) {
         ASSERT_NEAR(g1->edge_dress[i], g2->edge_dress[i], 1e-12,
-                    "default vs explicit node weights match (edge_dress)");
+                    "default vs explicit vertex weights match (edge_dress)");
     }
     for (i = 0; i < N; i++) {
-        ASSERT_NEAR(g1->node_dress[i], g2->node_dress[i], 1e-12,
-                    "default vs explicit node weights match (node_dress)");
+        ASSERT_NEAR(g1->vertex_dress[i], g2->vertex_dress[i], 1e-12,
+                    "default vs explicit vertex weights match (vertex_dress)");
     }
 
     dress_free_graph(g1);
@@ -316,9 +316,9 @@ static void test_fit_with_intercepts(void)
     dress_free_graph(g2);
 }
 
-static void test_node_dress(void)
+static void test_vertex_dress(void)
 {
-    printf("test_node_dress\n");
+    printf("test_vertex_dress\n");
 
     int src[] = {0, 1, 0};
     int dst[] = {1, 2, 2};
@@ -330,12 +330,12 @@ static void test_node_dress(void)
 
     dress_fit(g, 100, 1e-8, NULL, NULL);
 
-    /* All nodes in K3 have the same degree and structure → same node_dress. */
-    ASSERT_GT(g->node_dress[0], 0.0, "node_dress[0] > 0");
-    ASSERT_NEAR(g->node_dress[0], g->node_dress[1], 1e-6,
-                "node_dress[0] == node_dress[1]");
-    ASSERT_NEAR(g->node_dress[0], g->node_dress[2], 1e-6,
-                "node_dress[0] == node_dress[2]");
+    /* All nodes in K3 have the same degree and structure → same vertex_dress. */
+    ASSERT_GT(g->vertex_dress[0], 0.0, "vertex_dress[0] > 0");
+    ASSERT_NEAR(g->vertex_dress[0], g->vertex_dress[1], 1e-6,
+                "vertex_dress[0] == vertex_dress[1]");
+    ASSERT_NEAR(g->vertex_dress[0], g->vertex_dress[2], 1e-6,
+                "vertex_dress[0] == vertex_dress[2]");
 
     dress_free_graph(g);
 }
@@ -419,7 +419,7 @@ static void test_complete_graph_k4(void)
 
     /* All nodes should also have equal dress norm. */
     for (int u = 1; u < 4; u++) {
-        ASSERT_NEAR(g->node_dress[u], g->node_dress[0], 1e-6,
+        ASSERT_NEAR(g->vertex_dress[u], g->vertex_dress[0], 1e-6,
                     "K4 nodes have equal dress norm");
     }
 
@@ -520,14 +520,14 @@ static void assert_fingerprint_equal(p_dress_graph_t g1, p_dress_graph_t g2,
     free(e1);
     free(e2);
 
-    /* ---- node fingerprint ---- */
+    /* ---- vertex fingerprint ---- */
     int N = g1->N;
-    ASSERT_EQ_INT(N, g2->N, "node count mismatch");
+    ASSERT_EQ_INT(N, g2->N, "vertex count mismatch");
 
     double *n1 = (double *)malloc((size_t)N * sizeof(double));
     double *n2 = (double *)malloc((size_t)N * sizeof(double));
-    memcpy(n1, g1->node_dress, (size_t)N * sizeof(double));
-    memcpy(n2, g2->node_dress, (size_t)N * sizeof(double));
+    memcpy(n1, g1->vertex_dress, (size_t)N * sizeof(double));
+    memcpy(n2, g2->vertex_dress, (size_t)N * sizeof(double));
     qsort(n1, (size_t)N, sizeof(double), cmp_double);
     qsort(n2, (size_t)N, sizeof(double), cmp_double);
     ASSERT(memcmp(n1, n2, (size_t)N * sizeof(double)) == 0, label);
@@ -830,12 +830,12 @@ int main(void)
 
     /* fitting */
     test_triangle_convergence();
-    test_node_weights_default();
+    test_vertex_weights_default();
     test_triangle_equal_dress();
     test_path_positive_dress();
     test_path_symmetry();
     test_fit_with_intercepts();
-    test_node_dress();
+    test_vertex_dress();
     test_weighted_fit();
 
     /* edge cases */

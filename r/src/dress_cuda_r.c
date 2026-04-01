@@ -90,7 +90,7 @@ SEXP C_dress_fit_cuda(SEXP n_vertices_,
     if (node_weights_ != R_NilValue) {
         if (LENGTH(node_weights_) != N) {
             free(U); free(V); if(W) free(W);
-            error("dress_fit_cuda: node_weights length mismatch");
+            error("dress_fit_cuda: vertex_weights length mismatch");
         }
         NW = (double *)malloc(N * sizeof(double));
         memcpy(NW, REAL(node_weights_), N * sizeof(double));
@@ -115,10 +115,10 @@ SEXP C_dress_fit_cuda(SEXP n_vertices_,
     SET_STRING_ELT(names, 1, mkChar("targets"));
     SET_STRING_ELT(names, 2, mkChar("edge_dress"));
     SET_STRING_ELT(names, 3, mkChar("edge_weight"));
-    SET_STRING_ELT(names, 4, mkChar("node_dress"));
+    SET_STRING_ELT(names, 4, mkChar("vertex_dress"));
     SET_STRING_ELT(names, 5, mkChar("iterations"));
     SET_STRING_ELT(names, 6, mkChar("delta"));
-    if (g->NW) SET_STRING_ELT(names, 7, mkChar("node_weights"));
+    if (g->NW) SET_STRING_ELT(names, 7, mkChar("vertex_weights"));
     setAttrib(result, R_NamesSymbol, names);
 
     SEXP r_sources    = PROTECT(allocVector(INTSXP,  g->E));
@@ -133,7 +133,7 @@ SEXP C_dress_fit_cuda(SEXP n_vertices_,
     memcpy(INTEGER(r_targets),    g->V,          g->E * sizeof(int));
     memcpy(REAL(r_edge_dress),    g->edge_dress, g->E * sizeof(double));
     memcpy(REAL(r_edge_wt),       g->edge_weight,g->E * sizeof(double));
-    memcpy(REAL(r_node_dress),    g->node_dress, g->N * sizeof(double));
+    memcpy(REAL(r_node_dress),    g->vertex_dress, g->N * sizeof(double));
 
     SET_VECTOR_ELT(result, 0, r_sources);
     SET_VECTOR_ELT(result, 1, r_targets);
@@ -209,7 +209,7 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
     if (node_weights_ != R_NilValue) {
         if (LENGTH(node_weights_) != N) {
              free(U); free(V); if(W) free(W);
-             error("dress_delta_fit_cuda: node_weights length mismatch");
+             error("dress_delta_fit_cuda: vertex_weights length mismatch");
         }
         NW = (double *)malloc(N * sizeof(double));
         memcpy(NW, REAL(node_weights_), N * sizeof(double));
@@ -318,7 +318,7 @@ SEXP C_nabla_dress_fit_cuda(SEXP n_vertices_,
     if (node_weights_ != R_NilValue) {
         if (LENGTH(node_weights_) != N) {
              free(U); free(V); if(W) free(W);
-             error("dress_nabla_fit_cuda: node_weights length mismatch");
+             error("dress_nabla_fit_cuda: vertex_weights length mismatch");
         }
         NW = (double *)malloc(N * sizeof(double));
         memcpy(NW, REAL(node_weights_), N * sizeof(double));

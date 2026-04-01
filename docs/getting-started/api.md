@@ -28,7 +28,7 @@ For usage examples see the [examples/](https://github.com/velicast/dress-graph/t
 | `targets` | int [E] | Edge target vertices (0-based) |
 | `edge_dress` | float [E] | DRESS similarity per edge |
 | `edge_weight` | float [E] | Variant-specific edge weight |
-| `node_dress` | float [N] | Per-node aggregated DRESS norm |
+| `vertex_dress` | float [N] | Per-vertex aggregated DRESS norm |
 | `iterations` | int | Iterations performed |
 | `delta` | float | Final maximum per-edge change |
 
@@ -68,7 +68,7 @@ Header: `dress/dress.h`
 | `dress_get` | `double dress_get(const p_dress_graph_t g, int u, int v, int max_iterations, double epsilon, double edge_weight)` |
 | `dress_free_graph` | `void dress_free_graph(p_dress_graph_t g)` |
 
-After fitting, result fields are accessed on the graph struct: `g->edge_dress[e]`, `g->edge_weight[e]`, `g->node_dress[u]`, `g->U[e]`, `g->V[e]`, `g->N`, `g->E`.
+After fitting, result fields are accessed on the graph struct: `g->edge_dress[e]`, `g->edge_weight[e]`, `g->vertex_dress[u]`, `g->U[e]`, `g->V[e]`, `g->N`, `g->E`.
 
 Header: `dress/delta_dress.h`
 
@@ -97,12 +97,12 @@ Header: `dress/igraph/dress.h`
 
 | Type / Function | Description |
 |--------|-----------|
-| `dress_result_igraph_t` | Struct: `N`, `E`, `src[E]`, `dst[E]`, `dress[E]`, `weight[E]`, `node_dress[N]`, `iterations`, `delta` (zero-copy views) |
-| `dress_fit` | `int dress_fit(const igraph_t *graph, const char *weight_attr, const char *node_weight_attr, dress_variant_t variant, int max_iters, double epsilon, int precompute, dress_result_igraph_t *result)` : macro for `dress_fit_igraph` |
+| `dress_result_igraph_t` | Struct: `N`, `E`, `src[E]`, `dst[E]`, `dress[E]`, `weight[E]`, `vertex_dress[N]`, `iterations`, `delta` (zero-copy views) |
+| `dress_fit` | `int dress_fit(const igraph_t *graph, const char *weight_attr, const char *vertex_weight_attr, dress_variant_t variant, int max_iters, double epsilon, int precompute, dress_result_igraph_t *result)` : macro for `dress_fit_igraph` |
 | `dress_free` | `void dress_free(dress_result_igraph_t *result)` : macro for `dress_free_igraph` |
 | `dress_to_vector` | `int dress_to_vector(const dress_result_igraph_t *result, igraph_vector_t *out)` : macro for `dress_to_vector_igraph` |
 | `delta_dress_result_igraph_t` | Struct: `histogram[hist_size]` where each entry is `{value, count}`, `hist_size` |
-| `dress_delta_fit` | `int dress_delta_fit(const igraph_t *graph, const char *weight_attr, const char *node_weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result)` : macro for `dress_delta_fit_igraph` |
+| `dress_delta_fit` | `int dress_delta_fit(const igraph_t *graph, const char *weight_attr, const char *vertex_weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result)` : macro for `dress_delta_fit_igraph` |
 | `delta_dress_free` | `void delta_dress_free(delta_dress_result_igraph_t *result)` : macro for `delta_dress_free_igraph` |
 | `delta_dress_to_vector` | `int delta_dress_to_vector(const delta_dress_result_igraph_t *result, igraph_vector_t *out)` : macro for `delta_dress_to_vector_igraph`; flattens histogram entries as `[value0, count0, value1, count1, ...]` |
 
@@ -111,7 +111,7 @@ MPI: include `dress/mpi/igraph/dress.h` instead; redirects `dress_delta_fit()` t
 
 | Function | Signature |
 |--------|-----------|
-| `dress_delta_fit_mpi_igraph` | `int dress_delta_fit_mpi_igraph(const igraph_t *graph, const char *weight_attr, const char *node_weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result, MPI_Comm comm)` |
+| `dress_delta_fit_mpi_igraph` | `int dress_delta_fit_mpi_igraph(const igraph_t *graph, const char *weight_attr, const char *vertex_weight_attr, dress_variant_t variant, int k, int max_iters, double epsilon, int precompute, delta_dress_result_igraph_t *result, MPI_Comm comm)` |
 | `dress_delta_fit_mpi_igraph_fcomm` | Same, but takes `int comm_f` (Fortran MPI handle) |
 | `dress_delta_fit_mpi_cuda_igraph` | Same as above, CUDA+MPI backend (available when CUDA header is also included) |
 | `dress_delta_fit_mpi_cuda_igraph_fcomm` | Fortran-handle variant of the CUDA+MPI function |
@@ -135,8 +135,8 @@ Header: `dress/dress.hpp`
 | `fit` | `FitResult fit(int maxIterations, double epsilon)` |
 | `get` | `double get(int u, int v, int maxIterations = 100, double epsilon = 1e-6, double edgeWeight = 1.0) const` |
 | `deltaFit` | `DeltaFitResult deltaFit(int k, int maxIterations, double epsilon, int nSamples = 0, unsigned int seed = 0, bool keepMultisets = false, bool computeHistogram = true)` |
-| Accessors | `numVertices()`, `numEdges()`, `edgeDress(e)`, `edgeWeight(e)`, `nodeDress(u)`, `edgeSource(e)`, `edgeTarget(e)` |
-| Bulk access | `edgeDressValues()`, `edgeWeights()`, `nodeDressValues()`, `edgeSources()`, `edgeTargets()`, all `const` pointers |
+| Accessors | `numVertices()`, `numEdges()`, `edgeDress(e)`, `edgeWeight(e)`, `vertexDress(u)`, `edgeSource(e)`, `edgeTarget(e)` |
+| Bulk access | `edgeDressValues()`, `edgeWeights()`, `vertexDressValues()`, `edgeSources()`, `edgeTargets()`, all `const` pointers |
 
 | Result type | Fields |
 |-------------|--------|
@@ -161,7 +161,7 @@ Package: `dress`
 
 | Result class | Fields |
 |--------------|--------|
-| `DRESSResult` | `sources: list[int]`, `targets: list[int]`, `edge_dress: list[float]`, `edge_weight: list[float]`, `node_dress: list[float]`, `iterations: int`, `delta: float` |
+| `DRESSResult` | `sources: list[int]`, `targets: list[int]`, `edge_dress: list[float]`, `edge_weight: list[float]`, `vertex_dress: list[float]`, `iterations: int`, `delta: float` |
 | `DeltaDRESSResult` | `histogram: list[tuple[float, int]]`, `multisets: object \| None`, `num_subgraphs: int` |
 | `NablaDRESSResult` | `histogram: list[tuple[float, int]]`, `multisets: object \| None`, `num_tuples: int` |
 | `FitResult` | `iterations: int`, `delta: float` |
@@ -173,7 +173,7 @@ Package: `dress`
 | Constructor | `DRESS(n_vertices, sources, targets, weights=None, variant=UNDIRECTED, precompute_intercepts=False)` |
 | `fit` | `fit(max_iterations=100, epsilon=1e-6) → FitResult` |
 | `get` | `get(u, v, max_iterations=100, epsilon=1e-6, edge_weight=1.0) → float` |
-| Properties | `n_vertices`, `n_edges`, `edge_dress(e)`, `edge_weight(e)`, `node_dress(u)` |
+| Properties | `n_vertices`, `n_edges`, `edge_dress(e)`, `edge_weight(e)`, `vertex_dress(u)` |
 
 | Variant constants | `UNDIRECTED`, `DIRECTED`, `FORWARD`, `BACKWARD` |
 |---|---|
@@ -206,7 +206,7 @@ MPI+CUDA: `from dress.mpi.cuda import delta_fit, nabla_fit`
 
 MPI wrappers accept an additional `comm=None` keyword (defaults to `MPI.COMM_WORLD`).
 
-When `set_attributes=True`, `fit` writes `"dress"` edge attributes and `"dress_norm"` node attributes back onto the NetworkX graph.
+When `set_attributes=True`, `fit` writes `"dress"` edge attributes and `"vertex_dress"` node attributes back onto the NetworkX graph.
 
 ---
 
@@ -243,7 +243,7 @@ Crate: `dress-graph`
 
 | Result type | Fields |
 |-------------|--------|
-| `DressResult` | `sources: Vec<i32>`, `targets: Vec<i32>`, `edge_dress: Vec<f64>`, `edge_weight: Vec<f64>`, `node_dress: Vec<f64>`, `iterations: i32`, `delta: f64` |
+| `DressResult` | `sources: Vec<i32>`, `targets: Vec<i32>`, `edge_dress: Vec<f64>`, `edge_weight: Vec<f64>`, `vertex_dress: Vec<f64>`, `iterations: i32`, `delta: f64` |
 | `HistogramEntry` | `value: f64`, `count: i64` |
 | `DeltaDressResult` | `histogram: Vec<HistogramEntry>`, `multisets: Option<Vec<f64>>`, `num_subgraphs: i64` |
 | `NablaDressResult` | `histogram: Vec<HistogramEntry>`, `multisets: Option<Vec<f64>>`, `num_tuples: i64` |
@@ -275,7 +275,7 @@ Package: `github.com/velicast/dress-graph/go`
 
 | Result type | Fields |
 |-------------|--------|
-| `Result` | `Sources []int32`, `Targets []int32`, `EdgeDress []float64`, `EdgeWeight []float64`, `NodeDress []float64`, `Iterations int`, `Delta float64` |
+| `Result` | `Sources []int32`, `Targets []int32`, `EdgeDress []float64`, `EdgeWeight []float64`, `VertexDress []float64`, `Iterations int`, `Delta float64` |
 | `HistogramEntry` | `Value float64`, `Count int64` |
 | `DeltaResult` | `Histogram []HistogramEntry`, `Multisets []float64` (nil when not requested), `NumSubgraphs int64` |
 | `NablaResult` | `Histogram []HistogramEntry`, `Multisets []float64` (nil when not requested), `NumTuples int64` |
@@ -302,7 +302,7 @@ Module: `dress.js`
 
 | Result type | Fields |
 |-------------|--------|
-| `DressResult` | `sources: Int32Array`, `targets: Int32Array`, `edgeDress: Float64Array`, `edgeWeight: Float64Array`, `nodeDress: Float64Array`, `iterations: number`, `delta: number` |
+| `DressResult` | `sources: Int32Array`, `targets: Int32Array`, `edgeDress: Float64Array`, `edgeWeight: Float64Array`, `vertexDress: Float64Array`, `iterations: number`, `delta: number` |
 | `HistogramEntry` | `{ value: number, count: number }` |
 | `DeltaDressResult` | `histogram: HistogramEntry[]`, `multisets: Float64Array \| null`, `numSubgraphs: number` |
 | `NablaDressResult` | `histogram: HistogramEntry[]`, `multisets: Float64Array \| null`, `numTuples: number` |
@@ -340,7 +340,7 @@ Package: `DRESS`
 
 | Result type | Fields |
 |-------------|--------|
-| `DRESSResult` | `sources::Vector{Int32}`, `targets::Vector{Int32}`, `edge_weight::Vector{Float64}`, `edge_dress::Vector{Float64}`, `node_dress::Vector{Float64}`, `iterations::Int`, `delta::Float64` |
+| `DRESSResult` | `sources::Vector{Int32}`, `targets::Vector{Int32}`, `edge_weight::Vector{Float64}`, `edge_dress::Vector{Float64}`, `vertex_dress::Vector{Float64}`, `iterations::Int`, `delta::Float64` |
 | `HistogramEntry` | `value::Float64`, `count::Int64` |
 | `DeltaDRESSResult` | `histogram::Vector{HistogramEntry}`, `multisets::Union{Matrix{Float64}, Nothing}`, `num_subgraphs::Int` |
 | `NablaDRESSResult` | `histogram::Vector{HistogramEntry}`, `multisets::Union{Matrix{Float64}, Nothing}`, `num_tuples::Int` |
@@ -370,7 +370,7 @@ Package: `dress.graph`
 | `$result` | `$result() → list` |
 | `$close` | `$close()` |
 
-`fit` returns a list with: `$sources`, `$targets`, `$edge_dress`, `$edge_weight`, `$node_dress`, `$iterations`, `$delta`.
+`fit` returns a list with: `$sources`, `$targets`, `$edge_dress`, `$edge_weight`, `$vertex_dress`, `$iterations`, `$delta`.
 
 `delta_fit` returns a list with: `$histogram` (data frame with `value` and `count` columns), `$multisets` (matrix, when `keep_multisets=TRUE`), `$num_subgraphs` (when `keep_multisets=TRUE`).
 
@@ -414,7 +414,7 @@ CPU and CUDA expose both functional and OO APIs. MPI and MPI+CUDA are available 
 | `result` | `g.result() → struct` |
 | `close` | `g.close()` |
 
-`fit` returns a struct with: `.sources`, `.targets`, `.edge_dress`, `.edge_weight`, `.node_dress`, `.iterations`, `.delta`.
+`fit` returns a struct with: `.sources`, `.targets`, `.edge_dress`, `.edge_weight`, `.vertex_dress`, `.iterations`, `.delta`.
 
 `delta_fit` returns a struct with: `.histogram.value`, `.histogram.count`, `.multisets` (when `KeepMultisets=true`), `.num_subgraphs` (when `KeepMultisets=true`).
 

@@ -126,7 +126,7 @@ def delta_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -163,8 +163,8 @@ def delta_fit(
     p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
     p_W = (_malloc_array([float(x) for x in weights], ctypes.c_double)
            if weights is not None else ctypes.POINTER(ctypes.c_double)())
-    p_NW = (_malloc_array([float(x) for x in node_weights], ctypes.c_double)
-            if node_weights is not None else ctypes.POINTER(ctypes.c_double)())
+    p_NW = (_malloc_array([float(x) for x in vertex_weights], ctypes.c_double)
+            if vertex_weights is not None else ctypes.POINTER(ctypes.c_double)())
 
     g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(int(variant)),
@@ -208,7 +208,7 @@ def nabla_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -245,8 +245,8 @@ def nabla_fit(
     p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
     p_W = (_malloc_array([float(x) for x in weights], ctypes.c_double)
            if weights is not None else ctypes.POINTER(ctypes.c_double)())
-    p_NW = (_malloc_array([float(x) for x in node_weights], ctypes.c_double)
-            if node_weights is not None else ctypes.POINTER(ctypes.c_double)())
+    p_NW = (_malloc_array([float(x) for x in vertex_weights], ctypes.c_double)
+            if vertex_weights is not None else ctypes.POINTER(ctypes.c_double)())
 
     g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(int(variant)),
@@ -310,7 +310,7 @@ class DRESS(_OmpDRESS):
                   comm=None):
         return delta_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -324,7 +324,7 @@ class DRESS(_OmpDRESS):
                   comm=None):
         return nabla_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,

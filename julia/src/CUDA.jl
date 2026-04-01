@@ -135,7 +135,7 @@ function fit(N::Integer,
                    sources::AbstractVector{<:Integer},
                    targets::AbstractVector{<:Integer};
                    weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
-                   node_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                   vertex_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
                    variant::Integer   = UNDIRECTED,
                    max_iterations::Integer = 100,
                    epsilon::Real      = 1e-6,
@@ -146,8 +146,8 @@ function fit(N::Integer,
     if weights !== nothing
         length(weights) == E || throw(ArgumentError("weights must have the same length as sources"))
     end
-    if node_weights !== nothing
-        length(node_weights) == N || throw(ArgumentError("node_weights must have length N"))
+    if vertex_weights !== nothing
+        length(vertex_weights) == N || throw(ArgumentError("vertex_weights must have length N"))
     end
 
     _ensure_lib()
@@ -168,10 +168,10 @@ function fit(N::Integer,
     end
 
     NW_c = C_NULL
-    if node_weights !== nothing
+    if vertex_weights !== nothing
         NW_c = Libc.malloc(N * sizeof(Cdouble))
         nw_arr = unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N)
-        nw_arr .= Cdouble.(node_weights)
+        nw_arr .= Cdouble.(vertex_weights)
     end
 
     g = ccall(_FN_INIT[], Ptr{Cvoid},
@@ -223,7 +223,7 @@ function delta_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -256,9 +256,9 @@ function delta_fit(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)
@@ -320,7 +320,7 @@ function nabla_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -353,9 +353,9 @@ function nabla_fit(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)
@@ -432,7 +432,7 @@ end
 export DressGraph, fit!, delta_fit!, nabla_fit!, close!
 
 """
-    DressGraph(N, sources, targets; weights=nothing, node_weights=nothing,
+    DressGraph(N, sources, targets; weights=nothing, vertex_weights=nothing,
                variant=UNDIRECTED, precompute_intercepts=false)
 
 Create a persistent CUDA DRESS graph object.
@@ -441,7 +441,7 @@ function DressGraph(N::Integer,
                     sources::AbstractVector{<:Integer},
                     targets::AbstractVector{<:Integer};
                     weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
-                    node_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                    vertex_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
                     variant::Integer   = UNDIRECTED,
                     precompute_intercepts::Bool = false)
 
@@ -450,8 +450,8 @@ function DressGraph(N::Integer,
     if weights !== nothing
         length(weights) == E || throw(ArgumentError("weights length mismatch"))
     end
-    if node_weights !== nothing
-        length(node_weights) == N || throw(ArgumentError("node_weights length mismatch"))
+    if vertex_weights !== nothing
+        length(vertex_weights) == N || throw(ArgumentError("vertex_weights length mismatch"))
     end
 
     _ensure_lib()
@@ -469,9 +469,9 @@ function DressGraph(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)

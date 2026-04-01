@@ -41,7 +41,7 @@ typedef struct dress_result_igraph_t {
     const int    *dst;   /* [E] edge target endpoints (owned by dg_)  */
     const double *dress; /* [E] dress similarity per edge             */
     const double *weight;/* [E] variant edge weight                   */
-    const double *node_dress; /* [N] per-node dress norm              */
+    const double *vertex_dress; /* [N] per-vertex dress norm              */
     int     iterations;  /* iterations performed                      */
     double  delta;       /* final max-delta at convergence            */
     p_dress_graph_t dg_; /* internal — do not access directly         */
@@ -61,8 +61,8 @@ typedef struct dress_result_igraph_t {
  *   weight_attr  — name of an edge attribute holding weights, or NULL
  *                  for unweighted graphs. If the attribute does not
  *                  exist on an edge, weight 1.0 is used.
- *   node_weight_attr — name of a vertex attribute holding node weights,
- *                  or NULL for uniform node weights (all 1.0).
+ *   vertex_weight_attr — name of a vertex attribute holding vertex weights,
+ *                  or NULL for uniform vertex weights (all 1.0).
  *   variant      — DRESS_VARIANT_UNDIRECTED / DIRECTED / FORWARD / BACKWARD
  *   max_iters    — maximum fitting iterations
  *   epsilon      — convergence threshold
@@ -73,7 +73,7 @@ typedef struct dress_result_igraph_t {
  */
 int dress_fit_igraph(const igraph_t *graph,
                      const char *weight_attr,
-                     const char *node_weight_attr,
+                     const char *vertex_weight_attr,
                      dress_variant_t variant,
                      int max_iters,
                      double epsilon,
@@ -121,8 +121,8 @@ typedef struct delta_dress_result_igraph_t {
  * Parameters:
  *   graph        — pointer to a valid igraph_t (not modified)
  *   weight_attr  — name of an edge attribute holding weights, or NULL
- *   node_weight_attr — name of a vertex attribute holding node weights,
- *                  or NULL for uniform node weights (all 1.0).
+ *   vertex_weight_attr — name of a vertex attribute holding vertex weights,
+ *                  or NULL for uniform vertex weights (all 1.0).
  *   variant      — DRESS_VARIANT_UNDIRECTED / DIRECTED / FORWARD / BACKWARD
  *   k            — deletion depth: vertices removed per subset
  *   max_iters    — maximum DRESS iterations per subgraph
@@ -134,7 +134,7 @@ typedef struct delta_dress_result_igraph_t {
  */
 int dress_delta_fit_igraph(const igraph_t *graph,
                            const char *weight_attr,
-                           const char *node_weight_attr,
+                           const char *vertex_weight_attr,
                            dress_variant_t variant,
                            int k,
                            int max_iters,

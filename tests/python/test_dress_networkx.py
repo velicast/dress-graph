@@ -60,7 +60,7 @@ class TestReturnType:
         assert hasattr(result, "targets")
         assert hasattr(result, "edge_dress")
         assert hasattr(result, "edge_weight")
-        assert hasattr(result, "node_dress")
+        assert hasattr(result, "vertex_dress")
         assert hasattr(result, "iterations")
         assert hasattr(result, "delta")
 
@@ -73,7 +73,7 @@ class TestReturnType:
 
     def test_node_count_matches(self, triangle):
         result = dress_graph(triangle)
-        assert len(result.node_dress) == triangle.number_of_nodes()
+        assert len(result.vertex_dress) == triangle.number_of_nodes()
 
 
 # ── value bounds ─────────────────────────────────────────────────────
@@ -86,8 +86,8 @@ class TestBounds:
 
     def test_node_norms_positive(self, k4):
         result = dress_graph(k4)
-        for v in result.node_dress:
-            assert v > 0.0, f"node norm {v} should be positive"
+        for v in result.vertex_dress:
+            assert v > 0.0, f"vertex norm {v} should be positive"
 
 
 # ── convergence ──────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ class TestSetAttributes:
     def test_dress_norm_node_attribute_written(self, triangle):
         dress_graph(triangle, set_attributes=True)
         for n in triangle.nodes():
-            assert "dress_norm" in triangle.nodes[n], f"node {n} missing 'dress_norm'"
+            assert "vertex_dress" in triangle.nodes[n], f"node {n} missing 'vertex_dress'"
 
     def test_edge_values_match_result(self, k4):
         result = dress_graph(k4, set_attributes=True)
@@ -202,7 +202,7 @@ class TestLabels:
         for u, v in G.edges():
             assert "dress" in G[u][v]
         for n in G.nodes():
-            assert "dress_norm" in G.nodes[n]
+            assert "vertex_dress" in G.nodes[n]
 
     def test_karate_club(self):
         G = nx.karate_club_graph()
@@ -218,7 +218,7 @@ class TestDeterminism:
         r1 = dress_graph(k4)
         r2 = dress_graph(k4)
         assert r1.edge_dress == r2.edge_dress
-        assert r1.node_dress == r2.node_dress
+        assert r1.vertex_dress == r2.vertex_dress
         assert r1.iterations == r2.iterations
 
 

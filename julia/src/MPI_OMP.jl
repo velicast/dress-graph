@@ -76,7 +76,7 @@ function delta_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -112,9 +112,9 @@ function delta_fit(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)
@@ -181,7 +181,7 @@ function nabla_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -217,9 +217,9 @@ function nabla_fit(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)

@@ -7,7 +7,7 @@ DRESS is a deterministic, parameter-free framework that iteratively refines the 
 ## Quick start
 
 ```matlab
-result = dress_fit(4, [0 1 2 0], [1 2 3 3]);
+result = fit(4, [0 1 2 0], [1 2 3 3]);
 disp(result.edge_dress);
 ```
 

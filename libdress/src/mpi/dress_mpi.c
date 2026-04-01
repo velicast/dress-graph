@@ -17,6 +17,22 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
+
+/* NaN-aware MPI reduce: pick the non-NaN value (or NaN if both are NaN).
+ * Used instead of MPI_SUM for multiset merging so that NaN-initialized
+ * unsampled rows survive the Allreduce without corrupting data. */
+static void dress_nan_merge(void *invec, void *inoutvec, int *len,
+                            MPI_Datatype *dtype) {
+    (void)dtype;
+    double *in    = (double *)invec;
+    double *inout = (double *)inoutvec;
+    for (int i = 0; i < *len; i++) {
+        if (!isnan(in[i]))
+            inout[i] = in[i];
+        /* else: keep inout[i] (either data or NaN) */
+    }
+}
 
 #ifdef DRESS_CUDA
 #include "dress/cuda/dress_cuda.h"
@@ -104,9 +120,15 @@ static dress_hist_pair_t *_mpi_reduce(
     if (keep_multisets && multisets && local_ms && num_subgraphs) {
         int E = g->E;
         int64_t cnk = *num_subgraphs;
-        double *global_ms = (double *)calloc((size_t)cnk * E, sizeof(double));
+        /* NaN-init so unsampled rows stay NaN after merge. */ 
+        size_t _ms_len = (size_t)cnk * E; 
+        double *global_ms = (double *)malloc(_ms_len * sizeof(double)); 
+        for (size_t _i = 0; _i < _ms_len; _i++) global_ms[_i] = NAN;
+        MPI_Op _nan_op;
+        MPI_Op_create(dress_nan_merge, 1, &_nan_op);
         MPI_Allreduce(local_ms, global_ms, (int)(cnk * E),
-                      MPI_DOUBLE, MPI_SUM, comm);
+                      MPI_DOUBLE, _nan_op, comm);
+        MPI_Op_free(&_nan_op);
         free(local_ms);
         *multisets = global_ms;
     } else if (multisets) {
@@ -264,9 +286,15 @@ static dress_hist_pair_t *_mpi_reduce_omp(
     if (keep_multisets && multisets && local_ms && num_subgraphs) {
         int E = g->E;
         int64_t cnk = *num_subgraphs;
-        double *global_ms = (double *)calloc((size_t)cnk * E, sizeof(double));
+        /* NaN-init so unsampled rows stay NaN after merge. */ 
+        size_t _ms_len = (size_t)cnk * E; 
+        double *global_ms = (double *)malloc(_ms_len * sizeof(double)); 
+        for (size_t _i = 0; _i < _ms_len; _i++) global_ms[_i] = NAN;
+        MPI_Op _nan_op;
+        MPI_Op_create(dress_nan_merge, 1, &_nan_op);
         MPI_Allreduce(local_ms, global_ms, (int)(cnk * E),
-                      MPI_DOUBLE, MPI_SUM, comm);
+                      MPI_DOUBLE, _nan_op, comm);
+        MPI_Op_free(&_nan_op);
         free(local_ms);
         *multisets = global_ms;
     } else if (multisets) {
@@ -481,9 +509,15 @@ static dress_hist_pair_t *_nabla_mpi_reduce(
     if (keep_multisets && multisets && local_ms && num_tuples) {
         int E = g->E;
         int64_t pnk = *num_tuples;
-        double *global_ms = (double *)calloc((size_t)pnk * E, sizeof(double));
+        /* NaN-init so unsampled rows stay NaN after merge. */ 
+        size_t _ms_len = (size_t)pnk * E; 
+        double *global_ms = (double *)malloc(_ms_len * sizeof(double)); 
+        for (size_t _i = 0; _i < _ms_len; _i++) global_ms[_i] = NAN;
+        MPI_Op _nan_op;
+        MPI_Op_create(dress_nan_merge, 1, &_nan_op);
         MPI_Allreduce(local_ms, global_ms, (int)(pnk * E),
-                      MPI_DOUBLE, MPI_SUM, comm);
+                      MPI_DOUBLE, _nan_op, comm);
+        MPI_Op_free(&_nan_op);
         free(local_ms);
         *multisets = global_ms;
     } else if (multisets) {
@@ -634,9 +668,15 @@ static dress_hist_pair_t *_nabla_mpi_reduce_omp(
     if (keep_multisets && multisets && local_ms && num_tuples) {
         int E = g->E;
         int64_t pnk = *num_tuples;
-        double *global_ms = (double *)calloc((size_t)pnk * E, sizeof(double));
+        /* NaN-init so unsampled rows stay NaN after merge. */ 
+        size_t _ms_len = (size_t)pnk * E; 
+        double *global_ms = (double *)malloc(_ms_len * sizeof(double)); 
+        for (size_t _i = 0; _i < _ms_len; _i++) global_ms[_i] = NAN;
+        MPI_Op _nan_op;
+        MPI_Op_create(dress_nan_merge, 1, &_nan_op);
         MPI_Allreduce(local_ms, global_ms, (int)(pnk * E),
-                      MPI_DOUBLE, MPI_SUM, comm);
+                      MPI_DOUBLE, _nan_op, comm);
+        MPI_Op_free(&_nan_op);
         free(local_ms);
         *multisets = global_ms;
     } else if (multisets) {

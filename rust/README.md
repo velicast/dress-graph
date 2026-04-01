@@ -7,7 +7,7 @@ DRESS is a deterministic, parameter-free framework that iteratively refines the 
 ## Quick start
 
 ```rust
-use dress_graph::{DRESS, Variant};
+use fit::{DRESS, Variant};
 
 let sources = vec![0, 1, 2, 0];
 let targets = vec![1, 2, 3, 3];

@@ -18,8 +18,8 @@ export interface DressOptions {
     targets: Int32Array | number[];
     /** Optional edge weights (same length as sources) */
     weights?: Float64Array | number[] | null;
-    /** Optional node weights (length numVertices) */
-    nodeWeights?: Float64Array | number[] | null;
+    /** Optional vertex weights (length numVertices) */
+    vertexWeights?: Float64Array | number[] | null;
     /** Graph variant (default: Variant.UNDIRECTED) */
     variant?: number;
     /** Maximum fitting iterations (default: 100) */
@@ -39,8 +39,8 @@ export interface DressResult {
     edgeWeight: Float64Array;
     /** Per-edge dress similarity values */
     edgeDress: Float64Array;
-    /** Per-node aggregated dress similarity */
-    nodeDress: Float64Array;
+    /** Per-vertex aggregated dress similarity */
+    vertexDress: Float64Array;
     /** Number of iterations performed */
     iterations: number;
     /** Final maximum per-edge change */
@@ -61,8 +61,8 @@ export interface DRESSOptions {
     targets: Int32Array | number[];
     /** Optional edge weights (same length as sources) */
     weights?: Float64Array | number[] | null;
-    /** Optional node weights (length numVertices) */
-    nodeWeights?: Float64Array | number[] | null;
+    /** Optional vertex weights (length numVertices) */
+    vertexWeights?: Float64Array | number[] | null;
     /** Graph variant (default: Variant.UNDIRECTED) */
     variant?: number;
     /** Pre-compute neighbourhood intercepts (default: false) */
@@ -90,8 +90,8 @@ export interface DeltaDressOptions {
     targets: Int32Array | number[];
     /** Optional edge weights (same length as sources) */
     weights?: Float64Array | number[] | null;
-    /** Optional node weights (length numVertices) */
-    nodeWeights?: Float64Array | number[] | null;
+    /** Optional vertex weights (length numVertices) */
+    vertexWeights?: Float64Array | number[] | null;
     /** Vertices to remove per subset (default: 0 = original graph) */
     k?: number;
     /** Graph variant (default: Variant.UNDIRECTED) */
@@ -141,8 +141,8 @@ export interface NablaDressOptions {
     targets: Int32Array | number[];
     /** Optional edge weights (same length as sources) */
     weights?: Float64Array | number[] | null;
-    /** Optional node weights (length numVertices) */
-    nodeWeights?: Float64Array | number[] | null;
+    /** Optional vertex weights (length numVertices) */
+    vertexWeights?: Float64Array | number[] | null;
     /** Vertices to remove per tuple (default: 0 = original graph) */
     k?: number;
     /** Graph variant (default: Variant.UNDIRECTED) */

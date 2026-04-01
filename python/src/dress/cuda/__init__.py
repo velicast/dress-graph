@@ -227,16 +227,16 @@ BACKWARD   = 3
 def dress_cuda(N, E, U, V, W=None, NW=None, variant=UNDIRECTED,
                precompute_intercepts=0, max_iterations=100, epsilon=1e-10):
     """
-    Compute DRESS edge and node values using GPU acceleration.
+    Compute DRESS edge and vertex values using GPU acceleration.
 
     Parameters
     ----------
     N : int — number of nodes
     E : int — number of edges
-    U : array-like[int] — source node for each edge (length E)
-    V : array-like[int] — target node for each edge (length E)
+    U : array-like[int] — source vertex for each edge (length E)
+    V : array-like[int] — target vertex for each edge (length E)
     W : array-like[float] or None — edge weights (None = unweighted)
-    NW : array-like[float] or None — node weights (None = all 1.0)
+    NW : array-like[float] or None — vertex weights (None = all 1.0)
     variant : int — 0=UNDIRECTED, 1=DIRECTED, 2=FORWARD, 3=BACKWARD
     precompute_intercepts : int — 1 to precompute intercepts (faster for dense)
     max_iterations : int
@@ -245,7 +245,7 @@ def dress_cuda(N, E, U, V, W=None, NW=None, variant=UNDIRECTED,
     Returns
     -------
     edge_dress : np.ndarray[float64] of shape (E,)
-    node_dress : np.ndarray[float64] of shape (N,)
+    vertex_dress : np.ndarray[float64] of shape (N,)
     iterations : int
     delta : float
     """
@@ -279,7 +279,7 @@ def dress_cuda(N, E, U, V, W=None, NW=None, variant=UNDIRECTED,
 
     # Extract results
     edge_dress  = np.ctypeslib.as_array(g.contents.edge_dress,  shape=(E,)).copy()
-    node_dress  = np.ctypeslib.as_array(g.contents.node_dress,  shape=(N,)).copy()
+    vertex_dress  = np.ctypeslib.as_array(g.contents.vertex_dress,  shape=(N,)).copy()
     edge_weight = np.ctypeslib.as_array(g.contents.edge_weight, shape=(E,)).copy()
 
     iters = iterations.value
@@ -288,7 +288,7 @@ def dress_cuda(N, E, U, V, W=None, NW=None, variant=UNDIRECTED,
     # Free C memory
     lib.dress_free_graph(g)
 
-    return edge_dress, node_dress, edge_weight, iters, delta_val
+    return edge_dress, vertex_dress, edge_weight, iters, delta_val
 
 
 def dress_fit_cuda(g_ptr, max_iterations=100, epsilon=1e-10):
@@ -360,7 +360,7 @@ def nabla_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -391,8 +391,8 @@ def nabla_fit(
     else:
         p_W = ctypes.POINTER(ctypes.c_double)()
 
-    if node_weights is not None:
-        p_NW = _malloc_array([float(x) for x in node_weights], ctypes.c_double)
+    if vertex_weights is not None:
+        p_NW = _malloc_array([float(x) for x in vertex_weights], ctypes.c_double)
     else:
         p_NW = ctypes.POINTER(ctypes.c_double)()
 
@@ -441,7 +441,7 @@ def fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     variant=UNDIRECTED,
     max_iterations=100,
     epsilon=1e-6,
@@ -458,13 +458,13 @@ def fit(
     targets = list(targets)
     E = len(sources)
 
-    edge_dress, node_dress, edge_weight, iters, delta = dress_cuda(
+    edge_dress, vertex_dress, edge_weight, iters, delta = dress_cuda(
         N=n_vertices,
         E=E,
         U=sources,
         V=targets,
         W=list(weights) if weights is not None else None,
-        NW=list(node_weights) if node_weights is not None else None,
+        NW=list(vertex_weights) if vertex_weights is not None else None,
         variant=int(variant),
         precompute_intercepts=int(precompute_intercepts),
         max_iterations=max_iterations,
@@ -476,7 +476,7 @@ def fit(
         targets=targets,
         edge_dress=edge_dress.tolist(),
         edge_weight=edge_weight.tolist(),
-        node_dress=node_dress.tolist(),
+        vertex_dress=vertex_dress.tolist(),
         iterations=iters,
         delta=delta,
     )
@@ -487,7 +487,7 @@ def delta_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -524,8 +524,8 @@ def delta_fit(
     else:
         p_W = ctypes.POINTER(ctypes.c_double)()
 
-    if node_weights is not None:
-        p_NW = _malloc_array([float(x) for x in node_weights], ctypes.c_double)
+    if vertex_weights is not None:
+        p_NW = _malloc_array([float(x) for x in vertex_weights], ctypes.c_double)
     else:
         p_NW = ctypes.POINTER(ctypes.c_double)()
 
@@ -592,7 +592,7 @@ class DRESS(_BaseDRESS):
     def fit(self, max_iterations=100, epsilon=1e-6):
         result = fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
         )
@@ -605,7 +605,7 @@ class DRESS(_BaseDRESS):
                   offset=0, stride=1):
         return delta_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, offset=offset, stride=stride,
@@ -618,7 +618,7 @@ class DRESS(_BaseDRESS):
                   keep_multisets=False, compute_histogram=True):
         return nabla_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets,

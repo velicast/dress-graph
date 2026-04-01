@@ -116,11 +116,11 @@ class TestAccessors:
         for e in range(3):
             assert triangle.edge_weight(e) == pytest.approx(2.0)
 
-    def test_node_dress_after_fit(self, triangle):
+    def test_vertex_dress_after_fit(self, triangle):
         triangle.fit(100, 1e-8)
         for u in range(3):
-            nd = triangle.node_dress(u)
-            assert nd > 0.0, "node dress should be positive after fitting"
+            nd = triangle.vertex_dress(u)
+            assert nd > 0.0, "vertex dress should be positive after fitting"
 
 
 # ── NumPy view properties ────────────────────────────────────────────
@@ -156,9 +156,9 @@ class TestNumpyViews:
         # All dress values should be equal in a triangle
         np.testing.assert_allclose(dv, dv[0], atol=1e-6)
 
-    def test_node_dress_values_array(self, triangle):
+    def test_vertex_dress_values_array(self, triangle):
         triangle.fit(100, 1e-8)
-        nd = triangle.node_dress_values
+        nd = triangle.vertex_dress_values
         assert isinstance(nd, np.ndarray)
         assert nd.dtype == np.float64
         assert len(nd) == 3
@@ -182,7 +182,7 @@ class TestDressFit:
         r = dress.fit(3, [0, 1, 0], [1, 2, 2])
         assert isinstance(r, dress.DRESSResult)
         assert len(r.edge_dress) == 3
-        assert len(r.node_dress) == 3
+        assert len(r.vertex_dress) == 3
         assert len(r.sources) == 3
         assert len(r.targets) == 3
         assert len(r.edge_weight) == 3

@@ -137,7 +137,7 @@ sources, targets : array-like of int
     Edge endpoint arrays (same length).
 weights : array-like of float, optional
     Per-edge weights. Omit or pass an empty list for unweighted.
-node_weights : array-like of float, optional
+vertex_weights : array-like of float, optional
     Per-vertex weights. Omit or pass an empty list for unit weights.
 variant : Variant
     UNDIRECTED (default), DIRECTED, FORWARD, or BACKWARD.
@@ -159,7 +159,7 @@ precompute_intercepts : bool
              py::arg("sources"),
              py::arg("targets"),
              py::arg("weights"),
-               py::arg("node_weights")           = std::vector<double>{},
+               py::arg("vertex_weights")           = std::vector<double>{},
              py::arg("variant")               = DRESS_VARIANT_UNDIRECTED,
              py::arg("precompute_intercepts")  = false)
 
@@ -205,7 +205,7 @@ FitResult
              py::arg("keep_multisets") = false,
              py::arg("compute_histogram") = true,
              R"doc(
-Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS
+Run Δ^k-DRESS: enumerate all C(N,k) vertex-deletion subsets, fit DRESS
 on each subgraph, and accumulate edge values into a histogram.
 
 Returns
@@ -224,7 +224,7 @@ DeltaFitResult
              py::arg("compute_histogram") = true,
              R"doc(
 Run ∇^k-DRESS: enumerate all P(N,k) ordered k-tuples, mark each with
-generic injective node weights, fit DRESS on each marked graph, and
+generic injective vertex weights, fit DRESS on each marked graph, and
 accumulate edge values into a histogram.
 
 Returns
@@ -252,7 +252,7 @@ NablaFitResult
              "Weight of edge e")
         .def("edge_dress",  &DRESS::edgeDress,  py::arg("e"),
              "dress value of edge e")
-        .def("node_dress",  &DRESS::nodeDress,  py::arg("u"),
+        .def("vertex_dress",  &DRESS::vertexDress,  py::arg("u"),
              "dress norm of vertex u")
 
            .def("get", &DRESS::get,
@@ -294,10 +294,10 @@ NablaFitResult
             return wrap_array(g.edgeDressValues(), g.numEdges(), self);
         }, "Per-edge dress similarity array (NumPy view, float64)")
 
-        .def_property_readonly("node_dress_values", [](py::object self) {
+        .def_property_readonly("vertex_dress_values", [](py::object self) {
             auto& g = self.cast<DRESS&>();
-            return wrap_array(g.nodeDressValues(), g.numVertices(), self);
-        }, "Per-node dress norm array (NumPy view, float64)")
+            return wrap_array(g.vertexDressValues(), g.numVertices(), self);
+        }, "Per-vertex dress norm array (NumPy view, float64)")
 
         // --- repr ---
 

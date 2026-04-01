@@ -24,7 +24,7 @@
 
 static int _mpi_igraph_impl(const igraph_t *graph,
                             const char *weight_attr,
-                            const char *node_weight_attr,
+                            const char *vertex_weight_attr,
                             dress_variant_t variant,
                             int k, int max_iters, double epsilon,
                             int n_samples,
@@ -68,16 +68,16 @@ static int _mpi_igraph_impl(const igraph_t *graph,
             W[e] = igraph_cattribute_EAN(graph, weight_attr, e);
     }
 
-    /* ----- Extract node weights (optional) ----- */
+    /* ----- Extract vertex weights (optional) ----- */
 
     double *NW = NULL;
-    if (node_weight_attr != NULL &&
-        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, node_weight_attr))
+    if (vertex_weight_attr != NULL &&
+        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, vertex_weight_attr))
     {
         NW = (double *)malloc(N * sizeof(double));
         if (!NW) { free(U); free(V); free(W); return -1; }
         for (int v = 0; v < N; v++)
-            NW[v] = igraph_cattribute_VAN(graph, node_weight_attr, v);
+            NW[v] = igraph_cattribute_VAN(graph, vertex_weight_attr, v);
     }
 
     /* dress_init_graph takes ownership of U, V, W, NW */
@@ -124,7 +124,7 @@ static int _mpi_igraph_impl(const igraph_t *graph,
 
 int dress_delta_fit_mpi_igraph(const igraph_t *graph,
                                const char *weight_attr,
-                               const char *node_weight_attr,
+                               const char *vertex_weight_attr,
                                dress_variant_t variant,
                                int k, int max_iters, double epsilon,
                                int n_samples,
@@ -135,7 +135,7 @@ int dress_delta_fit_mpi_igraph(const igraph_t *graph,
                                delta_dress_result_igraph_t *result,
                                MPI_Comm comm)
 {
-    return _mpi_igraph_impl(graph, weight_attr, node_weight_attr, variant,
+    return _mpi_igraph_impl(graph, weight_attr, vertex_weight_attr, variant,
                             k, max_iters, epsilon,
                             n_samples, seed,
                             precompute, keep_multisets, compute_histogram,
@@ -144,7 +144,7 @@ int dress_delta_fit_mpi_igraph(const igraph_t *graph,
 
 int dress_delta_fit_mpi_igraph_fcomm(const igraph_t *graph,
                                      const char *weight_attr,
-                                     const char *node_weight_attr,
+                                     const char *vertex_weight_attr,
                                      dress_variant_t variant,
                                      int k, int max_iters, double epsilon,
                                      int n_samples,
@@ -155,7 +155,7 @@ int dress_delta_fit_mpi_igraph_fcomm(const igraph_t *graph,
                                      delta_dress_result_igraph_t *result,
                                      int comm_f)
 {
-    return dress_delta_fit_mpi_igraph(graph, weight_attr, node_weight_attr,
+    return dress_delta_fit_mpi_igraph(graph, weight_attr, vertex_weight_attr,
                                      variant, k, max_iters, epsilon,
                                      n_samples, seed,
                                      precompute, keep_multisets, compute_histogram,
@@ -169,7 +169,7 @@ int dress_delta_fit_mpi_igraph_fcomm(const igraph_t *graph,
 
 int dress_delta_fit_mpi_cuda_igraph(const igraph_t *graph,
                                     const char *weight_attr,
-                                    const char *node_weight_attr,
+                                    const char *vertex_weight_attr,
                                     dress_variant_t variant,
                                     int k, int max_iters, double epsilon,
                                int n_samples,
@@ -180,7 +180,7 @@ int dress_delta_fit_mpi_cuda_igraph(const igraph_t *graph,
                                delta_dress_result_igraph_t *result,
                                MPI_Comm comm)
 {
-    return _mpi_igraph_impl(graph, weight_attr, node_weight_attr, variant,
+    return _mpi_igraph_impl(graph, weight_attr, vertex_weight_attr, variant,
                             k, max_iters, epsilon,
                             n_samples, seed,
                             precompute, keep_multisets, compute_histogram,
@@ -189,7 +189,7 @@ int dress_delta_fit_mpi_cuda_igraph(const igraph_t *graph,
 
 int dress_delta_fit_mpi_cuda_igraph_fcomm(const igraph_t *graph,
                                           const char *weight_attr,
-                                          const char *node_weight_attr,
+                                          const char *vertex_weight_attr,
                                           dress_variant_t variant,
                                           int k, int max_iters, double epsilon,
                                      int n_samples,
@@ -201,7 +201,7 @@ int dress_delta_fit_mpi_cuda_igraph_fcomm(const igraph_t *graph,
                                      int comm_f)
 {
     return dress_delta_fit_mpi_cuda_igraph(graph, weight_attr,
-                                          node_weight_attr, variant, k,
+                                          vertex_weight_attr, variant, k,
                                           max_iters, epsilon,
                                           n_samples, seed,
                                           precompute, keep_multisets, compute_histogram,

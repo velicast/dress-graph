@@ -59,7 +59,7 @@ public:
             throw std::runtime_error("DRESS: dress_init_graph failed");
     }
 
-    // Unweighted graph (no edge weights, no node weights).
+    // Unweighted graph (no edge weights, no vertex weights).
     DRESS(int N,
                const std::vector<int>& U,
                const std::vector<int>& V,
@@ -73,7 +73,7 @@ public:
     // U, V, W, NW must have been allocated with malloc/calloc.
     // The DRESS (and underlying C code) takes ownership and will
     // free them on destruction.  W may be nullptr for unweighted graphs.
-    // NW may be nullptr (all node weights 1.0).
+    // NW may be nullptr (all vertex weights 1.0).
     DRESS(int N, int E,
                int *U, int *V, double *W, double *NW = nullptr,
                dress_variant_t variant       = DRESS_VARIANT_UNDIRECTED,
@@ -129,7 +129,7 @@ public:
         int64_t                   num_subgraphs; // C(N,k) — number of rows
     };
 
-    // Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets,
+    // Run Δ^k-DRESS: enumerate all C(N,k) vertex-deletion subsets,
     // fit DRESS on each, and accumulate edge values into a histogram.
     //
     // Parameters:
@@ -181,7 +181,7 @@ public:
     };
 
     // Run ∇^k-DRESS: enumerate all P(N,k) ordered k-tuples,
-    // mark each tuple with generic injective node weights,
+    // mark each tuple with generic injective vertex weights,
     // fit DRESS on each marked graph, and accumulate edge values
     // into a histogram.
     NablaFitResult nablaFit(int k, int maxIterations, double epsilon,
@@ -231,15 +231,15 @@ public:
     // Current dress similarity value for edge e.
     double      edgeDress(int e)    const { ensureValid(); return g_->edge_dress[e]; }
 
-    // Per-node dress norm (sqrt of weighted sum).
-    double      nodeDress(int u)    const { ensureValid(); return g_->node_dress[u]; }
+    // Per-vertex dress norm (sqrt of weighted sum).
+    double      vertexDress(int u)    const { ensureValid(); return g_->vertex_dress[u]; }
 
     // Pointer-based bulk access (for performance-critical loops).
     const int*    edgeSources()     const { ensureValid(); return g_->U; }
     const int*    edgeTargets()     const { ensureValid(); return g_->V; }
     const double* edgeWeights()     const { ensureValid(); return g_->edge_weight; }
     const double* edgeDressValues() const { ensureValid(); return g_->edge_dress; }
-    const double* nodeDressValues() const { ensureValid(); return g_->node_dress; }
+    const double* vertexDressValues() const { ensureValid(); return g_->vertex_dress; }
 
     // ------- virtual-edge query -------
 

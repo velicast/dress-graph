@@ -75,7 +75,7 @@ export const Variant = Object.freeze({
  * @property {Int32Array}    targets     - Edge target vertices
  * @property {Float64Array}  edgeWeight  - Per-edge variant weights
  * @property {Float64Array}  edgeDress   - Per-edge dress similarity
- * @property {Float64Array}  nodeDress   - Per-node aggregated similarity
+ * @property {Float64Array}  vertexDress   - Per-vertex aggregated similarity
  * @property {number}        iterations  - Iterations performed
  * @property {number}        delta       - Final max per-edge change
  */
@@ -128,15 +128,15 @@ export async function fit(opts) {
         }
     }
 
-    // Node weights (nullable)
+    // vertex weights (nullable)
     let nwPtr = 0; // NULL
-    if (opts.nodeWeights) {
-        if (opts.nodeWeights.length !== N) {
-            throw new Error(`nodeWeights (${opts.nodeWeights.length}) must equal vertex count (${N})`);
+    if (opts.vertexWeights) {
+        if (opts.vertexWeights.length !== N) {
+            throw new Error(`vertexWeights (${opts.vertexWeights.length}) must equal vertex count (${N})`);
         }
         nwPtr = M._malloc(N * 8);
         const heapF64 = M.HEAPF64;
-        const nw = opts.nodeWeights;
+        const nw = opts.vertexWeights;
         for (let i = 0; i < N; i++) {
             heapF64[(nwPtr >> 3) + i] = nw[i];
         }
@@ -173,16 +173,16 @@ export async function fit(opts) {
     //   offset 40: *edge_weight   (ptr32)
     //   offset 44: *edge_dress    (ptr32)
     //   offset 48: *edge_dress_next (ptr32)
-    //   offset 52: *node_dress    (ptr32)
+    //   offset 52: *vertex_dress    (ptr32)
     //   offset 56: *NW            (ptr32)
     const ewPtr = M.getValue(g + 40, 'i32');  // edge_weight pointer
     const edPtr = M.getValue(g + 44, 'i32');  // edge_dress pointer
-    const ndPtr = M.getValue(g + 52, 'i32');  // node_dress pointer
+    const ndPtr = M.getValue(g + 52, 'i32');  // vertex_dress pointer
 
     // Copy results into JS-owned typed arrays
     const edgeWeight = new Float64Array(E);
     const edgeDress  = new Float64Array(E);
-    const nodeDress  = new Float64Array(N);
+    const vertexDress  = new Float64Array(N);
 
     const heapF64 = M.HEAPF64;
     for (let i = 0; i < E; i++) {
@@ -190,7 +190,7 @@ export async function fit(opts) {
         edgeDress[i]  = heapF64[(edPtr >> 3) + i];
     }
     for (let i = 0; i < N; i++) {
-        nodeDress[i] = heapF64[(ndPtr >> 3) + i];
+        vertexDress[i] = heapF64[(ndPtr >> 3) + i];
     }
 
     // Copy sources/targets before free
@@ -211,7 +211,7 @@ export async function fit(opts) {
         targets:    targetsOut,
         edgeWeight: edgeWeight,
         edgeDress:  edgeDress,
-        nodeDress:  nodeDress,
+        vertexDress:  vertexDress,
         iterations: iterations,
         delta:      delta,
     };
@@ -286,10 +286,10 @@ export class DRESS {
         }
 
         let nwPtr = 0;
-        if (opts.nodeWeights && opts.nodeWeights.length === N) {
+        if (opts.vertexWeights && opts.vertexWeights.length === N) {
             nwPtr = M._malloc(N * 8);
             for (let i = 0; i < N; i++) {
-                M.HEAPF64[(nwPtr >> 3) + i] = opts.nodeWeights[i];
+                M.HEAPF64[(nwPtr >> 3) + i] = opts.vertexWeights[i];
             }
         }
 
@@ -346,14 +346,14 @@ export class DRESS {
 
         const edgeWeight = new Float64Array(E);
         const edgeDress  = new Float64Array(E);
-        const nodeDress  = new Float64Array(N);
+        const vertexDress  = new Float64Array(N);
 
         for (let i = 0; i < E; i++) {
             edgeWeight[i] = M.HEAPF64[(ewPtr >> 3) + i];
             edgeDress[i]  = M.HEAPF64[(edPtr >> 3) + i];
         }
         for (let i = 0; i < N; i++) {
-            nodeDress[i] = M.HEAPF64[(ndPtr >> 3) + i];
+            vertexDress[i] = M.HEAPF64[(ndPtr >> 3) + i];
         }
 
         return {
@@ -361,7 +361,7 @@ export class DRESS {
             targets:    new Int32Array(this._targets),
             edgeWeight,
             edgeDress,
-            nodeDress,
+            vertexDress,
             iterations: 0,
             delta:      0,
         };
@@ -606,11 +606,11 @@ export async function deltaFit(opts) {
     }
 
     let nwPtr = 0;
-    if (opts.nodeWeights && opts.nodeWeights.length === N) {
+    if (opts.vertexWeights && opts.vertexWeights.length === N) {
         nwPtr = M._malloc(N * 8);
         const heapF64 = M.HEAPF64;
         for (let i = 0; i < N; i++) {
-            heapF64[(nwPtr >> 3) + i] = opts.nodeWeights[i];
+            heapF64[(nwPtr >> 3) + i] = opts.vertexWeights[i];
         }
     }
 
@@ -739,11 +739,11 @@ export async function nablaFit(opts) {
     }
 
     let nwPtr = 0;
-    if (opts.nodeWeights && opts.nodeWeights.length === N) {
+    if (opts.vertexWeights && opts.vertexWeights.length === N) {
         nwPtr = M._malloc(N * 8);
         const heapF64 = M.HEAPF64;
         for (let i = 0; i < N; i++) {
-            heapF64[(nwPtr >> 3) + i] = opts.nodeWeights[i];
+            heapF64[(nwPtr >> 3) + i] = opts.vertexWeights[i];
         }
     }
 

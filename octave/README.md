@@ -14,8 +14,8 @@ pkg install dress-graph-0.4.0.tar.gz
 
 The generated package includes the MATLAB-compatible functional and OO APIs:
 
-- CPU: `dress_fit`, `dress_delta_fit`, `DRESS`
-- CUDA: `cuda.dress_fit`, `cuda.dress_delta_fit`, `cuda.DRESS`
+- CPU: `fit`, `delta_fit`, `DRESS`
+- CUDA: `cuda.fit`, `cuda.delta_fit`, `cuda.DRESS`
 - MPI: `mpi.DRESS(...).delta_fit(...)`
 - MPI+CUDA: `mpi.cuda.DRESS(...).delta_fit(...)`
 

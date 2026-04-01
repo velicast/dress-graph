@@ -32,7 +32,7 @@ __all__ = ["fit", "delta_fit", "nabla_fit", "NxDRESS"]
 # Shared helpers (also used by dress.cuda.networkx)
 # ---------------------------------------------------------------------------
 
-def _extract_edges(G, weight_attr="weight", node_weight_attr="node_weight"):
+def _extract_edges(G, weight_attr="weight", vertex_weight_attr="vertex_weight"):
     """Convert a NetworkX graph to 0-indexed edge arrays.
 
     Returns (n_vertices, sources, targets, weights_or_None,
@@ -54,18 +54,18 @@ def _extract_edges(G, weight_attr="weight", node_weight_attr="node_weight"):
         if w != 1.0:
             has_weights = True
 
-    # Extract per-node weights
-    node_weights = []
+    # Extract per-vertex weights
+    vertex_weights = []
     has_node_weights = False
     for n in nodes:
-        nw = G.nodes[n].get(node_weight_attr, 1.0)
-        node_weights.append(float(nw))
+        nw = G.nodes[n].get(vertex_weight_attr, 1.0)
+        vertex_weights.append(float(nw))
         if nw != 1.0:
             has_node_weights = True
 
     return (len(nodes), sources, targets,
             weights if has_weights else None,
-            node_weights if has_node_weights else None,
+            vertex_weights if has_node_weights else None,
             nodes)
 
 
@@ -77,7 +77,7 @@ def _set_graph_attributes(G, result, nodes):
         if G.has_edge(u_label, v_label):
             G[u_label][v_label]["dress"] = result.edge_dress[i]
     for i, n in enumerate(nodes):
-        G.nodes[n]["dress_norm"] = result.node_dress[i]
+        G.nodes[n]["vertex_dress"] = result.vertex_dress[i]
 
 
 def _dress_graph_impl(
@@ -86,19 +86,19 @@ def _dress_graph_impl(
     *,
     variant=UNDIRECTED,
     weight="weight",
-    node_weight="node_weight",
+    vertex_weight="vertex_weight",
     max_iterations=100,
     epsilon=1e-6,
     precompute_intercepts=False,
     set_attributes=False,
 ):
     """Core implementation shared by CPU and CUDA wrappers."""
-    n_vertices, sources, targets, weights, node_weights, nodes = _extract_edges(
-        G, weight, node_weight)
+    n_vertices, sources, targets, weights, vertex_weights, nodes = _extract_edges(
+        G, weight, vertex_weight)
 
     result = fit_fn(
         n_vertices, sources, targets,
-        weights=weights, node_weights=node_weights,
+        weights=weights, vertex_weights=vertex_weights,
         variant=variant,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute_intercepts=precompute_intercepts,
@@ -117,7 +117,7 @@ def _delta_dress_graph_impl(
     k=0,
     variant=UNDIRECTED,
     weight="weight",
-    node_weight="node_weight",
+    vertex_weight="vertex_weight",
     max_iterations=100,
     epsilon=1e-6,
     precompute=False,
@@ -125,12 +125,12 @@ def _delta_dress_graph_impl(
     **kwargs,
 ):
     """Core implementation shared by CPU, CUDA, and MPI wrappers."""
-    n_vertices, sources, targets, weights, node_weights, _nodes = _extract_edges(
-        G, weight, node_weight)
+    n_vertices, sources, targets, weights, vertex_weights, _nodes = _extract_edges(
+        G, weight, vertex_weight)
 
     return delta_fn(
         n_vertices, sources, targets,
-        weights=weights, node_weights=node_weights,
+        weights=weights, vertex_weights=vertex_weights,
         k=k, variant=variant,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
@@ -171,8 +171,8 @@ def fit(
     precompute_intercepts : bool
         Pre-compute common-neighbour index (default ``False``).
     set_attributes : bool
-        If ``True``, write ``"dress"`` edge attributes and ``"dress_norm"``
-        node attributes back onto *G*.
+        If ``True``, write ``"dress"`` edge attributes and ``"vertex_dress"``
+        vertex attributes back onto *G*.
 
     Returns
     -------
@@ -255,7 +255,7 @@ def nabla_fit(
     k: int = 0,
     variant: Variant = UNDIRECTED,
     weight: str = "weight",
-    node_weight: str = "node_weight",
+    vertex_weight: str = "vertex_weight",
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute: bool = False,
@@ -272,8 +272,8 @@ def nabla_fit(
     k : int
         Individualization depth.
     variant : Variant
-    weight, node_weight : str
-        Edge/node attribute names.
+    weight, vertex_weight : str
+        Edge/vertex attribute names.
     max_iterations, epsilon : int, float
     precompute, keep_multisets : bool
 
@@ -284,7 +284,7 @@ def nabla_fit(
     from dress import nabla_fit
     return _delta_dress_graph_impl(
         nabla_fit, G,
-        k=k, variant=variant, weight=weight, node_weight=node_weight,
+        k=k, variant=variant, weight=weight, vertex_weight=vertex_weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
         keep_multisets=keep_multisets,
@@ -300,8 +300,8 @@ def nabla_fit(
 class NxDRESS:
     """Persistent DRESS graph backed by a NetworkX graph.
 
-    Translates NetworkX node labels to 0-based indices automatically,
-    so :meth:`get` accepts the original node labels.
+    Translates NetworkX vertex labels to 0-based indices automatically,
+    so :meth:`get` accepts the original vertex labels.
 
     The backend is determined by which module you import from::
 
@@ -334,11 +334,11 @@ class NxDRESS:
         *,
         variant: Variant = UNDIRECTED,
         weight: str = "weight",
-        node_weight: str = "node_weight",
+        vertex_weight: str = "vertex_weight",
         precompute_intercepts: bool = False,
     ) -> None:
-        n_vertices, sources, targets, weights, node_weights, nodes = _extract_edges(
-            G, weight, node_weight)
+        n_vertices, sources, targets, weights, vertex_weights, nodes = _extract_edges(
+            G, weight, vertex_weight)
         self._nodes = nodes
         self._node_to_idx = {n: i for i, n in enumerate(nodes)}
         cls = self._dress_cls
@@ -346,7 +346,7 @@ class NxDRESS:
             from dress import DRESS as cls
         self._dress = cls(
             n_vertices, sources, targets,
-            weights=weights, node_weights=node_weights,
+            weights=weights, vertex_weights=vertex_weights,
             variant=variant,
             precompute_intercepts=precompute_intercepts,
         )
@@ -420,9 +420,9 @@ class NxDRESS:
         epsilon: float = 1e-6,
         edge_weight: float = 1.0,
     ) -> float:
-        """Query the DRESS similarity for any node pair.
+        """Query the DRESS similarity for any vertex pair.
 
-        Accepts original NetworkX node labels (strings, ints, etc.).
+        Accepts original NetworkX vertex labels (strings, ints, etc.).
         """
         ui = self._node_to_idx[u]
         vi = self._node_to_idx[v]
@@ -439,7 +439,7 @@ class NxDRESS:
             targets=[g.edge_target(e) for e in range(E)],
             edge_dress=[g.edge_dress(e) for e in range(E)],
             edge_weight=[g.edge_weight(e) for e in range(E)],
-            node_dress=[g.node_dress(u) for u in range(g.n_vertices)],
+            vertex_dress=[g.vertex_dress(u) for u in range(g.n_vertices)],
             iterations=fr.iterations if fr else 0,
             delta=fr.delta if fr else 0.0,
         )
@@ -450,7 +450,7 @@ class NxDRESS:
 
     @property
     def nodes(self):
-        """Node label list (same order as 0-based indices)."""
+        """Vertex label list (same order as 0-based indices)."""
         return self._nodes
 
     def __enter__(self):

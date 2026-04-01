@@ -288,7 +288,7 @@ This continuous relaxation has concrete advantages:
 - **Metric output.**  2-WL answers "same or different"; DRESS answers
   "how similar."  Every binary classification task becomes a
   regression/similarity task, and every histogram becomes a distribution.
-- **Edge granularity.**  2-WL assigns one color per node pair; DRESS assigns
+- **Edge granularity.**  2-WL assigns one color per vertex pair; DRESS assigns
   one value per edge, providing a compact structural description.
 - **Downstream utility.**  Continuous values can be thresholded, ranked,
   clustered, or used directly as features - none of which are possible

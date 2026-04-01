@@ -69,7 +69,7 @@ mpi$delta_fit <- function(n_vertices,
                                 sources,
                                 targets,
                                 weights          = NULL,
-                                node_weights     = NULL,
+                                vertex_weights     = NULL,
                                 k                = 0L,
                                 variant          = 0L,
                                 max_iterations   = 100L,
@@ -85,7 +85,7 @@ mpi$delta_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -113,7 +113,7 @@ mpi$delta_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -143,7 +143,7 @@ mpi$nabla_fit <- function(n_vertices,
                                 sources,
                                 targets,
                                 weights          = NULL,
-                                node_weights     = NULL,
+                                vertex_weights     = NULL,
                                 k                = 0L,
                                 variant          = 0L,
                                 max_iterations   = 100L,
@@ -159,7 +159,7 @@ mpi$nabla_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -187,7 +187,7 @@ mpi$nabla_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -214,7 +214,7 @@ mpi$cuda$delta_fit <- function(n_vertices,
                                      sources,
                                      targets,
                                      weights          = NULL,
-                                     node_weights     = NULL,
+                                     vertex_weights     = NULL,
                                      k                = 0L,
                                      variant          = 0L,
                                      max_iterations   = 100L,
@@ -230,7 +230,7 @@ mpi$cuda$delta_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -257,7 +257,7 @@ mpi$cuda$delta_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -280,7 +280,7 @@ mpi$cuda$nabla_fit <- function(n_vertices,
                                      sources,
                                      targets,
                                      weights          = NULL,
-                                     node_weights     = NULL,
+                                     vertex_weights     = NULL,
                                      k                = 0L,
                                      variant          = 0L,
                                      max_iterations   = 100L,
@@ -296,7 +296,7 @@ mpi$cuda$nabla_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -323,7 +323,7 @@ mpi$cuda$nabla_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -351,7 +351,7 @@ mpi$omp$delta_fit <- function(n_vertices,
                                     sources,
                                     targets,
                                     weights          = NULL,
-                                    node_weights     = NULL,
+                                    vertex_weights     = NULL,
                                     k                = 0L,
                                     variant          = 0L,
                                     max_iterations   = 100L,
@@ -367,7 +367,7 @@ mpi$omp$delta_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -394,7 +394,7 @@ mpi$omp$delta_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -418,7 +418,7 @@ mpi$omp$nabla_fit <- function(n_vertices,
                                     sources,
                                     targets,
                                     weights          = NULL,
-                                    node_weights     = NULL,
+                                    vertex_weights     = NULL,
                                     k                = 0L,
                                     variant          = 0L,
                                     max_iterations   = 100L,
@@ -434,7 +434,7 @@ mpi$omp$nabla_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -461,7 +461,7 @@ mpi$omp$nabla_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -493,7 +493,7 @@ mpi$DRESS <- function(n_vertices,
                       sources,
                       targets,
                       weights               = NULL,
-                      node_weights          = NULL,
+                      vertex_weights          = NULL,
                       variant               = DRESS_UNDIRECTED,
                       precompute_intercepts = FALSE) {
 
@@ -512,13 +512,13 @@ mpi$DRESS <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
-  if (!is.null(node_weights)) {
-    node_weights <- as.double(node_weights)
-    stopifnot(length(node_weights) == n_vertices)
+  if (!is.null(vertex_weights)) {
+    vertex_weights <- as.double(vertex_weights)
+    stopifnot(length(vertex_weights) == n_vertices)
   }
 
   ptr <- .Call(C_dress_init,
-               n_vertices, sources, targets, weights, node_weights,
+               n_vertices, sources, targets, weights, vertex_weights,
                variant, precompute)
 
   self <- new.env(parent = emptyenv())
@@ -612,7 +612,7 @@ mpi$cuda$DRESS <- function(n_vertices,
                            sources,
                            targets,
                            weights               = NULL,
-                           node_weights          = NULL,
+                           vertex_weights          = NULL,
                            variant               = DRESS_UNDIRECTED,
                            precompute_intercepts = FALSE) {
 
@@ -631,13 +631,13 @@ mpi$cuda$DRESS <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
-  if (!is.null(node_weights)) {
-    node_weights <- as.double(node_weights)
-    stopifnot(length(node_weights) == n_vertices)
+  if (!is.null(vertex_weights)) {
+    vertex_weights <- as.double(vertex_weights)
+    stopifnot(length(vertex_weights) == n_vertices)
   }
 
   ptr <- .Call(C_dress_init,
-               n_vertices, sources, targets, weights, node_weights,
+               n_vertices, sources, targets, weights, vertex_weights,
                variant, precompute)
 
   self <- new.env(parent = emptyenv())

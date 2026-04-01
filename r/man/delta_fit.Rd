@@ -9,12 +9,11 @@ The result is a sparse exact histogram of edge DRESS values pooled across all
 }
 \usage{
 delta_fit(n_vertices, sources, targets, weights = NULL,
-                node_weights = NULL, k = 0L, variant = DRESS_UNDIRECTED,
+                vertex_weights = NULL, k = 0L, variant = DRESS_UNDIRECTED,
                 max_iterations = 100L, epsilon = 1e-6,
                 n_samples = 0L, seed = 0L,
                 precompute = FALSE,
-                keep_multisets = FALSE, compute_histogram = TRUE,
-                offset = 0L, stride = 1L)
+                keep_multisets = FALSE, compute_histogram = TRUE)
 }
 \arguments{
   \item{n_vertices}{Integer. Number of vertices (vertex ids must be in
@@ -23,7 +22,7 @@ delta_fit(n_vertices, sources, targets, weights = NULL,
   \item{targets}{Integer vector of length E -- edge target endpoints (0-based).}
   \item{weights}{Numeric vector of length E -- edge weights, or \code{NULL}
     for unweighted (all ones). Default \code{NULL}.}
-  \item{node_weights}{Numeric vector of length N -- node weights, or \code{NULL}
+  \item{vertex_weights}{Numeric vector of length N -- vertex weights, or \code{NULL}
     (all ones). Default \code{NULL}.}
   \item{k}{Integer. Number of vertices to remove per subset
     (0 = original graph, default 0).}
@@ -43,12 +42,6 @@ delta_fit(n_vertices, sources, targets, weights = NULL,
     Default \code{FALSE}.}
   \item{compute_histogram}{Logical. If \code{FALSE}, skip histogram
     construction (default \code{TRUE}).}
-  \item{offset}{Integer. Start index for stride-based subgraph selection
-    (0-based). Used for distributing work across MPI ranks.
-    Default \code{0L}.}
-  \item{stride}{Integer. Step size for stride-based subgraph selection
-    (must be >= 1). Only subgraphs where \code{index \%\% stride == offset}
-    are processed. Default \code{1L} (process all subgraphs).}
 }
 \value{
 A list with components:

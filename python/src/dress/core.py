@@ -10,7 +10,7 @@ Usage::
 
     result = fit(4, [0, 1, 2, 0], [1, 2, 3, 3])
     result.edge_dress     # per-edge similarity values
-    result.node_dress     # per-node norms
+    result.vertex_dress     # per-vertex norms
     result.iterations     # number of iterations
     result.delta          # final convergence delta
 """
@@ -108,13 +108,13 @@ def _flatten_histogram(hist: Dict[float, int]) -> List[Tuple[float, int]]:
 
 @dataclass
 class DRESSResult:
-    """Extended result with copies of edge/node data (legacy API)."""
+    """Extended result with copies of edge/vertex data (legacy API)."""
 
     sources: List[int]
     targets: List[int]
     edge_dress: List[float]
     edge_weight: List[float]
-    node_dress: List[float]
+    vertex_dress: List[float]
     iterations: int
     delta: float
 
@@ -169,7 +169,7 @@ class DRESS:
         Edge endpoint arrays (same length).
     weights : sequence of float, optional
         Per-edge weights. ``None`` for unweighted (all weights = 1).
-    node_weights : sequence of float, optional
+    vertex_weights : sequence of float, optional
         Per-vertex weights. ``None`` for unit weights (all = 1).
     variant : Variant
         ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
@@ -185,7 +185,7 @@ class DRESS:
         precompute_intercepts: bool = False,
         *,
         weights: Optional[Sequence[float]] = None,
-        node_weights: Optional[Sequence[float]] = None,
+        vertex_weights: Optional[Sequence[float]] = None,
         variant: Optional[Variant] = None,
     ) -> None:
         # Support both calling conventions:
@@ -222,7 +222,7 @@ class DRESS:
 
         w_in = [1.0] * E if _weights is None else [float(w) for w in _weights]
         self._weights_input = _weights  # original caller weights (None = unweighted)
-        self._node_weights = [float(x) for x in node_weights] if node_weights is not None else None
+        self._node_weights = [float(x) for x in vertex_weights] if vertex_weights is not None else None
 
         # Build variant adjacency (CSR)
         self._build_adjacency(w_in)
@@ -230,7 +230,7 @@ class DRESS:
         # Initialise dress values to 1.0
         self._edge_dress: List[float] = [1.0] * E
         self._edge_dress_next: List[float] = [1.0] * E
-        self._node_dress: List[float] = [0.0] * n_vertices
+        self._vertex_dress: List[float] = [0.0] * n_vertices
 
     # -- public properties --------------------------------------------------
 
@@ -273,9 +273,9 @@ class DRESS:
         """DRESS value of edge *e* (call :meth:`fit` first)."""
         return self._edge_dress[e]
 
-    def node_dress(self, u: int) -> float:
-        """Node DRESS norm of vertex *u* (call :meth:`fit` first)."""
-        return self._node_dress[u]
+    def vertex_dress(self, u: int) -> float:
+        """vertex dress norm of vertex *u* (call :meth:`fit` first)."""
+        return self._vertex_dress[u]
 
     # -- NumPy array properties ---------------------------------------------
 
@@ -316,15 +316,15 @@ class DRESS:
         return self._np_dress
 
     @property
-    def node_dress_values(self):
-        """Node DRESS norms as ``numpy.ndarray[float64]``."""
+    def vertex_dress_values(self):
+        """vertex dress norms as ``numpy.ndarray[float64]``."""
         import numpy as np
-        if not hasattr(self, '_np_node_dress'):
-            self._np_node_dress = np.array(self._node_dress, dtype=np.float64)
+        if not hasattr(self, '_np_vertex_dress'):
+            self._np_vertex_dress = np.array(self._vertex_dress, dtype=np.float64)
         else:
-            for i, v in enumerate(self._node_dress):
-                self._np_node_dress[i] = v
-        return self._np_node_dress
+            for i, v in enumerate(self._vertex_dress):
+                self._np_vertex_dress[i] = v
+        return self._np_vertex_dress
 
     # -- adjacency construction --------------------------------------------
 
@@ -363,7 +363,7 @@ class DRESS:
                 p = raw_offset[u] + cnt[u]; cnt[u] += 1
                 raw_target[p] = v; raw_eidx[p] = i; raw_weight[p] = w
 
-        # Sort each node's segment by target id
+        # Sort each vertex segment by target id
         for u in range(N):
             s, e = raw_offset[u], raw_offset[u + 1]
             if e - s > 1:
@@ -438,7 +438,7 @@ class DRESS:
                     adj_target[p] = u; adj_eidx[p] = eid
                     self._edge_weight[eid] = w
 
-        # Sort each node's variant segment by target id
+        # Sort each vertex's variant segment by target id
         for u in range(N):
             s, e = adj_offset[u], adj_offset[u + 1]
             if e - s > 1:
@@ -471,8 +471,8 @@ class DRESS:
         -------
         FitResult
             Lightweight result with ``iterations`` and ``delta``.
-            Edge and node values are available on the graph object
-            via ``dress_values``, ``node_dress_values``, etc.
+            Edge and vertex values are available on the graph object
+            via ``dress_values``, ``vertex_dress_values``, etc.
         """
         N, E = self._N, self._E
         adj_offset = self._adj_offset
@@ -481,7 +481,7 @@ class DRESS:
         ew = self._edge_weight
         ed = self._edge_dress
         ed_next = self._edge_dress_next
-        nd = self._node_dress
+        nd = self._vertex_dress
         nw = self._node_weights
 
         final_delta = 0.0
@@ -490,7 +490,7 @@ class DRESS:
         for iteration in range(max_iterations):
             max_delta = 0.0
 
-            # Phase 1: compute node norms (sort+KBN for bitwise reproducibility)
+            # Phase 1: compute vertex norms (sort+KBN for bitwise reproducibility)
             for u in range(N):
                 base = adj_offset[u]
                 end = adj_offset[u + 1]
@@ -574,15 +574,15 @@ class DRESS:
                 final_iter = iteration
                 break
 
-        self._node_dress = nd
+        self._vertex_dress = nd
 
         # Invalidate numpy caches so they re-sync on next access
         if hasattr(self, '_np_dress'):
             for i, v in enumerate(ed):
                 self._np_dress[i] = v
-        if hasattr(self, '_np_node_dress'):
+        if hasattr(self, '_np_vertex_dress'):
             for i, v in enumerate(nd):
-                self._np_node_dress[i] = v
+                self._np_vertex_dress[i] = v
 
         return FitResult(
             iterations=final_iter,
@@ -628,7 +628,7 @@ class DRESS:
         adj_eidx = self._adj_eidx
         ew = self._edge_weight
         ed = self._edge_dress
-        nd = self._node_dress
+        nd = self._vertex_dress
 
         # Binary search for existing edge
         lo, hi = adj_offset[u], adj_offset[u + 1]
@@ -739,7 +739,7 @@ class DRESS:
         return delta_fit(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k,
             variant=self._variant,
             max_iterations=max_iterations,
@@ -756,17 +756,17 @@ class DRESS:
         result = _cuda_fit(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             variant=self._variant,
             max_iterations=max_iterations,
             epsilon=epsilon,
         )
         self._edge_dress = list(result.edge_dress)
-        self._node_dress = list(result.node_dress)
+        self._vertex_dress = list(result.vertex_dress)
         if hasattr(self, '_np_dress'):
             del self._np_dress
-        if hasattr(self, '_np_node_dress'):
-            del self._np_node_dress
+        if hasattr(self, '_np_vertex_dress'):
+            del self._np_vertex_dress
         return FitResult(iterations=result.iterations, delta=result.delta)
 
     def delta_fit_cuda(self, k: int = 0, max_iterations: int = 100,
@@ -778,7 +778,7 @@ class DRESS:
         return _cuda_delta(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k,
             variant=self._variant,
             max_iterations=max_iterations,
@@ -800,7 +800,7 @@ class DRESS:
         return _mpi_delta(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k,
             variant=self._variant,
             max_iterations=max_iterations,
@@ -823,7 +823,7 @@ class DRESS:
         return _mpi_cuda_delta(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k,
             variant=self._variant,
             max_iterations=max_iterations,
@@ -841,17 +841,17 @@ class DRESS:
         result = _omp_fit(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             variant=self._variant,
             max_iterations=max_iterations,
             epsilon=epsilon,
         )
         self._edge_dress = list(result.edge_dress)
-        self._node_dress = list(result.node_dress)
+        self._vertex_dress = list(result.vertex_dress)
         if hasattr(self, '_np_dress'):
             del self._np_dress
-        if hasattr(self, '_np_node_dress'):
-            del self._np_node_dress
+        if hasattr(self, '_np_vertex_dress'):
+            del self._np_vertex_dress
         return FitResult(iterations=result.iterations, delta=result.delta)
 
     def delta_fit_omp(self, k: int = 0, max_iterations: int = 100,
@@ -863,7 +863,7 @@ class DRESS:
         return _omp_delta(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k,
             variant=self._variant,
             max_iterations=max_iterations,
@@ -885,7 +885,7 @@ class DRESS:
         return _mpi_omp_delta(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k,
             variant=self._variant,
             max_iterations=max_iterations,
@@ -907,7 +907,7 @@ class DRESS:
         """Compute the ∇^k-DRESS histogram (CPU, sequential).
 
         Enumerates all P(N,k) ordered k-tuples, marks each with
-        generic injective node weights, runs DRESS on each marked
+        generic injective vertex weights, runs DRESS on each marked
         graph, and accumulates edge values into a histogram.
 
         Returns
@@ -917,7 +917,7 @@ class DRESS:
         return nabla_fit(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k,
             variant=self._variant,
             max_iterations=max_iterations,
@@ -938,7 +938,7 @@ class DRESS:
         return _cuda_nabla(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k, variant=self._variant,
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets,
@@ -956,7 +956,7 @@ class DRESS:
         return _omp_nabla(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k, variant=self._variant,
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets,
@@ -975,7 +975,7 @@ class DRESS:
         return _mpi_nabla(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k, variant=self._variant,
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -994,7 +994,7 @@ class DRESS:
         return _mpi_cuda_nabla(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k, variant=self._variant,
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -1013,7 +1013,7 @@ class DRESS:
         return _mpi_omp_nabla(
             self._N, self._U, self._V,
             weights=self._weights_input,
-            node_weights=self._node_weights,
+            vertex_weights=self._node_weights,
             k=k, variant=self._variant,
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -1029,7 +1029,7 @@ def fit(
     sources: Sequence[int],
     targets: Sequence[int],
     weights: Optional[Sequence[float]] = None,
-    node_weights: Optional[Sequence[float]] = None,
+    vertex_weights: Optional[Sequence[float]] = None,
     variant: Variant = UNDIRECTED,
     max_iterations: int = 100,
     epsilon: float = 1e-6,
@@ -1061,10 +1061,10 @@ def fit(
     -------
     DRESSResult
         Dataclass with fields ``sources``, ``targets``, ``edge_dress``,
-        ``edge_weight``, ``node_dress``, ``iterations``, and ``delta``.
+        ``edge_weight``, ``vertex_dress``, ``iterations``, and ``delta``.
     """
     g = DRESS(n_vertices, sources, targets, weights=weights,
-              node_weights=node_weights, variant=variant,
+              vertex_weights=vertex_weights, variant=variant,
               precompute_intercepts=precompute_intercepts)
     fr = g.fit(max_iterations=max_iterations, epsilon=epsilon)
     return DRESSResult(
@@ -1072,7 +1072,7 @@ def fit(
         targets=list(g._V),
         edge_dress=list(g._edge_dress),
         edge_weight=list(g._edge_weight),
-        node_dress=list(g._node_dress),
+        vertex_dress=list(g._vertex_dress),
         iterations=fr.iterations,
         delta=fr.delta,
     )
@@ -1084,7 +1084,7 @@ def delta_fit(
     sources: Sequence[int],
     targets: Sequence[int],
     weights: Optional[Sequence[float]] = None,
-    node_weights: Optional[Sequence[float]] = None,
+    vertex_weights: Optional[Sequence[float]] = None,
     k: int = 0,
     variant: Variant = UNDIRECTED,
     max_iterations: int = 100,
@@ -1137,12 +1137,12 @@ def delta_fit(
     src = list(sources)
     tgt = list(targets)
     wgt: Optional[List[float]] = list(weights) if weights is not None else None
-    nwgt: Optional[List[float]] = list(node_weights) if node_weights is not None else None
+    nwgt: Optional[List[float]] = list(vertex_weights) if vertex_weights is not None else None
 
     # Build the full graph once.
     full_g = DRESS(N, list(src), list(tgt),
                    weights=list(wgt) if wgt is not None else None,
-                   node_weights=list(nwgt) if nwgt is not None else None,
+                   vertex_weights=list(nwgt) if nwgt is not None else None,
                    variant=variant)
     hist: Dict[float, int] = {}
     do_hist = compute_histogram
@@ -1268,7 +1268,7 @@ def delta_fit(
                     sub_nwgt = [nwgt[v] for v in range(N) if v not in deleted]
                 g = DRESS(sub_n, sub_src, sub_tgt,
                           weights=sub_wgt_list if sub_wgt_list else None,
-                          node_weights=sub_nwgt,
+                          vertex_weights=sub_nwgt,
                           variant=variant)
                 g.fit(max_iterations=max_iterations, epsilon=epsilon)
                 if do_hist:
@@ -1294,7 +1294,7 @@ def nabla_fit(
     sources: Sequence[int],
     targets: Sequence[int],
     weights: Optional[Sequence[float]] = None,
-    node_weights: Optional[Sequence[float]] = None,
+    vertex_weights: Optional[Sequence[float]] = None,
     k: int = 0,
     variant: Variant = UNDIRECTED,
     max_iterations: int = 100,
@@ -1308,7 +1308,7 @@ def nabla_fit(
     """Compute the ∇^k-DRESS histogram (pure Python).
 
     Enumerates all P(N,k) ordered k-tuples, marks each with
-    generic injective node weights (sqrt of successive primes),
+    generic injective vertex weights (sqrt of successive primes),
     runs DRESS on each marked graph, and accumulates edge values.
 
     Returns
@@ -1322,7 +1322,7 @@ def nabla_fit(
     src = list(sources)
     tgt = list(targets)
     wgt: Optional[List[float]] = list(weights) if weights is not None else None
-    nwgt: Optional[List[float]] = list(node_weights) if node_weights is not None else None
+    nwgt: Optional[List[float]] = list(vertex_weights) if vertex_weights is not None else None
 
     # P(N, k)
     pnk = 1
@@ -1354,7 +1354,7 @@ def nabla_fit(
             ms[base + e_idx] = g.edge_dress(e_idx)
 
     if k == 0:
-        g = DRESS(N, src, tgt, weights=wgt, node_weights=nwgt, variant=variant)
+        g = DRESS(N, src, tgt, weights=wgt, vertex_weights=nwgt, variant=variant)
         g.fit(max_iterations=max_iterations, epsilon=epsilon)
         if do_hist:
             _accumulate_histogram(g)
@@ -1401,7 +1401,7 @@ def nabla_fit(
             for i in range(k):
                 marked_nw[tuple_buf[i]] = marker_weights[i]
 
-            g = DRESS(N, src, tgt, weights=wgt, node_weights=marked_nw, variant=variant)
+            g = DRESS(N, src, tgt, weights=wgt, vertex_weights=marked_nw, variant=variant)
             g.fit(max_iterations=max_iterations, epsilon=epsilon)
             if do_hist:
                 _accumulate_histogram(g)

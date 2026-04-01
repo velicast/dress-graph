@@ -4,9 +4,9 @@
  * Exact algorithmic match with the CPU fit() in dress.c:
  *
  *   Per iteration:
- *     Phase 1 — node_dress[u] = sqrt(4 + Σ edge_weight[e]*edge_dress[e])
+ *     Phase 1 — vertex_dress[u] = sqrt(4 + Σ edge_weight[e]*edge_dress[e])
  *               over all half-edges in u's CSR segment.
- *               → One thread per node.
+ *               → One thread per vertex.
  *
  *     Phase 2 — For each edge e = (u,v), compute dress(u,v):
  *               ● With intercepts: walk intercept_edge_ux/vx arrays.
@@ -14,7 +14,7 @@
  *               Add variant-specific self-loop/cross-term:
  *                 FORWARD|BACKWARD: 4 + w·d
  *                 UNDIRECTED|DIRECTED: 8 + 2·w·d
- *               Divide by node_dress[u]*node_dress[v].
+ *               Divide by vertex_dress[u]*vertex_dress[v].
  *               Write to edge_dress_next[e].
  *               Track max |d_old − d_new| via atomicMax.
  *               → One thread per edge.
@@ -22,7 +22,7 @@
  *     Phase 3 — Swap edge_dress ↔ edge_dress_next (pointer swap on host).
  *     Phase 4 — Check convergence (download scalar max_delta from GPU).
  *
- * After the loop, download edge_dress[] and node_dress[] to the host graph.
+ * After the loop, download edge_dress[] and vertex_dress[] to the host graph.
  */
 
 #include "dress/cuda/dress_cuda.h"
@@ -250,9 +250,9 @@ double kbn_sum_d(const double *arr, int n)
 }
 
 /* ------------------------------------------------------------------ */
-/*  Kernel 1: node_dress                                               */
+/*  Kernel 1: vertex_dress                                               */
 /*                                                                     */
-/*  node_dress[u] = sqrt( 4 + Σ edge_weight[ei] * edge_dress[ei] )    */
+/*  vertex_dress[u] = sqrt( 4 + Σ edge_weight[ei] * edge_dress[ei] )    */
 /*  where the sum runs over all half-edges in u's CSR row.             */
 /*                                                                     */
 /*  Each thread gets an exact slice of d_work via work_offset[tid].    */
@@ -266,7 +266,7 @@ kernel_node_dress(const int    item_start,
                   const int   * __restrict__ adj_edge_idx,
                   const double* __restrict__ edge_weight,
                   const double* __restrict__ edge_dress,
-                  double      * __restrict__ node_dress,
+                  double      * __restrict__ vertex_dress,
                   const double* __restrict__ NW,
                   const size_t* __restrict__ work_offset,
                   double      * __restrict__ d_work)
@@ -290,7 +290,7 @@ kernel_node_dress(const int    item_start,
 
     int n = deg + 1;
     sort_d(buf, n);
-    node_dress[u] = sqrt(kbn_sum_d(buf, n));
+    vertex_dress[u] = sqrt(kbn_sum_d(buf, n));
 }
 
 /* ------------------------------------------------------------------ */
@@ -301,7 +301,7 @@ static __device__ __forceinline__
 void edge_finalize(int e, int u, int v, int variant,
                    const double* __restrict__ edge_weight,
                    const double* __restrict__ edge_dress,
-                   const double* __restrict__ node_dress,
+                   const double* __restrict__ vertex_dress,
                    const double* __restrict__ NW,
                    double* __restrict__ edge_dress_next,
                    unsigned long long* __restrict__ d_max_delta,
@@ -319,7 +319,7 @@ void edge_finalize(int e, int u, int v, int variant,
     sort_d(buf, n);
     double numerator = kbn_sum_d(buf, n);
 
-    double denom = node_dress[u] * node_dress[v];
+    double denom = vertex_dress[u] * vertex_dress[v];
     double dress_uv = (denom > 0.0) ? (numerator / denom) : 0.0;
     edge_dress_next[e] = dress_uv;
 
@@ -333,7 +333,7 @@ void edge_finalize(int e, int u, int v, int variant,
 /*  For edge e = (u,v):                                                */
 /*    num  = Σ_{k ∈ intercepts(e)} (w_ux·d_ux + w_vx·d_vx)            */
 /*         + self_term(variant, w_e, d_e)                              */
-/*    edge_dress_next[e] = num / (node_dress[u] * node_dress[v])       */
+/*    edge_dress_next[e] = num / (vertex_dress[u] * vertex_dress[v])       */
 /* ------------------------------------------------------------------ */
 
 __global__ void
@@ -345,7 +345,7 @@ kernel_edge_dress_intercept(
         const int   * __restrict__ V,
         const double* __restrict__ edge_weight,
         const double* __restrict__ edge_dress,
-        const double* __restrict__ node_dress,
+        const double* __restrict__ vertex_dress,
         const double* __restrict__ NW,
         const int   * __restrict__ intercept_offset,
         const int   * __restrict__ intercept_edge_ux,
@@ -377,7 +377,7 @@ kernel_edge_dress_intercept(
     }
 
     edge_finalize(e, u, v, variant, edge_weight, edge_dress,
-                  node_dress, NW, edge_dress_next, d_max_delta, buf, n);
+                  vertex_dress, NW, edge_dress_next, d_max_delta, buf, n);
 }
 
 /* ------------------------------------------------------------------ */
@@ -397,7 +397,7 @@ kernel_edge_dress_merge(
         const int   * __restrict__ V,
         const double* __restrict__ edge_weight,
         const double* __restrict__ edge_dress,
-        const double* __restrict__ node_dress,
+        const double* __restrict__ vertex_dress,
         const double* __restrict__ NW,
         const int   * __restrict__ adj_offset,
         const int   * __restrict__ adj_target,
@@ -435,7 +435,7 @@ kernel_edge_dress_merge(
     }
 
     edge_finalize(e, u, v, variant, edge_weight, edge_dress,
-                  node_dress, NW, edge_dress_next, d_max_delta, buf, n);
+                  vertex_dress, NW, edge_dress_next, d_max_delta, buf, n);
 }
 
 /* ------------------------------------------------------------------ */
@@ -505,11 +505,11 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
     CUDA_CHECK(cudaMemcpy(d_edge_weight, g->edge_weight, E * sizeof(double), cudaMemcpyHostToDevice));
     CUDA_CHECK(cudaMemcpy(d_edge_dress,  g->edge_dress,  E * sizeof(double), cudaMemcpyHostToDevice));
 
-    /* Node array */
+    /* vertex array */
     double *d_node_dress;
     CUDA_CHECK(cudaMalloc(&d_node_dress, N * sizeof(double)));
 
-    /* Node weights (optional) */
+    /* vertex weights (optional) */
     double *d_NW = NULL;
     if (g->NW != NULL) {
         CUDA_CHECK(cudaMalloc(&d_NW, N * sizeof(double)));
@@ -600,7 +600,7 @@ void dress_fit_cuda(p_dress_graph_t g, int max_iterations, double epsilon,
 
     for (int iter = 0; iter < max_iterations; iter++) {
 
-        /* Phase 1: compute node_dress */
+        /* Phase 1: compute vertex_dress */
         for (int batch = 0; batch < node_plan.batch_count; batch++) {
             int item_start = node_plan.batch_start[batch];
             int item_count = node_plan.batch_size[batch];
@@ -680,10 +680,10 @@ cleanup:
     CUDA_CHECK(cudaMemcpy(g->edge_dress, d_edge_dress,
                           E * sizeof(double), cudaMemcpyDeviceToHost));
 
-    /* Download node_dress as-is from the last Phase 1 computation.
-     * This matches CPU fit() behavior exactly: node_dress is computed
+    /* Download vertex_dress as-is from the last Phase 1 computation.
+     * This matches CPU fit() behavior exactly: vertex_dress is computed
      * from the edge_dress values BEFORE the final Phase 2 + swap. */
-    CUDA_CHECK(cudaMemcpy(g->node_dress, d_node_dress,
+    CUDA_CHECK(cudaMemcpy(g->vertex_dress, d_node_dress,
                           N * sizeof(double), cudaMemcpyDeviceToHost));
 
     /* Free device memory */

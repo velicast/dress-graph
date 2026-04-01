@@ -4,12 +4,12 @@
 \description{
 Compute the \eqn{\nabla^k}{Nabla^k}-DRESS histogram by enumerating all
 \eqn{P(N,k)}{P(N,k)} ordered k-tuples of vertices, marking each tuple with
-distinct generic node weights, running DRESS on each marked graph, and
+distinct generic vertex weights, running DRESS on each marked graph, and
 pooling all converged edge values into a sparse exact histogram.
 }
 \usage{
 nabla_fit(n_vertices, sources, targets, weights = NULL,
-                node_weights = NULL, k = 0L, variant = DRESS_UNDIRECTED,
+                vertex_weights = NULL, k = 0L, variant = DRESS_UNDIRECTED,
                 max_iterations = 100L, epsilon = 1e-6,
                 n_samples = 0L, seed = 0L,
                 precompute = FALSE,
@@ -22,7 +22,7 @@ nabla_fit(n_vertices, sources, targets, weights = NULL,
   \item{targets}{Integer vector of length E -- edge target endpoints (0-based).}
   \item{weights}{Numeric vector of length E -- edge weights, or \code{NULL}
     for unweighted (all ones). Default \code{NULL}.}
-  \item{node_weights}{Numeric vector of length N -- node weights, or \code{NULL}
+  \item{vertex_weights}{Numeric vector of length N -- vertex weights, or \code{NULL}
     (all ones). Default \code{NULL}.}
   \item{k}{Integer. Number of vertices to individualize per tuple
     (0 = original graph, default 0).}

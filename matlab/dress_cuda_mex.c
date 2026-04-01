@@ -106,7 +106,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
 
     const char *field_names[] = {
         "sources", "targets", "edge_dress", "edge_weight",
-        "node_dress", "iterations", "delta"
+        "vertex_dress", "iterations", "delta"
     };
 
     mxArray *m_src, *m_dst, *m_dress, *m_weight, *m_node, *m_iters, *m_delta;
@@ -167,7 +167,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     mxSetFieldByNumber(plhs[0], 0, 3, m_weight);
 
     m_node = mxCreateDoubleMatrix(N, 1, mxREAL);
-    memcpy(mxGetPr(m_node), g->node_dress, N * sizeof(double));
+    memcpy(mxGetPr(m_node), g->vertex_dress, N * sizeof(double));
     mxSetFieldByNumber(plhs[0], 0, 4, m_node);
 
     m_iters = mxCreateNumericMatrix(1, 1, mxINT32_CLASS, mxREAL);

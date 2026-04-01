@@ -13,9 +13,9 @@ pip install dress-graph
 ## Quick start
 
 ```python
-from dress import dress_fit
+from dress import fit
 
-result = dress_fit(
+result = fit(
     n_vertices=4,
     sources=[0, 1, 2, 0],
     targets=[1, 2, 3, 3],

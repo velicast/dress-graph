@@ -28,7 +28,7 @@ function result = fit(n_vertices, sources, targets, varargin)
 %       .targets      — int32 [E x 1]  edge target endpoints (0-based)
 %       .edge_dress   — double [E x 1] DRESS similarity per edge
 %       .edge_weight  — double [E x 1] variant-specific edge weight
-%       .node_dress   — double [N x 1] per-node norm
+%       .vertex_dress   — double [N x 1] per-vertex norm
 %       .iterations   — int32 scalar   iterations performed
 %       .delta        — double scalar  final max per-edge change
 %

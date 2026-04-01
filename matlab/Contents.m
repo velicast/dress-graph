@@ -1,8 +1,8 @@
 % dress-graph MATLAB package
-% Version 0.7.0 (2026-03-31)
+% Version 0.8.0 (2026-03-31)
 %
 % DRESS: A Continuous Framework for Structural Graph Refinement.
-%   fit       - Run DRESS on an edge list and return edge and node values.
+%   fit       - Run DRESS on an edge list and return edge and vertex values.
 %   delta_fit - Compute exact sparse Delta-k-DRESS histogram entries.
 %   DRESS           - Persistent graph object wrapper.
 %   dress_to_table  - Convert result structs to MATLAB tables.

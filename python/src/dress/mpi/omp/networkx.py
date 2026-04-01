@@ -29,7 +29,7 @@ def delta_fit(
     k: int = 0,
     variant: Variant = UNDIRECTED,
     weight: str = "weight",
-    node_weight: str = "node_weight",
+    vertex_weight: str = "vertex_weight",
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute: bool = False,
@@ -53,7 +53,7 @@ def delta_fit(
     from dress.mpi.omp import delta_fit
     return _delta_dress_graph_impl(
         delta_fit, G,
-        k=k, variant=variant, weight=weight, node_weight=node_weight,
+        k=k, variant=variant, weight=weight, vertex_weight=vertex_weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
         keep_multisets=keep_multisets,
@@ -68,7 +68,7 @@ def dress_graph(
     *,
     variant: Variant = UNDIRECTED,
     weight: str = "weight",
-    node_weight: str = "node_weight",
+    vertex_weight: str = "vertex_weight",
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute_intercepts: bool = False,
@@ -82,7 +82,7 @@ def dress_graph(
     from dress.omp import fit
     return _dress_graph_impl(
         fit, G,
-        variant=variant, weight=weight, node_weight=node_weight,
+        variant=variant, weight=weight, vertex_weight=vertex_weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute_intercepts=precompute_intercepts,
         set_attributes=set_attributes,
@@ -94,7 +94,7 @@ def nabla_fit(
     k: int = 0,
     variant: Variant = UNDIRECTED,
     weight: str = "weight",
-    node_weight: str = "node_weight",
+    vertex_weight: str = "vertex_weight",
     max_iterations: int = 100,
     epsilon: float = 1e-6,
     precompute: bool = False,
@@ -108,7 +108,7 @@ def nabla_fit(
     from dress.mpi.omp import nabla_fit
     return _delta_dress_graph_impl(
         nabla_fit, G,
-        k=k, variant=variant, weight=weight, node_weight=node_weight,
+        k=k, variant=variant, weight=weight, vertex_weight=vertex_weight,
         max_iterations=max_iterations, epsilon=epsilon,
         precompute=precompute,
         keep_multisets=keep_multisets,

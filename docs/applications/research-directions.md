@@ -103,7 +103,7 @@ nauty's search tree shrinks.
 
 ## 6. Graph Compression and Summarisation
 
-The 1-WL quotient graph has one super-node per color class.  DRESS
+The 1-WL quotient graph has one super-vertex per color class.  DRESS
 produces the same quotient structure, but each super-edge carries a
 **continuous weight** (the DRESS value of that edge type).  This tells you
 not just *that* two groups are connected, but *how tightly*.
@@ -116,7 +116,7 @@ visualisation.
 ## 7. Role Extraction in Networks
 
 1-WL assigns one color per structural role (binary: same or different).
-DRESS gives a **continuous role embedding** per node:
+DRESS gives a **continuous role embedding** per vertex:
 
 ```python
 role(u) = sorted([dress(e) for e in edges_incident_to(u)])

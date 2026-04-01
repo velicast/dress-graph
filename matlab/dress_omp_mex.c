@@ -21,7 +21,7 @@
  *     .targets      — int32 [E x 1]  edge target endpoints (0-based)
  *     .edge_dress   — double [E x 1] per-edge DRESS similarity
  *     .edge_weight  — double [E x 1] variant-specific edge weight
- *     .node_dress   — double [N x 1] per-node norm
+ *     .vertex_dress   — double [N x 1] per-vertex norm
  *     .iterations   — int32 scalar   iterations performed
  *     .delta        — double scalar  final max per-edge change
  */
@@ -160,7 +160,7 @@ void mexFunction(int nlhs, mxArray *plhs[],
     /* Field names for the output struct */
     const char *field_names[] = {
         "sources", "targets", "edge_dress", "edge_weight",
-        "node_dress", "iterations", "delta"
+        "vertex_dress", "iterations", "delta"
     };
 
     mxArray *m_src, *m_dst, *m_dress, *m_weight, *m_node, *m_iters, *m_delta;
@@ -233,9 +233,9 @@ void mexFunction(int nlhs, mxArray *plhs[],
     memcpy(mxGetPr(m_weight), g->edge_weight, E * sizeof(double));
     mxSetFieldByNumber(plhs[0], 0, 3, m_weight);
 
-    /* node_dress — double [N x 1] */
+    /* vertex_dress — double [N x 1] */
     m_node = mxCreateDoubleMatrix(N, 1, mxREAL);
-    memcpy(mxGetPr(m_node), g->node_dress, N * sizeof(double));
+    memcpy(mxGetPr(m_node), g->vertex_dress, N * sizeof(double));
     mxSetFieldByNumber(plhs[0], 0, 4, m_node);
 
     /* iterations — int32 scalar */

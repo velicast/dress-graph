@@ -55,7 +55,7 @@ assert("iterations > 0",                     res$iterations > 0L)
 assert("delta >= 0",                         res$delta >= 0.0)
 assert("edge_dress length == 3",             length(res$edge_dress) == 3L)
 assert("edge_weight length == 3",            length(res$edge_weight) == 3L)
-assert("node_dress length == 3",             length(res$node_dress) == 3L)
+assert("vertex_dress length == 3",             length(res$vertex_dress) == 3L)
 assert("sources length == 3",               length(res$sources) == 3L)
 assert("targets length == 3",               length(res$targets) == 3L)
 
@@ -63,26 +63,26 @@ assert("targets length == 3",               length(res$targets) == 3L)
 assert("triangle edges equal dress",
        max(res$edge_dress) - min(res$edge_dress) < 1e-6)
 
-# All nodes in a triangle should have equal node_dress
+# All nodes in a triangle should have equal vertex_dress
 assert("triangle nodes equal dress",
-       max(res$node_dress) - min(res$node_dress) < 1e-6)
+       max(res$vertex_dress) - min(res$vertex_dress) < 1e-6)
 
 # Edge dress values should be positive
 assert("edge_dress > 0", all(res$edge_dress > 0))
 
 # =======================================================================
-cat("\n== Node weights (Default vs Explicit 1.0) ==\n")
+cat("\n== vertex weights (Default vs Explicit 1.0) ==\n")
 # =======================================================================
 
-# 1. Default (implicit All-1 node weights)
+# 1. Default (implicit All-1 vertex weights)
 r1 <- dress_fit(3L, c(0L, 1L, 0L), c(1L, 2L, 2L))
 
-# 2. Explicit All-1 node weights
+# 2. Explicit All-1 vertex weights
 nw <- c(1.0, 1.0, 1.0)
-r2 <- dress_fit(3L, c(0L, 1L, 0L), c(1L, 2L, 2L), node_weights=nw)
+r2 <- dress_fit(3L, c(0L, 1L, 0L), c(1L, 2L, 2L), vertex_weights=nw)
 
 assert_equal("edge_dress match", r1$edge_dress, r2$edge_dress, tol=1e-12)
-assert_equal("node_dress match", r1$node_dress, r2$node_dress, tol=1e-12)
+assert_equal("vertex_dress match", r1$vertex_dress, r2$vertex_dress, tol=1e-12)
 
 # =======================================================================
 cat("\n== Path 0-1-2-3 (unweighted, undirected) ==\n")
@@ -92,9 +92,9 @@ res_path <- dress_fit(4L, c(0L, 1L, 2L), c(1L, 2L, 3L))
 
 assert("path converges",                   res_path$iterations > 0L)
 assert("path 3 edges",                     length(res_path$edge_dress) == 3L)
-assert("path 4 nodes",                     length(res_path$node_dress) == 4L)
+assert("path 4 nodes",                     length(res_path$vertex_dress) == 4L)
 assert("path edge_dress >= 0",             all(res_path$edge_dress >= 0))
-assert("path node_dress >= 0",             all(res_path$node_dress >= 0))
+assert("path vertex_dress >= 0",             all(res_path$vertex_dress >= 0))
 
 # Leaf edges should be symmetric: dress(0-1) == dress(2-3)
 assert_equal("leaf edges symmetric",
@@ -112,7 +112,7 @@ cat("\n== Triangle + pendant (4 vertices) ==\n")
 res_tp <- dress_fit(4L, c(0L, 1L, 0L, 2L), c(1L, 2L, 2L, 3L))
 
 assert("tri+pendant 4 edges",             length(res_tp$edge_dress) == 4L)
-assert("tri+pendant 4 nodes",             length(res_tp$node_dress) == 4L)
+assert("tri+pendant 4 nodes",             length(res_tp$vertex_dress) == 4L)
 assert("tri+pendant converges",           res_tp$delta < 1e-6)
 
 # Triangle edges should have higher dress than the pendant edge
@@ -176,14 +176,14 @@ res_star <- dress_fit(6L,
                       c(1L, 2L, 3L, 4L, 5L))
 
 assert("star 5 edges",                    length(res_star$edge_dress) == 5L)
-assert("star 6 nodes",                    length(res_star$node_dress) == 6L)
+assert("star 6 nodes",                    length(res_star$vertex_dress) == 6L)
 
 # All edges in a star should have equal dress (by symmetry)
 assert("star edges equal dress",
        max(res_star$edge_dress) - min(res_star$edge_dress) < 1e-6)
 
-# Leaf nodes should have equal node_dress
-leaf_norms <- res_star$node_dress[2:6]
+# Leaf nodes should have equal vertex_dress
+leaf_norms <- res_star$vertex_dress[2:6]
 assert("star leaf nodes equal",
        max(leaf_norms) - min(leaf_norms) < 1e-6)
 
@@ -195,7 +195,7 @@ cat("\n== Disconnected pair of edges ==\n")
 res_disc <- dress_fit(4L, c(0L, 2L), c(1L, 3L))
 
 assert("disconnected 2 edges",            length(res_disc$edge_dress) == 2L)
-assert("disconnected 4 nodes",            length(res_disc$node_dress) == 4L)
+assert("disconnected 4 nodes",            length(res_disc$vertex_dress) == 4L)
 
 # Both isolated edges should be symmetric
 assert_equal("disconnected edges equal",
@@ -211,7 +211,7 @@ k4_t <- c(1L, 2L, 3L, 2L, 3L, 3L)
 res_k4 <- dress_fit(4L, k4_s, k4_t)
 
 assert("K4 has 6 edges",                  length(res_k4$edge_dress) == 6L)
-assert("K4 has 4 nodes",                  length(res_k4$node_dress) == 4L)
+assert("K4 has 4 nodes",                  length(res_k4$vertex_dress) == 4L)
 
 # All edges in K4 should be equal (by symmetry)
 assert("K4 edges equal dress",
@@ -219,7 +219,7 @@ assert("K4 edges equal dress",
 
 # All nodes in K4 should be equal
 assert("K4 nodes equal dress",
-       max(res_k4$node_dress) - min(res_k4$node_dress) < 1e-6)
+       max(res_k4$vertex_dress) - min(res_k4$vertex_dress) < 1e-6)
 
 # =======================================================================
 cat("\n== Persistent DRESS ==\n")
@@ -245,7 +245,7 @@ assert("get(0,0) is numeric",           is.numeric(d00))
 # Result snapshot
 res <- g$result()
 assert("result has edge_dress",          length(res$edge_dress) == 3L)
-assert("result has node_dress",          length(res$node_dress) == 3L)
+assert("result has vertex_dress",          length(res$vertex_dress) == 3L)
 
 # Triangle edges equal
 assert("DRESS triangle equal dress",

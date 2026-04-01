@@ -26,7 +26,7 @@ All experiments use the **ZINC-12K** benchmark (Dwivedi et al., 2023):
 
 For each graph in the dataset:
 
-1. Call `dress_fit()` to obtain per-edge DRESS values and per-node DRESS values.
+1. Call `dress_fit()` to obtain per-edge DRESS values and per-vertex DRESS values.
 2. Optionally apply \(\Delta^k\)-DRESS (`dress_delta_fit` with \(k=1\)) for
    higher-order structural refinement.
 3. Cache the results. Preprocessing the full ZINC-12K dataset takes < 1 second.

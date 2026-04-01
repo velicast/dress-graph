@@ -13,6 +13,7 @@
 #include "dress/omp/dress_omp.h"
 #include "../delta_dress_impl.h"
 #include "../dress_histogram.h"
+#include <math.h>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -77,9 +78,14 @@ static int64_t *dress_delta_fit_omp_flat_impl(
     int wants_ms = keep_multisets && multisets;
     double *ms = NULL;
     if (wants_ms) {
-        ms = (double *)calloc((size_t)cnk * E, sizeof(double));
-        *multisets = ms;
-        if (!ms) wants_ms = 0;
+        size_t ms_len = (size_t)cnk * E;
+        ms = (double *)malloc(ms_len * sizeof(double));
+        if (ms) {
+            for (size_t i = 0; i < ms_len; i++) ms[i] = NAN;
+            *multisets = ms;
+        } else {
+            wants_ms = 0;
+        }
     }
 
     /* Per-thread flat histograms. */

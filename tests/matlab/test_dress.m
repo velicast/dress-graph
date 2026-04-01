@@ -37,7 +37,7 @@ end
 try
     r = dress_fit(3, int32([0;1;0]), int32([1;2;2]));
     assert_eq(length(r.edge_dress), 3, 'triangle: 3 edges');
-    assert_eq(length(r.node_dress), 3, 'triangle: 3 nodes');
+    assert_eq(length(r.vertex_dress), 3, 'triangle: 3 nodes');
     assert_true(r.iterations > 0, 'triangle: iterations > 0');
     passed = passed + 1;
     fprintf('PASS: unweighted triangle\n');
@@ -85,22 +85,22 @@ catch e
     fprintf('FAIL: precompute intercepts: %s\n', e.message);
 end
 
-% -- node weights default --
+% -- vertex weights default --
 try
-    % 1. Default (implicit All-1 node weights)
+    % 1. Default (implicit All-1 vertex weights)
     r1 = dress_fit(3, int32([0;1;0]), int32([1;2;2]));
     
-    % 2. Explicit All-1 node weights
+    % 2. Explicit All-1 vertex weights
     nw = [1.0; 1.0; 1.0];
-    r2 = dress_fit(3, int32([0;1;0]), int32([1;2;2]), 'NodeWeights', nw);
+    r2 = dress_fit(3, int32([0;1;0]), int32([1;2;2]), 'VertexWeights', nw);
     
     assert_near(r1.edge_dress, r2.edge_dress, 1e-12, 'edge_dress match');
-    assert_near(r1.node_dress, r2.node_dress, 1e-12, 'node_dress match');
+    assert_near(r1.vertex_dress, r2.vertex_dress, 1e-12, 'vertex_dress match');
     passed = passed + 1;
-    fprintf('PASS: node weights default\n');
+    fprintf('PASS: vertex weights default\n');
 catch e
     failed = failed + 1;
-    fprintf('FAIL: node weights default: %s\n', e.message);
+    fprintf('FAIL: vertex weights default: %s\n', e.message);
 end
 
 %% === Fitting ===
@@ -155,18 +155,18 @@ catch e
     fprintf('FAIL: boundedness: %s\n', e.message);
 end
 
-%% === Node dress ===
+%% === vertex dress ===
 
 try
     r = dress_fit(3, int32([0;1;0]), int32([1;2;2]));
-    assert_true(all(r.node_dress > 0), 'node_dress: all > 0');
-    assert_near(r.node_dress(1), r.node_dress(2), 1e-10, 'node_dress: symmetric');
-    assert_near(r.node_dress(2), r.node_dress(3), 1e-10, 'node_dress: symmetric');
+    assert_true(all(r.vertex_dress > 0), 'vertex_dress: all > 0');
+    assert_near(r.vertex_dress(1), r.vertex_dress(2), 1e-10, 'vertex_dress: symmetric');
+    assert_near(r.vertex_dress(2), r.vertex_dress(3), 1e-10, 'vertex_dress: symmetric');
     passed = passed + 1;
-    fprintf('PASS: node dress\n');
+    fprintf('PASS: vertex dress\n');
 catch e
     failed = failed + 1;
-    fprintf('FAIL: node dress: %s\n', e.message);
+    fprintf('FAIL: vertex dress: %s\n', e.message);
 end
 
 %% === Star graph ===
@@ -215,7 +215,7 @@ try
     % Result snapshot
     res = g.result();
     assert_eq(length(res.edge_dress), 3, 'DRESS: 3 edge_dress');
-    assert_eq(length(res.node_dress), 3, 'DRESS: 3 node_dress');
+    assert_eq(length(res.vertex_dress), 3, 'DRESS: 3 vertex_dress');
     assert_near(res.edge_dress, 2*ones(3,1), 1e-6, 'DRESS: triangle edges = 2');
 
     g.close();

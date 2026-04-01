@@ -19,7 +19,7 @@ class _DressGraph(ctypes.Structure):
         ("edge_weight",            ctypes.POINTER(ctypes.c_double)),
         ("edge_dress",             ctypes.POINTER(ctypes.c_double)),
         ("edge_dress_next",        ctypes.POINTER(ctypes.c_double)),
-        ("node_dress",             ctypes.POINTER(ctypes.c_double)),
+        ("vertex_dress",             ctypes.POINTER(ctypes.c_double)),
         ("NW",                     ctypes.POINTER(ctypes.c_double)),
         ("precompute_intercepts",  ctypes.c_int),
         ("intercept_offset",       ctypes.POINTER(ctypes.c_int)),

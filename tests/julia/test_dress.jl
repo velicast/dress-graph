@@ -34,7 +34,7 @@ path4() = fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
             @test length(r.sources) == 3
             @test length(r.targets) == 3
             @test length(r.edge_dress) == 3
-            @test length(r.node_dress) == 3
+            @test length(r.vertex_dress) == 3
             @test r.iterations > 0
         end
 
@@ -114,14 +114,14 @@ path4() = fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
             end
         end
 
-        @testset "node dress" begin
+        @testset "vertex dress" begin
             r = triangle()
             for u in 1:3
-                @test r.node_dress[u] > 0.0
+                @test r.vertex_dress[u] > 0.0
             end
             # K3: all nodes equal
-            @test r.node_dress[1] ≈ r.node_dress[2] atol=1e-6
-            @test r.node_dress[1] ≈ r.node_dress[3] atol=1e-6
+            @test r.vertex_dress[1] ≈ r.vertex_dress[2] atol=1e-6
+            @test r.vertex_dress[1] ≈ r.vertex_dress[3] atol=1e-6
         end
 
         @testset "weighted fit" begin
@@ -154,7 +154,7 @@ path4() = fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
             end
             # All nodes equal
             for u in 2:4
-                @test r.node_dress[u] ≈ r.node_dress[1] atol=1e-6
+                @test r.vertex_dress[u] ≈ r.vertex_dress[1] atol=1e-6
             end
         end
 
@@ -204,7 +204,7 @@ path4() = fit(4, Int32[0, 1, 2], Int32[1, 2, 3])
         @testset "result" begin
             r = DRESS.result(g)
             @test length(r.edge_dress) == 3
-            @test length(r.node_dress) == 3
+            @test length(r.vertex_dress) == 3
             d0 = r.edge_dress[1]
             for e in 2:3
                 @test r.edge_dress[e] ≈ d0 atol=1e-6

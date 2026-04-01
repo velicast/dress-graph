@@ -5,7 +5,7 @@
  * Usage:  ./test_dress_cuda
  *
  * Builds a small test graph, runs both CPU and GPU fit, and prints
- * the max absolute difference across all edge_dress and node_dress
+ * the max absolute difference across all edge_dress and vertex_dress
  * values.  Exits 0 on success (diff < 1e-12), 1 otherwise.
  */
 
@@ -63,9 +63,9 @@ static p_dress_graph_t copy_dress_graph(p_dress_graph_t src)
     memcpy(g->edge_dress,      src->edge_dress,      E * sizeof(double));
     memcpy(g->edge_dress_next, src->edge_dress_next, E * sizeof(double));
 
-    /* Node array */
-    g->node_dress = (double *)malloc(N * sizeof(double));
-    memcpy(g->node_dress, src->node_dress, N * sizeof(double));
+    /* vertex array */
+    g->vertex_dress = (double *)malloc(N * sizeof(double));
+    memcpy(g->vertex_dress, src->vertex_dress, N * sizeof(double));
 
     /* Intercepts */
     if (src->precompute_intercepts) {
@@ -170,10 +170,10 @@ static int run_test(const char *name, dress_variant_t variant,
         if (d > max_diff_edge) max_diff_edge = d;
     }
 
-    /* Compare node_dress */
+    /* Compare vertex_dress */
     double max_diff_node = 0.0;
     for (int u = 0; u < N; u++) {
-        double d = fabs(g_cpu->node_dress[u] - g_gpu->node_dress[u]);
+        double d = fabs(g_cpu->vertex_dress[u] - g_gpu->vertex_dress[u]);
         if (d > max_diff_node) max_diff_node = d;
     }
 

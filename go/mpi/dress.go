@@ -103,7 +103,7 @@ func (r *NablaResult) String() string {
 //   - epsilon: convergence tolerance
 //   - precompute: precompute intercepts in each subgraph
 //   - keepMultisets: if true, return per-subgraph edge values
-func DeltaFit(n int, sources, targets []int32, weights []float64, nodeWeights []float64,
+func DeltaFit(n int, sources, targets []int32, weights []float64, vertexWeights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	nSamples int, seed uint32,
 	precompute bool, keepMultisets bool, computeHistogram bool) (*DeltaResult, error) {
@@ -133,14 +133,14 @@ func DeltaFit(n int, sources, targets []int32, weights []float64, nodeWeights []
 	}
 
 	var nwPtr *C.double
-	if len(nodeWeights) > 0 {
-		if len(nodeWeights) != n {
-			return nil, fmt.Errorf("dress: node weights length (%d) != node count (%d)", len(nodeWeights), n)
+	if len(vertexWeights) > 0 {
+		if len(vertexWeights) != n {
+			return nil, fmt.Errorf("dress: vertex weights length (%d) != node count (%d)", len(vertexWeights), n)
 		}
 		nwPtr = (*C.double)(C.malloc(C.size_t(n) * C.size_t(unsafe.Sizeof(C.double(0)))))
 		nwSlice := unsafe.Slice(nwPtr, n)
 		for i := 0; i < n; i++ {
-			nwSlice[i] = C.double(nodeWeights[i])
+			nwSlice[i] = C.double(vertexWeights[i])
 		}
 	}
 
@@ -217,7 +217,7 @@ func DeltaFit(n int, sources, targets []int32, weights []float64, nodeWeights []
 // Same signature as the CPU dress.NablaFit — switch from CPU
 // to MPI by changing only the import path. All MPI logic runs in C using
 // MPI_COMM_WORLD, including sparse histogram aggregation by value.
-func NablaFit(n int, sources, targets []int32, weights []float64, nodeWeights []float64,
+func NablaFit(n int, sources, targets []int32, weights []float64, vertexWeights []float64,
 	k int, variant Variant, maxIterations int, epsilon float64,
 	nSamples int, seed uint32,
 	precompute bool, keepMultisets bool, computeHistogram bool) (*NablaResult, error) {
@@ -247,14 +247,14 @@ func NablaFit(n int, sources, targets []int32, weights []float64, nodeWeights []
 	}
 
 	var nwPtr *C.double
-	if len(nodeWeights) > 0 {
-		if len(nodeWeights) != n {
-			return nil, fmt.Errorf("dress: node weights length (%d) != node count (%d)", len(nodeWeights), n)
+	if len(vertexWeights) > 0 {
+		if len(vertexWeights) != n {
+			return nil, fmt.Errorf("dress: vertex weights length (%d) != node count (%d)", len(vertexWeights), n)
 		}
 		nwPtr = (*C.double)(C.malloc(C.size_t(n) * C.size_t(unsafe.Sizeof(C.double(0)))))
 		nwSlice := unsafe.Slice(nwPtr, n)
 		for i := 0; i < n; i++ {
-			nwSlice[i] = C.double(nodeWeights[i])
+			nwSlice[i] = C.double(vertexWeights[i])
 		}
 	}
 
@@ -334,8 +334,8 @@ type Result struct {
 	Targets     []int32
 	EdgeWeight  []float64
 	EdgeDress   []float64
-	NodeDress   []float64
-	NodeWeights []float64
+	VertexDress   []float64
+	VertexWeights []float64
 	Iterations  int
 	Delta       float64
 }
@@ -357,7 +357,7 @@ type DRESS struct {
 // NewDRESS constructs a DRESS graph from an edge list.
 // The returned graph is NOT fitted yet — call .Fit() before .Get().
 // When done, call .Close() to release memory.
-func NewDRESS(n int, sources, targets []int32, weights []float64, nodeWeights []float64,
+func NewDRESS(n int, sources, targets []int32, weights []float64, vertexWeights []float64,
 	variant Variant, precomputeIntercepts bool) (*DRESS, error) {
 
 	e := len(sources)
@@ -367,8 +367,8 @@ func NewDRESS(n int, sources, targets []int32, weights []float64, nodeWeights []
 	if weights != nil && len(weights) != e {
 		return nil, fmt.Errorf("dress: weights length (%d) != edge count (%d)", len(weights), e)
 	}
-	if nodeWeights != nil && len(nodeWeights) != n {
-		return nil, fmt.Errorf("dress: node weights length (%d) != node count (%d)", len(nodeWeights), n)
+	if vertexWeights != nil && len(vertexWeights) != n {
+		return nil, fmt.Errorf("dress: vertex weights length (%d) != node count (%d)", len(vertexWeights), n)
 	}
 
 	uPtr := (*C.int)(C.malloc(C.size_t(e) * C.size_t(unsafe.Sizeof(C.int(0)))))
@@ -390,11 +390,11 @@ func NewDRESS(n int, sources, targets []int32, weights []float64, nodeWeights []
 	}
 
 	var nwPtr *C.double
-	if nodeWeights != nil {
+	if vertexWeights != nil {
 		nwPtr = (*C.double)(C.malloc(C.size_t(n) * C.size_t(unsafe.Sizeof(C.double(0)))))
 		nwSlice := unsafe.Slice(nwPtr, n)
 		for i := 0; i < n; i++ {
-			nwSlice[i] = C.double(nodeWeights[i])
+			nwSlice[i] = C.double(vertexWeights[i])
 		}
 	}
 
@@ -573,7 +573,7 @@ func (dg *DRESS) Result() (*Result, error) {
 		Targets:    make([]int32, dg.e),
 		EdgeWeight: make([]float64, dg.e),
 		EdgeDress:  make([]float64, dg.e),
-		NodeDress:  make([]float64, dg.n),
+		VertexDress:  make([]float64, dg.n),
 	}
 	for i := 0; i < dg.e; i++ {
 		result.Sources[i] = int32(uSlice[i])
@@ -582,7 +582,7 @@ func (dg *DRESS) Result() (*Result, error) {
 		result.EdgeDress[i] = float64(edSlice[i])
 	}
 	for i := 0; i < dg.n; i++ {
-		result.NodeDress[i] = float64(ndSlice[i])
+		result.VertexDress[i] = float64(ndSlice[i])
 	}
 	return result, nil
 }

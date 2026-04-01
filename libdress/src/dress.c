@@ -96,8 +96,8 @@ static int find_raw_edge(int u, int v, const int *raw_offset, const adj_edge_t *
 // For directed variants, only the out-edge u→v is stored.
 //
 // Output:
-//   *out_offset : [N+1] prefix-sum array of per-node degrees
-//   *out_data   : flat array of adj_edge_t, sorted by neighbor id per node
+//   *out_offset : [N+1] prefix-sum array of per-vertex degrees
+//   *out_data   : flat array of adj_edge_t, sorted by neighbor id per vertex
 //
 // Both output arrays are heap-allocated; caller takes ownership.
 static void build_raw_adjacency(p_dress_graph_t g,
@@ -109,7 +109,7 @@ static void build_raw_adjacency(p_dress_graph_t g,
     int *U = g->U, *V = g->V;
     int *cnt = (int *)calloc(N, sizeof(int));
 
-    // Count per-node degree
+    // Count per-vertex degree
     for (i = 0; i < E; i++) {
         int u = U[i], v = V[i];
         if (variant == DRESS_VARIANT_UNDIRECTED) { cnt[u]++; cnt[v]++; }
@@ -125,7 +125,7 @@ static void build_raw_adjacency(p_dress_graph_t g,
     // Single flat allocation for all adjacency entries
     adj_edge_t *data = (adj_edge_t *)malloc(offset[N] * sizeof(adj_edge_t));
 
-    // Scatter edges into their respective node segments
+    // Scatter edges into their respective vertex segments
     memset(cnt, 0, N * sizeof(int));
     for (i = 0; i < E; i++) {
         int    u = U[i], v = V[i];
@@ -145,7 +145,7 @@ static void build_raw_adjacency(p_dress_graph_t g,
     // W ownership is retained by the graph (g->input_weight) and freed
     // in dress_free_graph — do NOT free it here.
     
-    // Sort each node's segment by neighbor id for binary-search access
+    // Sort each vertex segment by neighbor id for binary-search access
 #ifdef _OPENMP
     #pragma omp parallel for
 #endif
@@ -176,12 +176,12 @@ static void build_variant_adjacency(p_dress_graph_t g,
     dress_variant_t variant = g->variant;
     int *U = g->U, *V = g->V;
 
-    // Per-node degree counters for the variant adjacency.
+    // Per-vertex degree counters for the variant adjacency.
     // For DIRECTED, N[u] = out(u) U in(u) with one entry per neighbor.
     int *node_out_degree = (int *)calloc(N + 1, sizeof(int));
     int *node_in_degree  = (int *)calloc(N + 1, sizeof(int));
 
-    // Count variant-specific per-node degrees
+    // Count variant-specific per-vertex degrees
     for (e = 0; e < E; e++) {
         int u = U[e], v = V[e];
         if (variant == DRESS_VARIANT_UNDIRECTED) {
@@ -223,7 +223,7 @@ static void build_variant_adjacency(p_dress_graph_t g,
     adj_edge_t *tmp_data = (adj_edge_t *)malloc(S * sizeof(adj_edge_t));
     int *tmp_count = (int *)calloc(N, sizeof(int));
 
-    // Populate the variant adjacency by iterating over each node's raw
+    // Populate the variant adjacency by iterating over each vertex's raw
     // neighbors and applying variant-specific rules.
     for (int u = 0; u < N; u++) {
         int raw_start = raw_offset[u];
@@ -275,7 +275,7 @@ static void build_variant_adjacency(p_dress_graph_t g,
     g->adj_edge_idx = (int *)malloc(S * sizeof(int));
     g->edge_weight  = (double *)malloc(E * sizeof(double));
 
-    // Sort each node's segment by neighbor id, then split the adj_edge_t
+    // Sort each vertex segment by neighbor id, then split the adj_edge_t
     // struct-of-arrays into the final CSR arrays
 #ifdef _OPENMP
     #pragma omp parallel for
@@ -389,14 +389,14 @@ p_dress_graph_t dress_init_graph(int N, int E, int *U, int *V,
     g->V = V;
     g->variant = variant;
     g->precompute_intercepts = precompute_intercepts;
-    g->node_dress = (double *)malloc(N * sizeof(double));
+    g->vertex_dress = (double *)malloc(N * sizeof(double));
 
     // Take ownership of W. delta_dress needs the raw input weights to
     // construct subgraphs correctly (edge_weight stores variant-specific
     // weights that differ from the raw input). Freed in dress_free_graph.
     g->W = W;  // NULL when unweighted
 
-    // Take ownership of NW (node weights). If NULL, allocate all-1.0
+    // Take ownership of NW (vertex weights). If NULL, allocate all-1.0
     // so the hot loop avoids a branch per edge.
     if (NW != NULL) {
         g->NW = NW;
@@ -475,7 +475,7 @@ static inline double fit_finalize(p_dress_graph_t g, int e,
 static double fit_impl_intercept(p_dress_graph_t g, int e)
 {
     int    u = g->U[e], v = g->V[e];
-    double denominator = g->node_dress[u] * g->node_dress[v];
+    double denominator = g->vertex_dress[u] * g->vertex_dress[v];
     int max_terms = g->intercept_offset[e + 1] - g->intercept_offset[e] + 1;
 
     double stack_buf[KBN_STACK_LIMIT];
@@ -500,7 +500,7 @@ static double fit_impl_intercept(p_dress_graph_t g, int e)
 static double fit_impl_merge(p_dress_graph_t g, int e)
 {
     int    u = g->U[e], v = g->V[e];
-    double denominator = g->node_dress[u] * g->node_dress[v];
+    double denominator = g->vertex_dress[u] * g->vertex_dress[v];
     int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
     int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
     int max_terms = (deg_u < deg_v ? deg_u : deg_v) + 1;
@@ -535,7 +535,7 @@ static double fit_impl_merge(p_dress_graph_t g, int e)
 // Run dress iterative fixed-point fitting (sequential).
 //
 // Each iteration:
-//   1. Recompute node_dress[u] = sqrt(4*nw + ∑ w_ux · d_ux) for all u.
+//   1. Recompute vertex_dress[u] = sqrt(4*nw + ∑ w_ux · d_ux) for all u.
 //   2. Recompute edge_dress_next[e] = fit_impl(e) for all e.
 //   3. Swap edge_dress ↔ edge_dress_next (double-buffer).
 //   4. Stop if max |d_old - d_new| < epsilon.
@@ -552,7 +552,7 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
         double max_delta = 0.0;
         int u, e;
 
-        // Phase 1: compute per-node dress norm (sort+KBN for bitwise reproducibility)
+        // Phase 1: compute per-vertex dress norm (sort+KBN for bitwise reproducibility)
         for (u = 0; u < g->N; u++) {
             int base = g->adj_offset[u];
             int end  = g->adj_offset[u + 1];
@@ -568,7 +568,7 @@ void dress_fit(p_dress_graph_t g, int max_iterations, double epsilon,
                 int ei = g->adj_edge_idx[base + i];
                 buf[i + 1] = g->edge_weight[ei] * g->edge_dress[ei];
             }
-            g->node_dress[u] = sqrt(kbn_sorted_sum(buf, deg + 1));
+            g->vertex_dress[u] = sqrt(kbn_sorted_sum(buf, deg + 1));
 
             if (buf != stack_buf) free(buf);
         }
@@ -625,8 +625,8 @@ void dress_free_graph(p_dress_graph_t g)
     free(g->edge_dress);
     free(g->edge_dress_next);
 
-    // Per-node arrays
-    free(g->node_dress);
+    // Per-vertex arrays
+    free(g->vertex_dress);
     free(g->NW);
 
     // Precomputed intercepts (conditional)
@@ -713,8 +713,8 @@ double dress_get(const p_dress_graph_t g, int u, int v,
               : edge_weight;
 
     double A   = intercept;
-    double Du2 = g->node_dress[u] * g->node_dress[u];
-    double Dv2 = g->node_dress[v] * g->node_dress[v];
+    double Du2 = g->vertex_dress[u] * g->vertex_dress[u];
+    double Dv2 = g->vertex_dress[v] * g->vertex_dress[v];
 
     if (Du2 <= 0.0 || Dv2 <= 0.0)
         return 0.0;

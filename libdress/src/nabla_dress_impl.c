@@ -6,9 +6,9 @@
  *
  * Key difference from Δ^k-DRESS:
  *   - Enumerates P(N,k) ordered k-tuples instead of C(N,k) combinations.
- *   - Marks tuple vertices with distinct generic node weights instead of
+ *   - Marks tuple vertices with distinct generic vertex weights instead of
  *     deleting them.
- *   - The graph topology is unchanged; only node weights differ per tuple.
+ *   - The graph topology is unchanged; only vertex weights differ per tuple.
  *
  * Features:
  *   - Hash-map histogram (exact double keys, no epsilon binning)
@@ -17,6 +17,7 @@
  */
 
 #include "nabla_dress_impl.h"
+#include "delta_dress_impl.h"   /* for dress_rand_r */
 #include "dress_histogram.h"
 #include "dress/dress.h"
 
@@ -51,8 +52,8 @@ static void nabla_default_weights(double *out, int k)
 /**
  * Build a marked copy of the graph for a given ordered k-tuple.
  *
- * The graph topology is identical to `g`.  Node weights are set to
- * marker_weights[i] for tuple[i], and 1.0 for all other nodes.
+ * The graph topology is identical to `g`.  vertex weights are set to
+ * marker_weights[i] for tuple[i], and 1.0 for all other vertexs.
  *
  * Returns a freshly allocated dress graph.  The caller must free it
  * with dress_free_graph().
@@ -77,7 +78,7 @@ static p_dress_graph_t nabla_build_marked_graph(p_dress_graph_t g,
         memcpy(sub_W, g->W, E * sizeof(double));
     }
 
-    /* Build node weights: 1.0 everywhere, marker at tuple positions. */
+    /* Build vertex weights: 1.0 everywhere, marker at tuple positions. */
     double *sub_NW = (double *)malloc(N * sizeof(double));
     for (int v = 0; v < N; v++)
         sub_NW[v] = 1.0;
@@ -118,16 +119,6 @@ int64_t dress_nabla_perm_count(int n, int k)
 
 /* ── Sampling helpers ─────────────────────────────────────────────── */
 
-/* Portable rand_r: MSVC lacks POSIX rand_r. */
-#ifdef _MSC_VER
-static int dress_rand_r(unsigned int *seed)
-{
-    *seed = *seed * 1103515245u + 12345u;
-    return (int)((*seed >> 16) & 0x7fff);
-}
-#else
-#define dress_rand_r rand_r
-#endif
 
 /* 64-bit random from two rand_r calls. */
 static int64_t nabla_rand64(unsigned int *seed, int64_t bound)

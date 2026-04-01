@@ -48,7 +48,7 @@ SEXP C_dress_fit_omp(SEXP n_vertices_,
     if (node_weights_ != R_NilValue) {
         if (LENGTH(node_weights_) != N) {
             free(U); free(V); if(W) free(W);
-            error("dress_fit_omp: node_weights length mismatch");
+            error("dress_fit_omp: vertex_weights length mismatch");
         }
         NW = (double *)malloc(N * sizeof(double));
         if (!NW) { free(U); free(V); if(W) free(W); error("dress_fit_omp: malloc failed"); }
@@ -69,10 +69,10 @@ SEXP C_dress_fit_omp(SEXP n_vertices_,
     SET_STRING_ELT(names, 1, mkChar("targets"));
     SET_STRING_ELT(names, 2, mkChar("edge_dress"));
     SET_STRING_ELT(names, 3, mkChar("edge_weight"));
-    SET_STRING_ELT(names, 4, mkChar("node_dress"));
+    SET_STRING_ELT(names, 4, mkChar("vertex_dress"));
     SET_STRING_ELT(names, 5, mkChar("iterations"));
     SET_STRING_ELT(names, 6, mkChar("delta"));
-    if (g->NW) SET_STRING_ELT(names, 7, mkChar("node_weights"));
+    if (g->NW) SET_STRING_ELT(names, 7, mkChar("vertex_weights"));
     setAttrib(result, R_NamesSymbol, names);
 
     SEXP r_s = PROTECT(allocVector(INTSXP, E));
@@ -87,7 +87,7 @@ SEXP C_dress_fit_omp(SEXP n_vertices_,
     memcpy(INTEGER(r_t), g->V, E * sizeof(int));
     memcpy(REAL(r_ed), g->edge_dress, E * sizeof(double));
     memcpy(REAL(r_ew), g->edge_weight, E * sizeof(double));
-    memcpy(REAL(r_nd), g->node_dress, N * sizeof(double));
+    memcpy(REAL(r_nd), g->vertex_dress, N * sizeof(double));
 
     SET_VECTOR_ELT(result, 0, r_s);
     SET_VECTOR_ELT(result, 1, r_t);

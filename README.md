@@ -108,7 +108,7 @@ $$
 d_{uv}^{(t+1)} = \frac{\sum_{x \in N[u] \cap N[v]} \bigl(\bar{w}_{ux} \, d_{ux}^{(t)} + \bar{w}_{vx} \, d_{vx}^{(t)}\bigr)}{\lVert u \rVert^{(t)} \cdot \lVert v \rVert^{(t)}}
 $$
 
-where the node norm is
+where the vertex norm is
 
 $$
 \lVert u \rVert^{(t)} = \sqrt{\sum_{x \in N[u]} \bar{w}_{ux} \, d_{ux}^{(t)}}
@@ -465,7 +465,7 @@ double val = g.edgeDress(e);               // per-edge value after fit
 # Δ⁰ : edge fingerprint
 result = fit(n_vertices, sources, targets)
 result.edge_dress    # per-edge values
-result.node_dress    # per-node norms
+result.vertex_dress    # per-vertex norms
 result.iterations    # convergence iterations
 
 # Δ¹ : histogram fingerprint
@@ -563,7 +563,7 @@ r, _ := dress.DeltaFit(n, sources, targets, nil,
 ```julia
 # Δ⁰ : edge fingerprint
 r = fit(N, sources, targets)
-# r.edge_dress, r.node_dress, r.iterations, r.delta
+# r.edge_dress, r.vertex_dress, r.iterations, r.delta
 
 # Δ¹ : histogram fingerprint
 r = delta_fit(N, sources, targets; k=1)
@@ -590,7 +590,7 @@ library(dress.graph)
 
 # Δ⁰ : edge fingerprint
 r <- fit(6L, sources, targets)
-# r$edge_dress, r$node_dress, r$iterations, r$delta
+# r$edge_dress, r$vertex_dress, r$iterations, r$delta
 
 # Δ¹ : histogram fingerprint
 r <- delta_fit(6L, sources, targets, k = 1L)       # CPU
@@ -621,7 +621,7 @@ r <- mpi$cuda$delta_fit(6L, sources, targets, k = 1L) # MPI+CUDA
 ```matlab
 % Δ⁰ : edge fingerprint
 result = fit(6, int32(sources), int32(targets));
-% result.edge_dress, result.node_dress, result.iterations, result.delta
+% result.edge_dress, result.vertex_dress, result.iterations, result.delta
 
 % Δ¹ : histogram fingerprint
 result = delta_fit(6, int32(sources), int32(targets), ...
@@ -657,7 +657,7 @@ g.close();
 const result = await fit({
     numVertices: 6, sources, targets,
 });
-// result.edgeDress, result.nodeDress, result.iterations, result.delta
+// result.edgeDress, result.vertexDress, result.iterations, result.delta
 
 // Δ¹ : histogram fingerprint
 const r = await deltaFit({

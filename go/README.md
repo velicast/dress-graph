@@ -9,7 +9,7 @@ DRESS is a deterministic, parameter-free framework that iteratively refines the 
 ```go
 import "github.com/velicast/dress-graph/go"
 
-result, _ := dress.DressFit(4,
+result, _ := dress.Fit(4,
     []int32{0, 1, 2, 0},
     []int32{1, 2, 3, 3},
     nil, dress.Undirected, 100, 1e-6, false)

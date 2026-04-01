@@ -48,8 +48,8 @@ typedef struct __dress_graph_t {
     int     *U;                    // [E]   input edge sources (owned)
     int     *V;                    // [E]   input edge targets (owned)
 
-    // CSR variant adjacency — sorted per-node neighbor lists stored flat.
-    // Neighbors of node u are adj_target[adj_offset[u] .. adj_offset[u+1]).
+    // CSR variant adjacency — sorted per-vertex neighbor lists stored flat.
+    // Neighbors of vertex u are adj_target[adj_offset[u] .. adj_offset[u+1]).
     int     *adj_offset;           // [N+1] CSR row offsets
     int     *adj_target;           // [S]   neighbor vertex ids
     int     *adj_edge_idx;         // [S]   maps half-edge to input edge index
@@ -61,9 +61,9 @@ typedef struct __dress_graph_t {
     double  *edge_dress;           // [E]   current dress values
     double  *edge_dress_next;      // [E]   next-iteration dress values (double-buffer)
 
-    // Per-node arrays — indexed by vertex id 0..N-1.
-    double  *NW;                   // [N]   per-node weight (NULL → all 1.0)
-    double  *node_dress;           // [N]   sqrt of weighted dress sum for node
+    // Per-vertex arrays — indexed by vertex id 0..N-1.
+    double  *NW;                   // [N]   per-vertex weight (NULL → all 1.0)
+    double  *vertex_dress;           // [N]   sqrt of weighted dress sum for node
 
     // Precomputed intercepts (allocated only when precompute_intercepts == 1).
     // For edge e = (u,v), common neighbors are stored at
@@ -76,7 +76,7 @@ typedef struct __dress_graph_t {
 
 // Construct a dress graph from an edge list.
 // Takes ownership of U, V, W, NW (all freed by dress_free_graph).
-// W may be NULL (unweighted).  NW may be NULL (all node weights = 1.0).
+// W may be NULL (unweighted).  NW may be NULL (all vertex weights = 1.0).
 p_dress_graph_t dress_init_graph(int N, int E, int *U, int *V,
                                  double *W, double *NW,
                                  dress_variant_t variant,
@@ -97,7 +97,7 @@ void   dress_free_graph(p_dress_graph_t g);
 // If edge (u,v) exists in the graph, returns its converged edge_dress value.
 // If the edge does not exist (virtual edge), estimates what the DRESS value
 // *would be* using a local fixed-point iteration against the frozen
-// steady-state node/edge values.  Useful for link prediction.
+// steady-state vertex/edge values.  Useful for link prediction.
 //
 // The graph must have been fitted (dress_fit) before calling this.
 // edge_weight is the hypothetical weight of the virtual edge (ignored
@@ -192,7 +192,7 @@ int64_t *dress_delta_fit_strided_flat(p_dress_graph_t g, int k, int iterations,
 // Compute the ∇^k-DRESS histogram of a graph.
 //
 // Enumerates all P(N, k) ordered k-tuples of vertices, marks each
-// tuple with distinct generic node weights (sqrt of successive primes),
+// tuple with distinct generic vertex weights (sqrt of successive primes),
 // runs DRESS on the resulting weighted graph, and accumulates every
 // converged edge value into a single histogram.
 //

@@ -60,7 +60,7 @@ function fit(N::Integer,
                    sources::AbstractVector{<:Integer},
                    targets::AbstractVector{<:Integer};
                    weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
-                   node_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                   vertex_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
                    variant::Integer   = UNDIRECTED,
                    max_iterations::Integer = 100,
                    epsilon::Real      = 1e-6,
@@ -69,7 +69,7 @@ function fit(N::Integer,
     E = length(sources)
     length(targets) == E || throw(ArgumentError("sources and targets must have equal length"))
     weights !== nothing && length(weights) != E && throw(ArgumentError("weights length mismatch"))
-    node_weights !== nothing && length(node_weights) != N && throw(ArgumentError("node_weights length mismatch"))
+    vertex_weights !== nothing && length(vertex_weights) != N && throw(ArgumentError("vertex_weights length mismatch"))
 
     _ensure_lib()
 
@@ -85,9 +85,9 @@ function fit(N::Integer,
     end
 
     NW_c = C_NULL
-    if node_weights !== nothing
+    if vertex_weights !== nothing
         NW_c = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N) .= Cdouble.(vertex_weights)
     end
 
     g = ccall(_FN_INIT[], Ptr{Cvoid},
@@ -126,7 +126,7 @@ function delta_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -154,9 +154,9 @@ function delta_fit(N::Integer,
     end
 
     NW_c = C_NULL
-    if node_weights !== nothing
+    if vertex_weights !== nothing
         NW_c = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N) .= Cdouble.(vertex_weights)
     end
 
     g = ccall(_FN_INIT[], Ptr{Cvoid},
@@ -213,7 +213,7 @@ function nabla_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -241,9 +241,9 @@ function nabla_fit(N::Integer,
     end
 
     NW_c = C_NULL
-    if node_weights !== nothing
+    if vertex_weights !== nothing
         NW_c = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N) .= Cdouble.(vertex_weights)
     end
 
     g = ccall(_FN_INIT[], Ptr{Cvoid},

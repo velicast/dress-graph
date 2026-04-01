@@ -22,7 +22,7 @@ remotes::install_github("velicast/dress-graph", subdir="r")
 ```r
 library(dress.graph)
 
-result <- dress_fit(
+result <- fit(
   n_vertices = 4L,
   sources    = c(0L, 1L, 2L, 0L),
   targets    = c(1L, 2L, 3L, 3L)

@@ -31,7 +31,7 @@
 
 int dress_fit_igraph(const igraph_t *graph,
                          const char *weight_attr,
-                         const char *node_weight_attr,
+                         const char *vertex_weight_attr,
                          dress_variant_t variant,
                          int max_iters,
                          double epsilon,
@@ -83,11 +83,11 @@ int dress_fit_igraph(const igraph_t *graph,
         }
     }
 
-    /* ----- Extract node weights (optional) ----- */
+    /* ----- Extract vertex weights (optional) ----- */
 
     double *NW = NULL;
-    if (node_weight_attr != NULL &&
-        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, node_weight_attr))
+    if (vertex_weight_attr != NULL &&
+        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, vertex_weight_attr))
     {
         NW = (double *)malloc(N * sizeof(double));
         if (!NW) {
@@ -95,7 +95,7 @@ int dress_fit_igraph(const igraph_t *graph,
             return -1;
         }
         for (int v = 0; v < N; v++) {
-            NW[v] = igraph_cattribute_VAN(graph, node_weight_attr, v);
+            NW[v] = igraph_cattribute_VAN(graph, vertex_weight_attr, v);
         }
     }
 
@@ -130,7 +130,7 @@ int dress_fit_igraph(const igraph_t *graph,
     result->dst        = dg->V;
     result->dress      = dg->edge_dress;
     result->weight     = dg->edge_weight;
-    result->node_dress = dg->node_dress;
+    result->vertex_dress = dg->vertex_dress;
     result->dg_        = dg;
 
     return 0;
@@ -178,7 +178,7 @@ int dress_to_vector_igraph(const dress_result_igraph_t *result,
 
 int dress_delta_fit_igraph(const igraph_t *graph,
                                const char *weight_attr,
-                               const char *node_weight_attr,
+                               const char *vertex_weight_attr,
                                dress_variant_t variant,
                                int k,
                                int max_iters,
@@ -234,11 +234,11 @@ int dress_delta_fit_igraph(const igraph_t *graph,
         }
     }
 
-    /* ----- Extract node weights (optional) ----- */
+    /* ----- Extract vertex weights (optional) ----- */
 
     double *NW = NULL;
-    if (node_weight_attr != NULL &&
-        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, node_weight_attr))
+    if (vertex_weight_attr != NULL &&
+        igraph_cattribute_has_attr(graph, IGRAPH_ATTRIBUTE_VERTEX, vertex_weight_attr))
     {
         NW = (double *)malloc(N * sizeof(double));
         if (!NW) {
@@ -246,7 +246,7 @@ int dress_delta_fit_igraph(const igraph_t *graph,
             return -1;
         }
         for (int v = 0; v < N; v++) {
-            NW[v] = igraph_cattribute_VAN(graph, node_weight_attr, v);
+            NW[v] = igraph_cattribute_VAN(graph, vertex_weight_attr, v);
         }
     }
 

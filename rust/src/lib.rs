@@ -99,8 +99,8 @@ pub struct DressResult {
     pub targets:     Vec<i32>,
     pub edge_weight: Vec<f64>,
     pub edge_dress:  Vec<f64>,
-    pub node_dress:  Vec<f64>,
-    pub node_weights: Option<Vec<f64>>,
+    pub vertex_dress:  Vec<f64>,
+    pub vertex_weights: Option<Vec<f64>>,
     pub iterations:  i32,
     pub delta:       f64,
 }
@@ -154,7 +154,7 @@ impl DRESS {
         sources: Vec<i32>,
         targets: Vec<i32>,
         weights: Option<Vec<f64>>,
-        node_weights: Option<Vec<f64>>,
+        vertex_weights: Option<Vec<f64>>,
         variant: Variant,
         precompute_intercepts: bool,
     ) -> Result<DRESS, DressError> {
@@ -168,7 +168,7 @@ impl DRESS {
             let u_ptr = libc_malloc_copy_i32(&sources);
             let v_ptr = libc_malloc_copy_i32(&targets);
             let w_ptr = weights.as_ref().map_or(std::ptr::null_mut(), |w| libc_malloc_copy_f64(w));
-            let nw_ptr = node_weights.as_ref().map_or(std::ptr::null_mut(), |nw| libc_malloc_copy_f64(nw));
+            let nw_ptr = vertex_weights.as_ref().map_or(std::ptr::null_mut(), |nw| libc_malloc_copy_f64(nw));
             let g = ffi::dress_init_graph(n, e as c_int, u_ptr, v_ptr, w_ptr, nw_ptr,
                                      variant as c_int, precompute_intercepts as c_int);
             if g.is_null() {
@@ -207,7 +207,7 @@ impl DRESS {
             let nd_ptr = *(base.add(96) as *const *const f64);
             let nw_ptr = *(base.add(104) as *const *const f64);
 
-            let node_weights = if !nw_ptr.is_null() {
+            let vertex_weights = if !nw_ptr.is_null() {
                 Some(std::slice::from_raw_parts(nw_ptr, n).to_vec())
             } else {
                 None
@@ -218,8 +218,8 @@ impl DRESS {
                 targets:     self.targets.clone(),
                 edge_weight: std::slice::from_raw_parts(ew_ptr, e).to_vec(),
                 edge_dress:  std::slice::from_raw_parts(ed_ptr, e).to_vec(),
-                node_dress:  std::slice::from_raw_parts(nd_ptr, n).to_vec(),
-                node_weights,
+                vertex_dress:  std::slice::from_raw_parts(nd_ptr, n).to_vec(),
+                vertex_weights,
                 iterations:  0,
                 delta:       0.0,
             }
@@ -227,7 +227,7 @@ impl DRESS {
     }
 
     /// Run Δ^k-DRESS on the persistent graph: enumerate all C(N,k)
-    /// node-deletion subsets, fit DRESS on each subgraph, and return the
+    /// vertex-deletion subsets, fit DRESS on each subgraph, and return the
     /// pooled histogram.
     pub fn delta_fit(
         &self,
@@ -435,11 +435,11 @@ impl std::error::Error for DressError {}
 /// One-shot DRESS fit: build graph, fit, return results, free graph.
 pub fn fit(
     n: i32, sources: Vec<i32>, targets: Vec<i32>,
-    weights: Option<Vec<f64>>, node_weights: Option<Vec<f64>>,
+    weights: Option<Vec<f64>>, vertex_weights: Option<Vec<f64>>,
     variant: Variant, precompute: bool,
     max_iterations: i32, epsilon: f64,
 ) -> Result<DressResult, DressError> {
-    let mut g = DRESS::new(n, sources, targets, weights, node_weights, variant, precompute)?;
+    let mut g = DRESS::new(n, sources, targets, weights, vertex_weights, variant, precompute)?;
     let (iterations, delta) = g.fit(max_iterations, epsilon);
     let mut r = g.result();
     r.iterations = iterations;
@@ -450,13 +450,13 @@ pub fn fit(
 /// One-shot Δ^k-DRESS: build graph, run delta fit, return results, free graph.
 pub fn delta_fit(
     n: i32, sources: Vec<i32>, targets: Vec<i32>,
-    weights: Option<Vec<f64>>, node_weights: Option<Vec<f64>>,
+    weights: Option<Vec<f64>>, vertex_weights: Option<Vec<f64>>,
     variant: Variant, precompute: bool,
     k: i32, max_iterations: i32, epsilon: f64,
     n_samples: i32, seed: u32,
     keep_multisets: bool, compute_histogram: bool,
 ) -> Result<DeltaDressResult, DressError> {
-    let g = DRESS::new(n, sources, targets, weights, node_weights, variant, precompute)?;
+    let g = DRESS::new(n, sources, targets, weights, vertex_weights, variant, precompute)?;
     g.delta_fit(k, max_iterations, epsilon, n_samples, seed,
                 keep_multisets, compute_histogram)
 }
@@ -464,13 +464,13 @@ pub fn delta_fit(
 /// One-shot ∇^k-DRESS: build graph, run nabla fit, return results, free graph.
 pub fn nabla_fit(
     n: i32, sources: Vec<i32>, targets: Vec<i32>,
-    weights: Option<Vec<f64>>, node_weights: Option<Vec<f64>>,
+    weights: Option<Vec<f64>>, vertex_weights: Option<Vec<f64>>,
     variant: Variant, precompute: bool,
     k: i32, max_iterations: i32, epsilon: f64,
     n_samples: i32, seed: u32,
     keep_multisets: bool, compute_histogram: bool,
 ) -> Result<NablaDressResult, DressError> {
-    let g = DRESS::new(n, sources, targets, weights, node_weights, variant, precompute)?;
+    let g = DRESS::new(n, sources, targets, weights, vertex_weights, variant, precompute)?;
     g.nabla_fit(k, max_iterations, epsilon, n_samples, seed,
                 keep_multisets, compute_histogram)
 }

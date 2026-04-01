@@ -107,7 +107,7 @@ async function testDRESS() {
     // Result snapshot
     const res = g.result();
     assert(res.edgeDress.length === 3, 'result: expected 3 edge_dress');
-    assert(res.nodeDress.length === 3, 'result: expected 3 node_dress');
+    assert(res.vertexDress.length === 3, 'result: expected 3 vertex_dress');
     const d0 = res.edgeDress[0];
     for (let i = 1; i < 3; i++) {
         assert(Math.abs(res.edgeDress[i] - d0) < 1e-6,
@@ -118,26 +118,26 @@ async function testDRESS() {
     console.log('  OK');
 }
 
-async function testNodeWeightsDefault() {
-    console.log('test: node weights default …');
+async function testVertexWeightsDefault() {
+    console.log('test: vertex weights default …');
     const n = 3;
     const src = [0, 1, 0];
     const tgt = [1, 2, 2];
 
-    // 1. Default (implicit All-1 node weights)
+    // 1. Default (implicit All-1 vertex weights)
     const r1 = await fit({
         numVertices: n,
         sources: src,
         targets: tgt,
     });
 
-    // 2. Explicit All-1 node weights
+    // 2. Explicit All-1 vertex weights
     const nw = [1.0, 1.0, 1.0];
     const r2 = await fit({
         numVertices: n,
         sources: src,
         targets: tgt,
-        nodeWeights: nw,
+        vertexWeights: nw,
     });
 
     for (let i = 0; i < r1.edgeDress.length; i++) {
@@ -153,16 +153,16 @@ async function main() {
     await testPath();
     await testVariants();
     await testWeighted();
-    await testNodeWeightsDefault();
-    await testNodeWeights();
+    await testVertexWeightsDefault();
+    await testVertexWeights();
     await testDRESS();
     console.log('\nAll tests passed.');
 }
 
-async function testNodeWeights() {
-    console.log('test: node weights (K3) …');
-    // K3 with node weights [10, 1, 1].
-    // Node 0 is very heavy. Edges connected to 0 (0-1, 0-2) should have higher dress?
+async function testVertexWeights() {
+    console.log('test: vertex weights (K3) …');
+    // K3 with vertex weights [10, 1, 1].
+    // Vertex 0 is very heavy. Edges connected to 0 (0-1, 0-2) should have higher dress?
     // Or lower?
     // Dress is sum of geometric means of neighbors.
     // Neighbors' weights matter.
@@ -170,11 +170,11 @@ async function testNodeWeights() {
         numVertices: 3,
         sources: [0, 1, 0],
         targets: [1, 2, 2],
-        nodeWeights: [100.0, 1.0, 1.0],
+        vertexWeights: [100.0, 1.0, 1.0],
     });
-    // With equal edge weights (implicit 1.0), but custom node weights.
+    // With equal edge weights (implicit 1.0), but custom vertex weights.
     // Edge (1,2): neighbors are 1 and 2. Their weights are 1.0.
-    // Edge (0,1): neighbors are 0 and 1. Node 0 has weight 100.0.
+    // Edge (0,1): neighbors are 0 and 1. Vertex 0 has weight 100.0.
     // So edge (0,1) dress should be different from edge (1,2).
     
     // Actually, dress similarity S(e) depends on sum over common neighbors.

@@ -1,7 +1,7 @@
 /*
  * dress_omp.c — OpenMP-parallel dress_fit.
  *
- * Parallelises the per-node (Phase 1) and per-edge (Phase 2) loops
+ * Parallelises the per-vertex (Phase 1) and per-edge (Phase 2) loops
  * within each iteration.  Suitable for large single graphs.
  *
  * Build: compile with OpenMP enabled (-fopenmp / /openmp).
@@ -67,7 +67,7 @@ static inline double fit_finalize_omp(p_dress_graph_t g, int e,
 
 static double fit_impl_intercept_omp(p_dress_graph_t g, int e) {
     int u = g->U[e], v = g->V[e];
-    double denominator = g->node_dress[u] * g->node_dress[v];
+    double denominator = g->vertex_dress[u] * g->vertex_dress[v];
     int max_terms = g->intercept_offset[e + 1] - g->intercept_offset[e] + 1;
     double stack_buf[KBN_STACK_LIMIT];
     double *buf = (max_terms <= KBN_STACK_LIMIT)
@@ -86,7 +86,7 @@ static double fit_impl_intercept_omp(p_dress_graph_t g, int e) {
 
 static double fit_impl_merge_omp(p_dress_graph_t g, int e) {
     int u = g->U[e], v = g->V[e];
-    double denominator = g->node_dress[u] * g->node_dress[v];
+    double denominator = g->vertex_dress[u] * g->vertex_dress[v];
     int deg_u = g->adj_offset[u + 1] - g->adj_offset[u];
     int deg_v = g->adj_offset[v + 1] - g->adj_offset[v];
     int max_terms = (deg_u < deg_v ? deg_u : deg_v) + 1;
@@ -123,7 +123,7 @@ void dress_fit_omp(p_dress_graph_t g, int max_iterations, double epsilon,
         double max_delta = 0.0;
         int u, e;
 
-        /* Phase 1: per-node dress norm */
+        /* Phase 1: per-vertex dress norm */
 #ifdef _OPENMP
         #pragma omp parallel for
 #endif
@@ -140,7 +140,7 @@ void dress_fit_omp(p_dress_graph_t g, int max_iterations, double epsilon,
                 int ei = g->adj_edge_idx[base + i];
                 buf[i + 1] = g->edge_weight[ei] * g->edge_dress[ei];
             }
-            g->node_dress[u] = sqrt(kbn_sorted_sum_omp(buf, deg + 1));
+            g->vertex_dress[u] = sqrt(kbn_sorted_sum_omp(buf, deg + 1));
             if (buf != stack_buf) free(buf);
         }
 

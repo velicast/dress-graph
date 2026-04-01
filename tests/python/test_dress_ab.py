@@ -64,12 +64,12 @@ def _compare(n, sources, targets, weights=None, variant=PyVariant.UNDIRECTED):
             f"edge {e} weight: C={cw}  Py={pw}"
         )
 
-    # Compare node dress norms
+    # Compare vertex dress norms
     for u in range(n):
-        cn = cg.node_dress(u)
-        pn = pr.node_dress[u]
+        cn = cg.vertex_dress(u)
+        pn = pr.vertex_dress[u]
         assert cn == pytest.approx(pn, abs=1e-14), (
-            f"node {u}: C={cn}  Py={pn}"
+            f"vertex {u}: C={cn}  Py={pn}"
         )
 
 

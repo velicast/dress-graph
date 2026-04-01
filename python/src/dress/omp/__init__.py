@@ -132,7 +132,7 @@ def fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     variant=UNDIRECTED,
     max_iterations=100,
     epsilon=1e-6,
@@ -140,7 +140,7 @@ def fit(
 ):
     """OpenMP-parallel DRESS fitting — drop-in replacement for ``dress.fit``.
 
-    Parallelises the per-edge and per-node loops within each iteration.
+    Parallelises the per-edge and per-vertex loops within each iteration.
     """
     lib = _get_lib()
     sources = list(sources)
@@ -151,8 +151,8 @@ def fit(
     p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
     p_W = (_malloc_array([float(x) for x in weights], ctypes.c_double)
            if weights is not None else ctypes.POINTER(ctypes.c_double)())
-    p_NW = (_malloc_array([float(x) for x in node_weights], ctypes.c_double)
-            if node_weights is not None else ctypes.POINTER(ctypes.c_double)())
+    p_NW = (_malloc_array([float(x) for x in vertex_weights], ctypes.c_double)
+            if vertex_weights is not None else ctypes.POINTER(ctypes.c_double)())
 
     g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(int(variant)),
@@ -164,7 +164,7 @@ def fit(
                       ctypes.byref(iterations), ctypes.byref(delta))
 
     edge_dress = np.ctypeslib.as_array(g.contents.edge_dress, shape=(E,)).copy()
-    node_dress = np.ctypeslib.as_array(g.contents.node_dress, shape=(n_vertices,)).copy()
+    vertex_dress = np.ctypeslib.as_array(g.contents.vertex_dress, shape=(n_vertices,)).copy()
     edge_weight = np.ctypeslib.as_array(g.contents.edge_weight, shape=(E,)).copy()
 
     iters = iterations.value
@@ -176,7 +176,7 @@ def fit(
         targets=targets,
         edge_dress=edge_dress.tolist(),
         edge_weight=edge_weight.tolist(),
-        node_dress=node_dress.tolist(),
+        vertex_dress=vertex_dress.tolist(),
         iterations=iters,
         delta=delta_val,
     )
@@ -187,7 +187,7 @@ def delta_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -214,8 +214,8 @@ def delta_fit(
     p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
     p_W = (_malloc_array([float(x) for x in weights], ctypes.c_double)
            if weights is not None else ctypes.POINTER(ctypes.c_double)())
-    p_NW = (_malloc_array([float(x) for x in node_weights], ctypes.c_double)
-            if node_weights is not None else ctypes.POINTER(ctypes.c_double)())
+    p_NW = (_malloc_array([float(x) for x in vertex_weights], ctypes.c_double)
+            if vertex_weights is not None else ctypes.POINTER(ctypes.c_double)())
 
     g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(int(variant)),
@@ -259,7 +259,7 @@ def nabla_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -284,8 +284,8 @@ def nabla_fit(
     p_V = _malloc_array([int(x) for x in targets], ctypes.c_int)
     p_W = (_malloc_array([float(x) for x in weights], ctypes.c_double)
            if weights is not None else ctypes.POINTER(ctypes.c_double)())
-    p_NW = (_malloc_array([float(x) for x in node_weights], ctypes.c_double)
-            if node_weights is not None else ctypes.POINTER(ctypes.c_double)())
+    p_NW = (_malloc_array([float(x) for x in vertex_weights], ctypes.c_double)
+            if vertex_weights is not None else ctypes.POINTER(ctypes.c_double)())
 
     g = lib.dress_init_graph(n_vertices, E, p_U, p_V, p_W, p_NW,
                              ctypes.c_int(int(variant)),
@@ -351,7 +351,7 @@ class DRESS(_BaseDRESS):
     def fit(self, max_iterations=100, epsilon=1e-6):
         result = fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
         )
@@ -364,7 +364,7 @@ class DRESS(_BaseDRESS):
                   offset=0, stride=1):
         return delta_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, offset=offset, stride=stride,
@@ -377,7 +377,7 @@ class DRESS(_BaseDRESS):
                   keep_multisets=False, compute_histogram=True):
         return nabla_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets,

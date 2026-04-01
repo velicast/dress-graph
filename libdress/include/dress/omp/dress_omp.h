@@ -8,10 +8,10 @@
  *
  *   p_dress_graph_t g = dress_init_graph(N, E, U, V, W, NW, variant, precompute);
  *   dress_fit_omp(g, max_iterations, epsilon, &iterations, &delta);
- *   // g->edge_dress and g->node_dress are now populated
+ *   // g->edge_dress and g->vertex_dress are now populated
  *   dress_free_graph(g);
  *
- * dress_fit_omp() parallelises the per-edge and per-node loops within
+ * dress_fit_omp() parallelises the per-edge and per-vertex loops within
  * each iteration using OpenMP.  Suitable for large single graphs.
  *
  * dress_delta_fit_omp() parallelises the outer C(N,k) subgraph loop:
@@ -33,7 +33,7 @@ extern "C" {
  * OpenMP-parallel iterative DRESS fitting.
  *
  * Same signature and semantics as the sequential dress_fit() in dress.h.
- * Parallelises the per-node and per-edge loops within each iteration.
+ * Parallelises the per-vertex and per-edge loops within each iteration.
  */
 void dress_fit_omp(p_dress_graph_t g, int max_iterations, double epsilon,
                    int *iterations, double *delta);

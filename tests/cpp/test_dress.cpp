@@ -79,9 +79,9 @@ static void test_weighted_construction()
     ASSERT_NEAR(g.edgeWeight(2), 6.0, 1e-12, "w[2] == 6.0");
 }
 
-static void test_node_weights_default()
+static void test_vertex_weights_default()
 {
-    std::printf("test_node_weights_default\n");
+    std::printf("test_vertex_weights_default\n");
 
     int N = 3;
     std::vector<int> src = {0, 1, 0}, dst = {1, 2, 2};
@@ -249,17 +249,17 @@ static void test_fit_with_intercepts()
     }
 }
 
-static void test_node_dress()
+static void test_vertex_dress()
 {
-    std::printf("test_node_dress\n");
+    std::printf("test_vertex_dress\n");
 
     DRESS g(3, {0, 1, 0}, {1, 2, 2});
     g.fit(100, 1e-8);
 
-    ASSERT_GT(g.nodeDress(0), 0.0, "node_dress[0] > 0");
-    ASSERT_NEAR(g.nodeDress(0), g.nodeDress(1), 1e-6,
+    ASSERT_GT(g.vertexDress(0), 0.0, "vertex_dress[0] > 0");
+    ASSERT_NEAR(g.vertexDress(0), g.vertexDress(1), 1e-6,
                 "K3: all node dress equal (0 vs 1)");
-    ASSERT_NEAR(g.nodeDress(0), g.nodeDress(2), 1e-6,
+    ASSERT_NEAR(g.vertexDress(0), g.vertexDress(2), 1e-6,
                 "K3: all node dress equal (0 vs 2)");
 }
 
@@ -294,13 +294,13 @@ static void test_bulk_accessors()
     const int    *tgt = g.edgeTargets();
     const double *wts = g.edgeWeights();
     const double *drv = g.edgeDressValues();
-    const double *ndv = g.nodeDressValues();
+    const double *ndv = g.vertexDressValues();
 
     ASSERT(src != nullptr, "edgeSources not null");
     ASSERT(tgt != nullptr, "edgeTargets not null");
     ASSERT(wts != nullptr, "edgeWeights not null");
     ASSERT(drv != nullptr, "edgeDressValues not null");
-    ASSERT(ndv != nullptr, "nodeDressValues not null");
+    ASSERT(ndv != nullptr, "vertexDressValues not null");
 
     ASSERT_EQ(src[0], 0, "bulk src[0] == 0");
     ASSERT_EQ(tgt[0], 1, "bulk tgt[0] == 1");
@@ -353,7 +353,7 @@ static void test_complete_k4()
     }
 
     for (int u = 1; u < 4; u++) {
-        ASSERT_NEAR(g.nodeDress(u), g.nodeDress(0), 1e-6,
+        ASSERT_NEAR(g.vertexDress(u), g.vertexDress(0), 1e-6,
                     "K4 nodes equal");
     }
 }
@@ -395,7 +395,7 @@ int main()
     /* construction */
     test_unweighted_triangle();
     test_weighted_construction();
-    test_node_weights_default();
+    test_vertex_weights_default();
     test_all_variants();
     test_precompute_intercepts();
     test_mismatched_sizes();
@@ -410,7 +410,7 @@ int main()
     test_path_positive_dress();
     test_path_symmetry();
     test_fit_with_intercepts();
-    test_node_dress();
+    test_vertex_dress();
     test_weighted_fit();
 
     /* accessors */

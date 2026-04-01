@@ -9,7 +9,7 @@ DRESS is a deterministic, parameter-free framework that iteratively refines the 
 ```julia
 using DRESS
 
-result = dress_fit(4, [0, 1, 2, 0], [1, 2, 3, 3])
+result = fit(4, [0, 1, 2, 0], [1, 2, 3, 3])
 println(result.edge_dress)
 ```
 

@@ -32,21 +32,21 @@ class TestConstruction:
         r = _fit(3, [0, 1, 0], [1, 2, 2], weights=[1.0, 2.0, 3.0])
         assert len(r.edge_dress) == 3
 
-    def test_node_weights_default(self):
-        """Passing all 1.0 node weights should match default behavior."""
+    def test_vertex_weights_default(self):
+        """Passing all 1.0 vertex weights should match default behavior."""
         src = [0, 1, 0, 1]
         tgt = [1, 2, 2, 3]
         n = 4
 
-        # 1. Default (implicit All-1 node weights)
+        # 1. Default (implicit All-1 vertex weights)
         r1 = _fit(n, src, tgt)
 
-        # 2. Explicit All-1 node weights
+        # 2. Explicit All-1 vertex weights
         nw = [1.0] * n
-        r2 = _fit(n, src, tgt, node_weights=nw)
+        r2 = _fit(n, src, tgt, vertex_weights=nw)
 
         for d1, d2 in zip(r1.edge_dress, r2.edge_dress):
-            assert abs(d1 - d2) < 1e-12, "Explicit node_weights=1.0 differs from default"
+            assert abs(d1 - d2) < 1e-12, "Explicit vertex_weights=1.0 differs from default"
 
     def test_all_variants(self):
         for v in (UNDIRECTED, DIRECTED, FORWARD, BACKWARD):
@@ -103,10 +103,10 @@ class TestFit:
             assert abs(d - d0) < 1e-6
 
     def test_k4_node_norms_equal(self):
-        """All node norms in K4 should be equal."""
+        """All vertex norms in K4 should be equal."""
         r = _fit(4, [0, 0, 0, 1, 1, 2], [1, 2, 3, 2, 3, 3])
-        n0 = r.node_dress[0]
-        for n in r.node_dress:
+        n0 = r.vertex_dress[0]
+        for n in r.vertex_dress:
             assert abs(n - n0) < 1e-6
 
     def test_star_dress(self):
@@ -146,10 +146,10 @@ class TestBounds:
         for d in r.edge_dress:
             assert 0.0 <= d <= 2.0 + 1e-9
 
-    def test_node_dress_positive(self):
+    def test_vertex_dress_positive(self):
         r = _fit(3, [0, 1, 0], [1, 2, 2])
-        for n in r.node_dress:
-            assert n >= 2.0, "node norm >= 2 (self-loop contributes 4.0 under sqrt)"
+        for n in r.vertex_dress:
+            assert n >= 2.0, "vertex norm >= 2 (self-loop contributes 4.0 under sqrt)"
 
 
 # ── determinism ──────────────────────────────────────────────────────
@@ -250,13 +250,13 @@ def _sorted_fingerprint(values):
 
 
 def _assert_fingerprint_equal(g1, g2, label=""):
-    """Sorted edge_dress and node_dress must be bitwise identical."""
+    """Sorted edge_dress and vertex_dress must be bitwise identical."""
     assert _sorted_fingerprint(g1._edge_dress) == \
            _sorted_fingerprint(g2._edge_dress), \
         f"edge fingerprint mismatch: {label}"
-    assert _sorted_fingerprint(g1._node_dress) == \
-           _sorted_fingerprint(g2._node_dress), \
-        f"node fingerprint mismatch: {label}"
+    assert _sorted_fingerprint(g1._vertex_dress) == \
+           _sorted_fingerprint(g2._vertex_dress), \
+        f"vertex fingerprint mismatch: {label}"
 
 
 # ── label-independence (sort+KBN) ────────────────────────────────

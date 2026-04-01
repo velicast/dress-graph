@@ -27,7 +27,7 @@ DRESS_BACKWARD   <- 3L
 #' Compute DRESS edge similarity
 #'
 #' Build a DRESS graph from an edge list and run iterative fitting.
-#' Returns per-edge similarity values along with per-node norms.
+#' Returns per-edge similarity values along with per-vertex norms.
 #'
 #' @param n_vertices Integer. Number of vertices (vertex ids must be in
 #'   \code{0 .. n_vertices - 1}).
@@ -35,8 +35,8 @@ DRESS_BACKWARD   <- 3L
 #' @param targets Integer vector of length E — edge target endpoints (0-based).
 #' @param weights Optional numeric vector of length E — per-edge weights.
 #'   \code{NULL} (default) gives every edge weight 1.
-#' @param node_weights Optional numeric vector of length N — per-node weights.
-#'   \code{NULL} (default) gives every node weight 1.
+#' @param vertex_weights Optional numeric vector of length N — per-vertex weights.
+#'   \code{NULL} (default) gives every vertex weight 1.
 #' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
 #'   One of \code{DRESS_UNDIRECTED} (0), \code{DRESS_DIRECTED} (1),
 #'   \code{DRESS_FORWARD} (2), \code{DRESS_BACKWARD} (3).
@@ -52,10 +52,10 @@ DRESS_BACKWARD   <- 3L
 #'   \item{\code{targets}}{Integer vector [E] — edge target endpoints (0-based).}
 #'   \item{\code{edge_dress}}{Numeric vector [E] — fitted DRESS values.}
 #'   \item{\code{edge_weight}}{Numeric vector [E] — variant-adjusted edge weights.}
-#'   \item{\code{node_dress}}{Numeric vector [N] — aggregated node DRESS norms.}
+#'   \item{\code{vertex_dress}}{Numeric vector [N] — aggregated vertex dress norms.}
 #'   \item{\code{iterations}}{Integer — iterations until convergence.}
 #'   \item{\code{delta}}{Numeric — final maximum change.}
-#'   \item{\code{node_weights}}{Numeric vector [N] — node weights (if provided).}
+#'   \item{\code{vertex_weights}}{Numeric vector [N] — vertex weights (if provided).}
 #' }
 #'
 #' @examples
@@ -74,7 +74,7 @@ fit <- function(n_vertices,
                       sources,
                       targets,
                       weights              = NULL,
-                      node_weights         = NULL,
+                      vertex_weights         = NULL,
                       variant              = DRESS_UNDIRECTED,
                       max_iterations       = 100L,
                       epsilon              = 1e-6,
@@ -100,9 +100,9 @@ fit <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
-  if (!is.null(node_weights)) {
-    node_weights <- as.double(node_weights)
-    stopifnot(length(node_weights) == n_vertices)
+  if (!is.null(vertex_weights)) {
+    vertex_weights <- as.double(vertex_weights)
+    stopifnot(length(vertex_weights) == n_vertices)
   }
 
   .Call(C_dress_fit,
@@ -110,7 +110,7 @@ fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         variant,
         max_iterations,
         epsilon,
@@ -130,7 +130,7 @@ fit <- function(n_vertices,
 #' @param targets Integer vector of length E — edge target endpoints (0-based).
 #' @param weights Numeric vector of length E — per-edge weights, or NULL for
 #'   unweighted (all weights = 1). Default NULL.
-#' @param node_weights Numeric vector of length N — per-node weights, or NULL
+#' @param vertex_weights Numeric vector of length N — per-vertex weights, or NULL
 #'   (all weights = 1). Default NULL.
 #' @param k Integer. Number of vertices to remove (0 = original graph).
 #' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
@@ -160,7 +160,7 @@ delta_fit <- function(n_vertices,
                             sources,
                             targets,
                             weights          = NULL,
-                            node_weights     = NULL,
+                            vertex_weights     = NULL,
                             k                = 0L,
                             variant          = DRESS_UNDIRECTED,
                             max_iterations   = 100L,
@@ -175,7 +175,7 @@ delta_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -188,7 +188,7 @@ delta_fit <- function(n_vertices,
 
   stopifnot(length(sources) == length(targets))
   if (!is.null(weights)) stopifnot(length(weights) == length(sources))
-  if (!is.null(node_weights)) stopifnot(length(node_weights) == n_vertices)
+  if (!is.null(vertex_weights)) stopifnot(length(vertex_weights) == n_vertices)
   stopifnot(n_vertices >= 1L)
   stopifnot(k >= 0L)
   stopifnot(variant >= 0L && variant <= 3L)
@@ -200,7 +200,7 @@ delta_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -227,7 +227,7 @@ delta_fit <- function(n_vertices,
 #' @param targets Integer vector of length E — edge target endpoints (0-based).
 #' @param weights Numeric vector of length E — per-edge weights, or NULL for
 #'   unweighted (all weights = 1). Default NULL.
-#' @param node_weights Numeric vector of length N — per-node weights, or NULL
+#' @param vertex_weights Numeric vector of length N — per-vertex weights, or NULL
 #'   (all weights = 1). Default NULL.
 #' @param k Integer. Tuple size (0 = original graph).
 #' @param variant Graph variant (default \code{DRESS_UNDIRECTED}).
@@ -262,7 +262,7 @@ nabla_fit <- function(n_vertices,
                             sources,
                             targets,
                             weights          = NULL,
-                            node_weights     = NULL,
+                            vertex_weights     = NULL,
                             k                = 0L,
                             variant          = DRESS_UNDIRECTED,
                             max_iterations   = 100L,
@@ -277,7 +277,7 @@ nabla_fit <- function(n_vertices,
   sources        <- as.integer(sources)
   targets        <- as.integer(targets)
   if (!is.null(weights)) weights <- as.double(weights)
-  if (!is.null(node_weights)) node_weights <- as.double(node_weights)
+  if (!is.null(vertex_weights)) vertex_weights <- as.double(vertex_weights)
   k              <- as.integer(k)
   variant        <- as.integer(variant)
   max_iterations <- as.integer(max_iterations)
@@ -290,7 +290,7 @@ nabla_fit <- function(n_vertices,
 
   stopifnot(length(sources) == length(targets))
   if (!is.null(weights)) stopifnot(length(weights) == length(sources))
-  if (!is.null(node_weights)) stopifnot(length(node_weights) == n_vertices)
+  if (!is.null(vertex_weights)) stopifnot(length(vertex_weights) == n_vertices)
   stopifnot(n_vertices >= 1L)
   stopifnot(k >= 0L)
   stopifnot(variant >= 0L && variant <= 3L)
@@ -302,7 +302,7 @@ nabla_fit <- function(n_vertices,
         sources,
         targets,
         weights,
-        node_weights,
+        vertex_weights,
         k,
         variant,
         max_iterations,
@@ -347,7 +347,7 @@ dress_version <- function() {
 #'   \item{\code{$get(u, v, max_iterations, epsilon, edge_weight)}}{
 #'     Query the DRESS value for an existing or virtual edge.}
 #'   \item{\code{$result()}}{Extract current results (sources, targets,
-#'     edge_dress, edge_weight, node_dress).}
+#'     edge_dress, edge_weight, vertex_dress).}
 #'   \item{\code{$close()}}{Explicitly free the C graph.}
 #' }
 #'
@@ -363,7 +363,7 @@ DRESS <- function(n_vertices,
                        sources,
                        targets,
                        weights               = NULL,
-                       node_weights          = NULL,
+                       vertex_weights          = NULL,
                        variant               = DRESS_UNDIRECTED,
                        precompute_intercepts = FALSE) {
 
@@ -382,13 +382,13 @@ DRESS <- function(n_vertices,
     stopifnot(length(weights) == length(sources))
   }
 
-  if (!is.null(node_weights)) {
-    node_weights <- as.double(node_weights)
-    stopifnot(length(node_weights) == n_vertices)
+  if (!is.null(vertex_weights)) {
+    vertex_weights <- as.double(vertex_weights)
+    stopifnot(length(vertex_weights) == n_vertices)
   }
 
   ptr <- .Call(C_dress_init,
-               n_vertices, sources, targets, weights, node_weights,
+               n_vertices, sources, targets, weights, vertex_weights,
                variant, precompute)
 
   self <- new.env(parent = emptyenv())
@@ -410,7 +410,7 @@ DRESS <- function(n_vertices,
                              compute_histogram = TRUE) {
     delta_fit(n_vertices, sources, targets,
                     weights          = weights,
-                    node_weights     = node_weights,
+                    vertex_weights     = vertex_weights,
                     k                = as.integer(k),
                     variant          = variant,
                     max_iterations   = as.integer(max_iterations),
@@ -431,7 +431,7 @@ DRESS <- function(n_vertices,
                              compute_histogram = TRUE) {
     nabla_fit(n_vertices, sources, targets,
                     weights          = weights,
-                    node_weights     = node_weights,
+                    vertex_weights     = vertex_weights,
                     k                = as.integer(k),
                     variant          = variant,
                     max_iterations   = as.integer(max_iterations),

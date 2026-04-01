@@ -15,7 +15,7 @@ result = fit(
 
 print(f"Iterations: {result.iterations}")
 print(f"Edge DRESS values: {result.edge_dress}")
-print(f"Node DRESS values: {result.node_dress}")
+print(f"Node DRESS values: {result.vertex_dress}")
 ```
 
 ### Δ^k-DRESS (Python)
@@ -47,7 +47,7 @@ G = nx.karate_club_graph()
 # Δ⁰: DRESS on the full graph
 result = fit(G, set_attributes=True)
 print(G.edges[0, 1]["dress"])     # per-edge similarity
-print(G.nodes[0]["dress_norm"])   # per-node norm
+print(G.nodes[0]["vertex_dress"])   # per-vertex norm
 
 # Δ¹: histogram fingerprint
 delta = delta_fit(G, k=1)
@@ -88,7 +88,7 @@ let r = delta_fit(
     vec![0, 1, 2, 0],
     vec![1, 2, 3, 3],
     None,     // edge weights
-    None,     // node weights
+    None,     // vertex weights
     Variant::Undirected,
     false,    // precompute
     1,        // k = 1
@@ -232,7 +232,7 @@ result, err := dress.Fit(4,
     []int32{0, 1, 2, 0},
     []int32{1, 2, 3, 3},
     nil, // no weights
-    nil, // no node weights
+    nil, // no vertex weights
     dress.Undirected, 100, 1e-6, true)
 
 fmt.Printf("iterations: %d\n", result.Iterations)
@@ -245,7 +245,7 @@ r, err := dress.DeltaFit(4,
     []int32{0, 1, 2, 0},
     []int32{1, 2, 3, 3},
     nil,                 // edge weights
-    nil,                 // node weights
+    nil,                 // vertex weights
     1,                   // k
     dress.Undirected,
     100, 1e-6,
@@ -305,7 +305,7 @@ res <- fit(
 
 cat("iterations:", res$iterations, "\n")
 cat("edge dress:", res$edge_dress, "\n")
-cat("node dress:", res$node_dress, "\n")
+cat("node dress:", res$vertex_dress, "\n")
 ```
 
 ### Δ^k-DRESS (R)

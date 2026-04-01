@@ -162,7 +162,7 @@ pub fn delta_fit<C: Communicator>(
     sources: Vec<i32>,
     targets: Vec<i32>,
     weights: Option<Vec<f64>>,
-    node_weights: Option<Vec<f64>>,
+    vertex_weights: Option<Vec<f64>>,
     k: i32,
     max_iterations: i32,
     epsilon: f64,
@@ -188,7 +188,7 @@ pub fn delta_fit<C: Communicator>(
             Some(w) => crate::libc_malloc_copy_f64(w),
             None => std::ptr::null_mut(),
         };
-        let nw_ptr = match &node_weights {
+        let nw_ptr = match &vertex_weights {
             Some(nw) => crate::libc_malloc_copy_f64(nw),
             None => std::ptr::null_mut(),
         };
@@ -227,7 +227,7 @@ pub fn nabla_fit<C: Communicator>(
     sources: Vec<i32>,
     targets: Vec<i32>,
     weights: Option<Vec<f64>>,
-    node_weights: Option<Vec<f64>>,
+    vertex_weights: Option<Vec<f64>>,
     k: i32,
     max_iterations: i32,
     epsilon: f64,
@@ -253,7 +253,7 @@ pub fn nabla_fit<C: Communicator>(
             Some(w) => crate::libc_malloc_copy_f64(w),
             None => std::ptr::null_mut(),
         };
-        let nw_ptr = match &node_weights {
+        let nw_ptr = match &vertex_weights {
             Some(nw) => crate::libc_malloc_copy_f64(nw),
             None => std::ptr::null_mut(),
         };
@@ -300,7 +300,7 @@ pub mod cuda {
         sources: Vec<i32>,
         targets: Vec<i32>,
         weights: Option<Vec<f64>>,
-        node_weights: Option<Vec<f64>>,
+        vertex_weights: Option<Vec<f64>>,
         k: i32,
         max_iterations: i32,
         epsilon: f64,
@@ -326,7 +326,7 @@ pub mod cuda {
                 Some(w) => crate::libc_malloc_copy_f64(w),
                 None => std::ptr::null_mut(),
             };
-            let nw_ptr = match &node_weights {
+            let nw_ptr = match &vertex_weights {
                 Some(nw) => crate::libc_malloc_copy_f64(nw),
                 None => std::ptr::null_mut(),
             };
@@ -365,7 +365,7 @@ pub mod cuda {
         sources: Vec<i32>,
         targets: Vec<i32>,
         weights: Option<Vec<f64>>,
-        node_weights: Option<Vec<f64>>,
+        vertex_weights: Option<Vec<f64>>,
         k: i32,
         max_iterations: i32,
         epsilon: f64,
@@ -391,7 +391,7 @@ pub mod cuda {
                 Some(w) => crate::libc_malloc_copy_f64(w),
                 None => std::ptr::null_mut(),
             };
-            let nw_ptr = match &node_weights {
+            let nw_ptr = match &vertex_weights {
                 Some(nw) => crate::libc_malloc_copy_f64(nw),
                 None => std::ptr::null_mut(),
             };
@@ -442,7 +442,7 @@ pub mod cuda {
         /// Construct a persistent MPI+CUDA DRESS graph.
         pub fn new(
             n: i32, sources: Vec<i32>, targets: Vec<i32>,
-            weights: Option<Vec<f64>>, node_weights: Option<Vec<f64>>,
+            weights: Option<Vec<f64>>, vertex_weights: Option<Vec<f64>>,
             variant: Variant, precompute_intercepts: bool,
         ) -> Result<DRESS, DressError> {
             let e = sources.len();
@@ -453,7 +453,7 @@ pub mod cuda {
                 let u_ptr = crate::libc_malloc_copy_i32(&sources);
                 let v_ptr = crate::libc_malloc_copy_i32(&targets);
                 let w_ptr = weights.as_ref().map_or(std::ptr::null_mut(), |w| crate::libc_malloc_copy_f64(w));
-                let nw_ptr = node_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
+                let nw_ptr = vertex_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
                 let g = super::dress_init_graph(n, e as super::c_int, u_ptr, v_ptr, w_ptr, nw_ptr,
                                                variant as super::c_int, precompute_intercepts as super::c_int);
                 if g.is_null() { return Err(DressError::InitFailed); }
@@ -541,7 +541,7 @@ pub mod cuda {
                 let nd_ptr = *(base.add(96) as *const *const f64);
                 let nw_c_ptr = *(base.add(104) as *const *const f64);
 
-                let node_weights = if !nw_c_ptr.is_null() {
+                let vertex_weights = if !nw_c_ptr.is_null() {
                     Some(std::slice::from_raw_parts(nw_c_ptr, n).to_vec())
                 } else {
                     None
@@ -552,8 +552,8 @@ pub mod cuda {
                     targets:     self.targets.clone(),
                     edge_weight: std::slice::from_raw_parts(ew_ptr, e).to_vec(),
                     edge_dress:  std::slice::from_raw_parts(ed_ptr, e).to_vec(),
-                    node_dress:  std::slice::from_raw_parts(nd_ptr, n).to_vec(),
-                    node_weights,
+                    vertex_dress:  std::slice::from_raw_parts(nd_ptr, n).to_vec(),
+                    vertex_weights,
                     iterations:  0,
                     delta:       0.0,
                 }
@@ -591,7 +591,7 @@ impl DRESS {
     /// Construct a persistent MPI DRESS graph.
     pub fn new(
         n: i32, sources: Vec<i32>, targets: Vec<i32>,
-        weights: Option<Vec<f64>>, node_weights: Option<Vec<f64>>,
+        weights: Option<Vec<f64>>, vertex_weights: Option<Vec<f64>>,
         variant: Variant, precompute_intercepts: bool,
     ) -> Result<DRESS, DressError> {
         let e = sources.len();
@@ -602,7 +602,7 @@ impl DRESS {
             let u_ptr = crate::libc_malloc_copy_i32(&sources);
             let v_ptr = crate::libc_malloc_copy_i32(&targets);
             let w_ptr = weights.as_ref().map_or(std::ptr::null_mut(), |w| crate::libc_malloc_copy_f64(w));
-            let nw_ptr = node_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
+            let nw_ptr = vertex_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
             let g = dress_init_graph(n, e as c_int, u_ptr, v_ptr, w_ptr, nw_ptr,
                                      variant as c_int, precompute_intercepts as c_int);
             if g.is_null() { return Err(DressError::InitFailed); }
@@ -690,7 +690,7 @@ impl DRESS {
             let nd_ptr = *(base.add(96) as *const *const f64);
             let nw_c_ptr = *(base.add(104) as *const *const f64);
 
-            let node_weights = if !nw_c_ptr.is_null() {
+            let vertex_weights = if !nw_c_ptr.is_null() {
                 Some(std::slice::from_raw_parts(nw_c_ptr, n).to_vec())
             } else {
                 None
@@ -701,8 +701,8 @@ impl DRESS {
                 targets:     self.targets.clone(),
                 edge_weight: std::slice::from_raw_parts(ew_ptr, e).to_vec(),
                 edge_dress:  std::slice::from_raw_parts(ed_ptr, e).to_vec(),
-                node_dress:  std::slice::from_raw_parts(nd_ptr, n).to_vec(),
-                node_weights,
+                vertex_dress:  std::slice::from_raw_parts(nd_ptr, n).to_vec(),
+                vertex_weights,
                 iterations:  0,
                 delta:       0.0,
             }
@@ -754,7 +754,7 @@ pub mod omp {
         sources: Vec<i32>,
         targets: Vec<i32>,
         weights: Option<Vec<f64>>,
-        node_weights: Option<Vec<f64>>,
+        vertex_weights: Option<Vec<f64>>,
         k: i32,
         max_iterations: i32,
         epsilon: f64,
@@ -777,7 +777,7 @@ pub mod omp {
             let u_ptr = crate::libc_malloc_copy_i32(&sources);
             let v_ptr = crate::libc_malloc_copy_i32(&targets);
             let w_ptr = weights.as_ref().map_or(std::ptr::null_mut(), |w| crate::libc_malloc_copy_f64(w));
-            let nw_ptr = node_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
+            let nw_ptr = vertex_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
 
             let g = super::dress_init_graph(
                 n, e as super::c_int, u_ptr, v_ptr, w_ptr, nw_ptr,
@@ -813,7 +813,7 @@ pub mod omp {
         sources: Vec<i32>,
         targets: Vec<i32>,
         weights: Option<Vec<f64>>,
-        node_weights: Option<Vec<f64>>,
+        vertex_weights: Option<Vec<f64>>,
         k: i32,
         max_iterations: i32,
         epsilon: f64,
@@ -836,7 +836,7 @@ pub mod omp {
             let u_ptr = crate::libc_malloc_copy_i32(&sources);
             let v_ptr = crate::libc_malloc_copy_i32(&targets);
             let w_ptr = weights.as_ref().map_or(std::ptr::null_mut(), |w| crate::libc_malloc_copy_f64(w));
-            let nw_ptr = node_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
+            let nw_ptr = vertex_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
 
             let g = super::dress_init_graph(
                 n, e as super::c_int, u_ptr, v_ptr, w_ptr, nw_ptr,
@@ -883,7 +883,7 @@ pub mod omp {
         /// Construct a persistent MPI+OMP DRESS graph.
         pub fn new(
             n: i32, sources: Vec<i32>, targets: Vec<i32>,
-            weights: Option<Vec<f64>>, node_weights: Option<Vec<f64>>,
+            weights: Option<Vec<f64>>, vertex_weights: Option<Vec<f64>>,
             variant: Variant, precompute_intercepts: bool,
         ) -> Result<DRESS, DressError> {
             let e = sources.len();
@@ -894,7 +894,7 @@ pub mod omp {
                 let u_ptr = crate::libc_malloc_copy_i32(&sources);
                 let v_ptr = crate::libc_malloc_copy_i32(&targets);
                 let w_ptr = weights.as_ref().map_or(std::ptr::null_mut(), |w| crate::libc_malloc_copy_f64(w));
-                let nw_ptr = node_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
+                let nw_ptr = vertex_weights.as_ref().map_or(std::ptr::null_mut(), |nw| crate::libc_malloc_copy_f64(nw));
                 let g = super::dress_init_graph(n, e as super::c_int, u_ptr, v_ptr, w_ptr, nw_ptr,
                                                variant as super::c_int, precompute_intercepts as super::c_int);
                 if g.is_null() { return Err(DressError::InitFailed); }
@@ -975,8 +975,8 @@ pub mod omp {
                     targets: self.targets.clone(),
                     edge_weight: std::slice::from_raw_parts(ew_ptr, e).to_vec(),
                     edge_dress: std::slice::from_raw_parts(ed_ptr, e).to_vec(),
-                    node_dress: std::slice::from_raw_parts(nd_ptr, n).to_vec(),
-                    node_weights: if !nw_c_ptr.is_null() { Some(std::slice::from_raw_parts(nw_c_ptr, n).to_vec()) } else { None },
+                    vertex_dress: std::slice::from_raw_parts(nd_ptr, n).to_vec(),
+                    vertex_weights: if !nw_c_ptr.is_null() { Some(std::slice::from_raw_parts(nw_c_ptr, n).to_vec()) } else { None },
                     iterations: 0,
                     delta: 0.0,
                 }

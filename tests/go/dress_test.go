@@ -96,19 +96,19 @@ func TestLengthMismatch(t *testing.T) {
 	}
 }
 
-func TestNodeWeights(t *testing.T) {
+func TestVertexWeights(t *testing.T) {
 	// K3
 	n := 3
 	src := []int32{0, 1, 0}
 	tgt := []int32{1, 2, 2}
 
-	// 1. Default (implicit All-1 node weights)
+	// 1. Default (implicit All-1 vertex weights)
 	r1, err := dress.Fit(n, src, tgt, nil, nil, dress.Undirected, 100, 1e-8, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// 2. Explicit All-1 node weights
+	// 2. Explicit All-1 vertex weights
 	nw := []float64{1.0, 1.0, 1.0}
 	r2, err := dress.Fit(n, src, tgt, nil, nw, dress.Undirected, 100, 1e-8, true)
 	if err != nil {
@@ -118,7 +118,7 @@ func TestNodeWeights(t *testing.T) {
 	for i, d1 := range r1.EdgeDress {
 		d2 := r2.EdgeDress[i]
 		if math.Abs(d1-d2) > 1e-12 {
-			t.Errorf("Explicit node_weights=1.0 differs from default: %.12f != %.12f", d2, d1)
+			t.Errorf("Explicit vertex_weights=1.0 differs from default: %.12f != %.12f", d2, d1)
 		}
 	}
 }
@@ -166,7 +166,7 @@ func TestDRESS(t *testing.T) {
 		t.Errorf("Get(0,1)=%.6f differs from Result edge dress %.6f", d01, d0)
 	}
 
-	// Query a virtual edge (not in graph) — 0-based, e.g. node 0 to itself
+	// Query a virtual edge (not in graph) — 0-based, e.g. vertex 0 to itself
 	// doesn't cause a crash
 	_, err = g.Get(0, 0, 100, 1e-6, 1.0)
 	if err != nil {
@@ -174,7 +174,7 @@ func TestDRESS(t *testing.T) {
 	}
 }
 
-func TestNodeWeighted(t *testing.T) {
+func TestVertexWeighted(t *testing.T) {
 	// Triangle: 0-1, 1-2, 0-2
 	nw := []float64{0.1, 0.2, 0.3}
 	r, err := dress.Fit(3,
@@ -185,11 +185,11 @@ func TestNodeWeighted(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(r.NodeWeights) != 3 {
-		t.Fatalf("expected 3 node weights, got %d", len(r.NodeWeights))
+	if len(r.VertexWeights) != 3 {
+		t.Fatalf("expected 3 vertex weights, got %d", len(r.VertexWeights))
 	}
 	// Floating point comparison with small epsilon if needed, but here exact copy is expected
-	if r.NodeWeights[0] != 0.1 || r.NodeWeights[1] != 0.2 || r.NodeWeights[2] != 0.3 {
-		t.Fatalf("node weights mismatch: %v", r.NodeWeights)
+	if r.VertexWeights[0] != 0.1 || r.VertexWeights[1] != 0.2 || r.VertexWeights[2] != 0.3 {
+		t.Fatalf("vertex weights mismatch: %v", r.VertexWeights)
 	}
 }

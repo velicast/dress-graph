@@ -152,7 +152,7 @@ runBtn.addEventListener('click', async () => {
         // Summary
         summaryEl.innerHTML = `
             <div class="stat"><div class="val">${r.sources.length}</div><div class="lbl">Edges</div></div>
-            <div class="stat"><div class="val">${r.nodeDress.length}</div><div class="lbl">Vertices</div></div>
+            <div class="stat"><div class="val">${r.vertexDress.length}</div><div class="lbl">Vertices</div></div>
             <div class="stat"><div class="val">${r.iterations}</div><div class="lbl">Iterations</div></div>
             <div class="stat"><div class="val">${r.delta.toExponential(3)}</div><div class="lbl">Delta</div></div>
             <div class="stat"><div class="val">${elapsed}s</div><div class="lbl">Time</div></div>
@@ -173,8 +173,8 @@ runBtn.addEventListener('click', async () => {
 
         // Node table
         html += '<br><table><tr><th>Node</th><th>Node DRESS</th></tr>';
-        for (let i = 0; i < r.nodeDress.length; i++) {
-            html += `<tr><td>${i}</td><td>${r.nodeDress[i].toFixed(6)}</td></tr>`;
+        for (let i = 0; i < r.vertexDress.length; i++) {
+            html += `<tr><td>${i}</td><td>${r.vertexDress[i].toFixed(6)}</td></tr>`;
         }
         html += '</table>';
 

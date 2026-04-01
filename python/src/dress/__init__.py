@@ -76,7 +76,7 @@ class DRESS:
         precompute_intercepts=False,
         *,
         weights=None,
-        node_weights=None,
+        vertex_weights=None,
         variant=None,
     ):
         # Resolve the flexible positional / keyword calling conventions:
@@ -104,7 +104,7 @@ class DRESS:
         self._src = list(sources)
         self._tgt = list(targets)
         self._wgt = list(_weights) if _weights is not None else None
-        self._nwgt = list(node_weights) if node_weights is not None else None
+        self._nwgt = list(vertex_weights) if vertex_weights is not None else None
         self._var = Variant(int(_variant))
         self._precompute = bool(precompute_intercepts)
 
@@ -127,7 +127,7 @@ class DRESS:
             from dress.core import DRESS as _PyDRESS
             self._impl = _PyDRESS(
                 self._n_v, self._src, self._tgt,
-                weights=self._wgt, node_weights=self._nwgt,
+                weights=self._wgt, vertex_weights=self._nwgt,
                 variant=self._var,
                 precompute_intercepts=self._precompute,
             )
@@ -167,9 +167,9 @@ class DRESS:
         """DRESS value of edge *e* (call :meth:`fit` first)."""
         return self._impl.edge_dress(e)
 
-    def node_dress(self, u):
-        """Node DRESS norm of vertex *u* (call :meth:`fit` first)."""
-        return self._impl.node_dress(u)
+    def vertex_dress(self, u):
+        """vertex dress norm of vertex *u* (call :meth:`fit` first)."""
+        return self._impl.vertex_dress(u)
 
     # -- NumPy array properties (zero-copy for C, lazy for Python) ---------
 
@@ -194,9 +194,9 @@ class DRESS:
         return self._impl.dress_values
 
     @property
-    def node_dress_values(self):
-        """Per-node DRESS norm array (NumPy)."""
-        return self._impl.node_dress_values
+    def vertex_dress_values(self):
+        """Per-vertex DRESS norm array (NumPy)."""
+        return self._impl.vertex_dress_values
 
     # -- fitting -----------------------------------------------------------
 
@@ -273,7 +273,7 @@ class DRESS:
         """Compute the nabla^k-DRESS histogram.
 
         Enumerates all P(N,k) ordered k-tuples, marks each with
-        generic injective node weights, runs DRESS on each marked
+        generic injective vertex weights, runs DRESS on each marked
         graph, and accumulates edge values into a histogram.
 
         Parameters
@@ -343,11 +343,11 @@ class DRESS:
     def _sync_hardware_fit(self, result):
         """Copy hardware-backend fit results into the pure-Python impl.
 
-        After this, ``edge_dress()``, ``node_dress()``, ``get()`` etc.
+        After this, ``edge_dress()``, ``vertex_dress()``, ``get()`` etc.
         all reflect the hardware-computed values.
         """
         self._impl._edge_dress = list(result.edge_dress)
-        self._impl._node_dress = list(result.node_dress)
+        self._impl._node_dress = list(result.vertex_dress)
         for attr in ('_np_dress', '_np_node_dress'):
             if hasattr(self._impl, attr):
                 delattr(self._impl, attr)
@@ -359,7 +359,7 @@ class DRESS:
         from dress.cuda import fit as _cuda_fit
         result = _cuda_fit(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
         )
@@ -374,7 +374,7 @@ class DRESS:
         from dress.cuda import delta_fit as _cuda_delta
         return _cuda_delta(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets,
@@ -390,7 +390,7 @@ class DRESS:
         from dress.mpi import delta_fit as _mpi_delta
         return _mpi_delta(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -406,7 +406,7 @@ class DRESS:
         from dress.mpi.cuda import delta_fit as _mpi_cuda_delta
         return _mpi_cuda_delta(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -421,7 +421,7 @@ class DRESS:
         from dress.cuda import nabla_fit as _cuda_nabla
         return _cuda_nabla(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets,
@@ -437,7 +437,7 @@ class DRESS:
         from dress.mpi import nabla_fit as _mpi_nabla
         return _mpi_nabla(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -453,7 +453,7 @@ class DRESS:
         from dress.mpi.cuda import nabla_fit as _mpi_cuda_nabla
         return _mpi_cuda_nabla(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -469,7 +469,7 @@ class DRESS:
         from dress.mpi.omp import nabla_fit as _mpi_omp_nabla
         return _mpi_omp_nabla(
             self._n_v, self._src, self._tgt,
-            weights=self._wgt, node_weights=self._nwgt,
+            weights=self._wgt, vertex_weights=self._nwgt,
             k=k, variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
             keep_multisets=keep_multisets, comm=comm,
@@ -495,7 +495,7 @@ def fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     variant=UNDIRECTED,
     max_iterations=100,
     epsilon=1e-6,
@@ -511,7 +511,7 @@ def fit(
         Edge endpoint arrays (same length).
     weights : sequence of float, optional
         Per-edge weights (``None`` for unweighted).
-    node_weights : sequence of float, optional
+    vertex_weights : sequence of float, optional
         Per-vertex weights (``None`` for unit weights).
     variant : Variant
         ``UNDIRECTED`` (default), ``DIRECTED``, ``FORWARD``, or ``BACKWARD``.
@@ -527,7 +527,7 @@ def fit(
     DRESSResult
     """
     g = DRESS(n_vertices, sources, targets, weights=weights,
-              node_weights=node_weights,
+              vertex_weights=vertex_weights,
               variant=variant, precompute_intercepts=precompute_intercepts)
     fr = g.fit(max_iterations=max_iterations, epsilon=epsilon)
     E = g.n_edges
@@ -536,7 +536,7 @@ def fit(
         targets=[g.edge_target(e) for e in range(E)],
         edge_dress=[g.edge_dress(e) for e in range(E)],
         edge_weight=[g.edge_weight(e) for e in range(E)],
-        node_dress=[g.node_dress(u) for u in range(g.n_vertices)],
+        vertex_dress=[g.vertex_dress(u) for u in range(g.n_vertices)],
         iterations=fr.iterations,
         delta=fr.delta,
     )
@@ -547,7 +547,7 @@ def delta_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -568,7 +568,7 @@ def delta_fit(
         Edge endpoint arrays (same length).
     weights : sequence of float, optional
         Per-edge weights (``None`` for unweighted).
-    node_weights : sequence of float, optional
+    vertex_weights : sequence of float, optional
         Per-vertex weights (``None`` for unit weights).
     k : int
         Deletion depth (default 0).
@@ -588,7 +588,7 @@ def delta_fit(
     DeltaDRESSResult
     """
     g = DRESS(n_vertices, sources, targets, weights=weights,
-              node_weights=node_weights,
+              vertex_weights=vertex_weights,
               variant=variant, precompute_intercepts=precompute)
     return g.delta_fit(
         k=k, max_iterations=max_iterations, epsilon=epsilon,
@@ -602,7 +602,7 @@ def nabla_fit(
     sources,
     targets,
     weights=None,
-    node_weights=None,
+    vertex_weights=None,
     k=0,
     variant=UNDIRECTED,
     max_iterations=100,
@@ -623,7 +623,7 @@ def nabla_fit(
         Edge endpoint arrays (same length).
     weights : sequence of float, optional
         Per-edge weights (``None`` for unweighted).
-    node_weights : sequence of float, optional
+    vertex_weights : sequence of float, optional
         Per-vertex weights (``None`` for unit weights).
     k : int
         Individualization depth (default 0).
@@ -643,7 +643,7 @@ def nabla_fit(
     NablaDRESSResult
     """
     g = DRESS(n_vertices, sources, targets, weights=weights,
-              node_weights=node_weights,
+              vertex_weights=vertex_weights,
               variant=variant, precompute_intercepts=precompute)
     return g.nabla_fit(
         k=k, max_iterations=max_iterations, epsilon=epsilon,

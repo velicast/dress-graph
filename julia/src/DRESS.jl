@@ -11,7 +11,7 @@ using DRESS
 result = fit(4, [0,1,2,0], [1,2,3,3])
 
 result.edge_dress          # per-edge similarity
-result.node_dress          # per-node aggregated similarity
+result.vertex_dress          # per-vertex aggregated similarity
 result.iterations          # iterations until convergence
 result.delta               # final max change
 ```
@@ -134,7 +134,7 @@ Fields:
 - `targets::Vector{Int32}`      – edge target vertices
 - `edge_weight::Vector{Float64}` – variant-specific edge weights
 - `edge_dress::Vector{Float64}` – per-edge dress similarity
-- `node_dress::Vector{Float64}` – per-node aggregated similarity
+- `vertex_dress::Vector{Float64}` – per-vertex aggregated similarity
 - `iterations::Int`             – iterations performed
 - `delta::Float64`              – final max per-edge change
 """
@@ -143,10 +143,10 @@ struct DRESSResult
     targets     :: Vector{Int32}
     edge_weight :: Vector{Float64}
     edge_dress  :: Vector{Float64}
-    node_dress  :: Vector{Float64}
+    vertex_dress  :: Vector{Float64}
     iterations  :: Int
     delta       :: Float64
-    node_weights :: Union{Vector{Float64}, Nothing}
+    vertex_weights :: Union{Vector{Float64}, Nothing}
 end
 
 struct HistogramEntry
@@ -177,7 +177,7 @@ end
 
 """
     fit(N, sources, targets;
-              weights=nothing, node_weights=nothing,
+              weights=nothing, vertex_weights=nothing,
               variant=UNDIRECTED,
               max_iterations=100, epsilon=1e-6,
               precompute_intercepts=false) → DRESSResult
@@ -191,7 +191,7 @@ Run the DRESS iterative fitting algorithm.
 
 # Keyword arguments
 - `weights`                – optional edge weights (Float64 vector, same length as sources)
-- `node_weights`           – optional node weights (Float64 vector, length N)
+- `vertex_weights`           – optional vertex weights (Float64 vector, length N)
 - `variant`                – one of `UNDIRECTED`, `DIRECTED`, `FORWARD`, `BACKWARD`
 - `max_iterations::Int`    – maximum fitting iterations (default 100)
 - `epsilon::Float64`       – convergence threshold (default 1e-6)
@@ -201,7 +201,7 @@ function fit(N::Integer,
                    sources::AbstractVector{<:Integer},
                    targets::AbstractVector{<:Integer};
                    weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
-                   node_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                   vertex_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
                    variant::Integer   = UNDIRECTED,
                    max_iterations::Integer = 100,
                    epsilon::Real      = 1e-6,
@@ -212,8 +212,8 @@ function fit(N::Integer,
     if weights !== nothing
         length(weights) == E || throw(ArgumentError("weights must have the same length as sources"))
     end
-    if node_weights !== nothing
-        length(node_weights) == N || throw(ArgumentError("node_weights must have length N"))
+    if vertex_weights !== nothing
+        length(vertex_weights) == N || throw(ArgumentError("vertex_weights must have length N"))
     end
 
     _ensure_lib()
@@ -235,10 +235,10 @@ function fit(N::Integer,
     end
 
     NW_c = C_NULL
-    if node_weights !== nothing
+    if vertex_weights !== nothing
         NW_c = Libc.malloc(N * sizeof(Cdouble))
         nw_arr = unsafe_wrap(Array, Ptr{Cdouble}(NW_c), N)
-        nw_arr .= Cdouble.(node_weights)
+        nw_arr .= Cdouble.(vertex_weights)
     end
 
     # dress_init_graph(N, E, U, V, W, NW, variant, precompute_intercepts) → ptr
@@ -275,7 +275,7 @@ function fit(N::Integer,
     #   double *edge_weight;       // Ptr    offset 72
     #   double *edge_dress;        // Ptr    offset 80
     #   double *edge_dress_next;   // Ptr    offset 88
-    #   double *node_dress;        // Ptr    offset 96
+    #   double *vertex_dress;        // Ptr    offset 96
     #   double *NW;                // Ptr    offset 104
 
     edge_weight_ptr = unsafe_load(Ptr{Ptr{Cdouble}}(g + 72))
@@ -325,7 +325,7 @@ mutable struct DressGraph
 end
 
 """
-    DressGraph(N, sources, targets; weights=nothing, node_weights=nothing,
+    DressGraph(N, sources, targets; weights=nothing, vertex_weights=nothing,
                variant=UNDIRECTED, precompute_intercepts=false)
 
 Create a persistent DRESS graph object.
@@ -334,7 +334,7 @@ function DressGraph(N::Integer,
                     sources::AbstractVector{<:Integer},
                     targets::AbstractVector{<:Integer};
                     weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
-                    node_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
+                    vertex_weights::Union{Nothing, AbstractVector{<:Real}} = nothing,
                     variant::Integer   = UNDIRECTED,
                     precompute_intercepts::Bool = false)
 
@@ -343,8 +343,8 @@ function DressGraph(N::Integer,
     if weights !== nothing
         length(weights) == E || throw(ArgumentError("weights length mismatch"))
     end
-    if node_weights !== nothing
-        length(node_weights) == N || throw(ArgumentError("node_weights length mismatch"))
+    if vertex_weights !== nothing
+        length(vertex_weights) == N || throw(ArgumentError("vertex_weights length mismatch"))
     end
 
     _ensure_lib()
@@ -362,9 +362,9 @@ function DressGraph(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
-        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(node_weights)
+        unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N) .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)
@@ -595,13 +595,13 @@ end
 
 """
     delta_fit(N, sources, targets;
-                    weights=nothing, node_weights=nothing,
+                    weights=nothing, vertex_weights=nothing,
                     k=0, variant=UNDIRECTED,
                     max_iterations=100, epsilon=1e-6,
                     precompute=false,
                     keep_multisets=false) → DeltaDRESSResult
 
-Run Δ^k-DRESS: enumerate all C(N,k) node-deletion subsets, fit DRESS on
+Run Δ^k-DRESS: enumerate all C(N,k) vertex-deletion subsets, fit DRESS on
 each subgraph, and return the pooled histogram.
 
 # Arguments
@@ -611,7 +611,7 @@ each subgraph, and return the pooled histogram.
 
 # Keyword arguments
 - `weights`              – optional edge weights (Float64 vector, same length as sources)
-- `node_weights`         – optional node weights (Float64 vector, length N)
+- `vertex_weights`         – optional vertex weights (Float64 vector, length N)
 - `k::Int`               – deletion depth (default 0 = original graph)
 - `variant`              – one of `UNDIRECTED`, `DIRECTED`, `FORWARD`, `BACKWARD`
 - `max_iterations::Int`  – max DRESS iterations per subgraph (default 100)
@@ -624,7 +624,7 @@ function delta_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -658,10 +658,10 @@ function delta_fit(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
         nw_arr = unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N)
-        nw_arr .= Cdouble.(node_weights)
+        nw_arr .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)
@@ -747,14 +747,14 @@ end
     nabla_fit(N, sources, targets; k=0, ...) → NablaDRESSResult
 
 Compute the ∇^k-DRESS histogram by enumerating all P(N,k) ordered k-tuples,
-marking each with generic injective node weights, and pooling the converged
+marking each with generic injective vertex weights, and pooling the converged
 edge values.
 """
 function nabla_fit(N::Integer,
                          sources::AbstractVector{<:Integer},
                          targets::AbstractVector{<:Integer};
                          weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
-                         node_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
+                         vertex_weights::Union{AbstractVector{<:Real}, Nothing} = nothing,
                          k::Integer         = 0,
                          variant::Integer   = UNDIRECTED,
                          max_iterations::Integer = 100,
@@ -786,10 +786,10 @@ function nabla_fit(N::Integer,
         Ptr{Cdouble}(C_NULL)
     end
 
-    NW_c = if node_weights !== nothing
+    NW_c = if vertex_weights !== nothing
         nw_ptr = Libc.malloc(N * sizeof(Cdouble))
         nw_arr = unsafe_wrap(Array, Ptr{Cdouble}(nw_ptr), N)
-        nw_arr .= Cdouble.(node_weights)
+        nw_arr .= Cdouble.(vertex_weights)
         Ptr{Cdouble}(nw_ptr)
     else
         Ptr{Cdouble}(C_NULL)

@@ -7,7 +7,7 @@
  * dress_nabla_fit_impl_flat() with different fit-function pointers.
  *
  * ∇^k-DRESS (Nabla-DRESS) enumerates P(N,k) ordered k-tuples of
- * vertices, marks each tuple with generic injective node weights,
+ * vertices, marks each tuple with generic injective vertex weights,
  * runs DRESS on the resulting weighted graph, and pools the
  * fingerprints.  This is the individualization variant of DRESS,
  * analogous to WL with distinguished constants.
@@ -24,7 +24,7 @@ typedef void (*dress_fit_fn)(p_dress_graph_t, int, double, int *, double *);
 
 /**
  * Core ∇^k-DRESS: enumerate P(N,k) ordered k-tuples, mark each
- * tuple with distinct generic node weights, fit DRESS on the
+ * tuple with distinct generic vertex weights, fit DRESS on the
  * marked graph, and accumulate the pooled histogram.
  *
  * Returns a flat packed array [val_bits, count, val_bits, count, ...].

@@ -244,11 +244,11 @@ static void test_directed_variants(void)
     igraph_destroy(&g);
 }
 
-/* ── test: node dress values ───────────────────────────────────────── */
+/* ── test: vertex dress values ───────────────────────────────────────── */
 
-static void test_node_dress(void)
+static void test_vertex_dress(void)
 {
-    printf("test_node_dress\n");
+    printf("test_vertex_dress\n");
 
     int edges[] = {0,1, 1,2, 0,2};
     igraph_t g = make_graph(edges, 3, 3, IGRAPH_UNDIRECTED);
@@ -257,13 +257,13 @@ static void test_node_dress(void)
     dress_fit_igraph(&g, NULL, NULL, DRESS_VARIANT_UNDIRECTED,
                          100, 1e-8, 0, &result);
 
-    /* All node norms in a triangle should be equal and >= 2 */
-    ASSERT(result.node_dress != NULL, "node_dress not NULL");
-    double n0 = result.node_dress[0];
-    ASSERT_GT(n0, 2.0 - 1e-6, "node dress >= 2");
+    /* All vertex norms in a triangle should be equal and >= 2 */
+    ASSERT(result.vertex_dress != NULL, "vertex_dress not NULL");
+    double n0 = result.vertex_dress[0];
+    ASSERT_GT(n0, 2.0 - 1e-6, "vertex dress >= 2");
     for (int u = 1; u < result.N; u++) {
-        ASSERT_NEAR(result.node_dress[u], n0, 1e-6,
-                    "triangle node norms equal");
+        ASSERT_NEAR(result.vertex_dress[u], n0, 1e-6,
+                    "triangle vertex norms equal");
     }
 
     dress_free_igraph(&result);
@@ -385,10 +385,10 @@ static void test_cross_validate_with_c_api(void)
                     "igraph matches raw C dress");
     }
 
-    /* Compare node norms */
+    /* Compare vertex norms */
     for (int u = 0; u < dg->N; u++) {
-        ASSERT_NEAR(ig_result.node_dress[u], dg->node_dress[u], 1e-14,
-                    "igraph matches raw C node dress");
+        ASSERT_NEAR(ig_result.vertex_dress[u], dg->vertex_dress[u], 1e-14,
+                    "igraph matches raw C vertex dress");
     }
 
     dress_free_graph(dg);
@@ -437,7 +437,7 @@ int main(void)
     test_k4();
     test_precompute_intercepts();
     test_directed_variants();
-    test_node_dress();
+    test_vertex_dress();
     test_to_vector();
     test_empty_graph();
     test_null_params();
