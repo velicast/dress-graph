@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.1] - 2026-04-03
+
+### Fixed
+- **Python vendored CUDA backends**: fixed the auto-build source lists in `dress.cuda` and `dress.mpi.cuda` so the generated shared libraries include the nabla implementation sources (`nabla_dress.c`, `nabla_dress_impl.c`, `nabla_dress_cuda.c`) alongside the existing delta sources. This fixes runtime symbol mismatches where the Python wrappers bound `dress_nabla_fit_*` functions that were missing from the rebuilt `.so`
+
 ## [0.8.0] - 2026-03-31
 
 ### Changed

@@ -6,7 +6,7 @@ PyPi [![PyPI Downloads](https://static.pepy.tech/personalized-badge/dress-graph?
 
 ### A Continuous Framework for Structural Graph Refinement
 
-DRESS is a deterministic, parameter-free framework that iteratively refines the structural similarity of edges in a graph to produce a canonical fingerprint: a real-valued edge vector, obtained by converging a non-linear dynamical system to its unique fixed point. The fingerprint is self-contained, isomorphism-invariant by construction, guaranteed bitwise-equal across any vertex labeling, numerically stable (no overflow, no error amplification, no undefined behavior), fast and embarrassingly parallel to compute.
+DRESS is a deterministic, parameter-free framework for continuous structural graph refinement. It iterates a nonlinear dynamical system on real-valued edge similarities and produces a graph fingerprint as a sorted edge-value vector once the iteration reaches a prescribed stopping criterion. The resulting fingerprint is self-contained, isomorphism-invariant by construction, reproducible across vertex labelings under the reference implementation, numerically robust in practice, and efficient to compute with straightforward parallelization and distribution.
 
 ```bash
 pip install dress-graph
@@ -123,7 +123,7 @@ and $N[u] = N(u) \cup \lbrace u \rbrace$ is the closed neighborhood.
 |----------|
 | Edge-centric refinement (operates only on edges) |
 | Parameter-free core (no damping factor, no hyperparameters) |
-| Unique fixed point via Birkhoff contraction |
+| Deterministic iterative refinement with practical convergence from a fixed initialization |
 | Bounded exactly in [0, 2] for unweighted graphs, self-similarity $d_{uu} = 2$ |
 | Isomorphism-invariant |
 | Guaranteed bitwise-equal results regardless of vertex labeling (sort + KBN compensated summation) |

@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dress-graph"
-version = "0.8.0"
-description = "DRESS: A deterministic, parameter-free framework for canonical graph fingerprinting via continuous structural edge refinement."
+version = "0.8.1"
+description = "DRESS is a deterministic, parameter-free framework for continuous structural graph refinement. It iterates a nonlinear dynamical system on real-valued edge similarities and produces a graph fingerprint as a sorted edge-value vector once the iteration reaches a prescribed stopping criterion."
 authors = [{name = "Eduar Castrillo Velilla"}]
 maintainers = [{name = "Eduar Castrillo Velilla"}]
 requires-python = ">=3.7"

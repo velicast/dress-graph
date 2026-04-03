@@ -106,9 +106,12 @@ def _build_cuda_so():
         os.path.join(src, 'dress_histogram.c'),
         os.path.join(src, 'delta_dress.c'),
         os.path.join(src, 'delta_dress_impl.c'),
+        os.path.join(src, 'nabla_dress.c'),
+        os.path.join(src, 'nabla_dress_impl.c'),
         os.path.join(src, 'omp', 'dress_omp.c'),
         os.path.join(src, 'omp', 'delta_dress_omp.c'),
         os.path.join(cuda_dir, 'delta_dress_cuda.c'),
+        os.path.join(cuda_dir, 'nabla_dress_cuda.c'),
         os.path.join(src, 'mpi', 'dress_mpi.c'),
     ]
     subprocess.check_call([

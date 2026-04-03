@@ -1,5 +1,5 @@
 % dress-graph MATLAB package
-% Version 0.8.0 (2026-03-31)
+% Version 0.8.1 (2026-04-03)
 %
 % DRESS: A Continuous Framework for Structural Graph Refinement.
 %   fit       - Run DRESS on an edge list and return edge and vertex values.

@@ -99,9 +99,12 @@ def _build_cuda_so():
         os.path.join(src, 'dress_histogram.c'),
         os.path.join(src, 'delta_dress.c'),
         os.path.join(src, 'delta_dress_impl.c'),
+        os.path.join(src, 'nabla_dress.c'),
+        os.path.join(src, 'nabla_dress_impl.c'),
         os.path.join(src, 'omp', 'dress_omp.c'),
         os.path.join(src, 'omp', 'delta_dress_omp.c'),
         os.path.join(cuda_dir, 'delta_dress_cuda.c'),
+        os.path.join(cuda_dir, 'nabla_dress_cuda.c'),
     ]
     subprocess.check_call([
         cc, '-shared', '-fPIC', '-O3', '-fopenmp', '-DDRESS_CUDA',
@@ -136,58 +139,67 @@ def _get_lib():
         _build_cuda_so()
         lib = ctypes.CDLL(_LOCAL_SO)
 
-    # Bind C function signatures
-    lib.dress_init_graph.restype  = _p_dress_graph_t
-    lib.dress_init_graph.argtypes = [
-        ctypes.c_int, ctypes.c_int,
-        ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.POINTER(ctypes.c_double),
-        ctypes.c_int, ctypes.c_int,
-    ]
+    def _bind(lib_obj):
+        lib_obj.dress_init_graph.restype  = _p_dress_graph_t
+        lib_obj.dress_init_graph.argtypes = [
+            ctypes.c_int, ctypes.c_int,
+            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_int),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.POINTER(ctypes.c_double),
+            ctypes.c_int, ctypes.c_int,
+        ]
 
-    lib.dress_fit.restype  = None
-    lib.dress_fit.argtypes = [
-        _p_dress_graph_t, ctypes.c_int, ctypes.c_double,
-        ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
-    ]
+        lib_obj.dress_fit.restype  = None
+        lib_obj.dress_fit.argtypes = [
+            _p_dress_graph_t, ctypes.c_int, ctypes.c_double,
+            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
+        ]
 
-    lib.dress_fit_cuda.restype  = None
-    lib.dress_fit_cuda.argtypes = [
-        _p_dress_graph_t, ctypes.c_int, ctypes.c_double,
-        ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
-    ]
+        lib_obj.dress_fit_cuda.restype  = None
+        lib_obj.dress_fit_cuda.argtypes = [
+            _p_dress_graph_t, ctypes.c_int, ctypes.c_double,
+            ctypes.POINTER(ctypes.c_int), ctypes.POINTER(ctypes.c_double),
+        ]
 
-    lib.dress_delta_fit_cuda.restype  = ctypes.POINTER(_DressHistPair)
-    lib.dress_delta_fit_cuda.argtypes = [
-        _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
-        ctypes.c_int, ctypes.c_uint,
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-        ctypes.POINTER(ctypes.c_int64),
-    ]
+        lib_obj.dress_delta_fit_cuda.restype  = ctypes.POINTER(_DressHistPair)
+        lib_obj.dress_delta_fit_cuda.argtypes = [
+            _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+            ctypes.c_int, ctypes.c_uint,
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
+            ctypes.POINTER(ctypes.c_int64),
+        ]
 
-    lib.dress_delta_fit_cuda_strided.restype  = ctypes.POINTER(_DressHistPair)
-    lib.dress_delta_fit_cuda_strided.argtypes = [
-        _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
-        ctypes.c_int, ctypes.c_uint,
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-        ctypes.POINTER(ctypes.c_int64),
-        ctypes.c_int, ctypes.c_int,
-    ]
+        lib_obj.dress_delta_fit_cuda_strided.restype  = ctypes.POINTER(_DressHistPair)
+        lib_obj.dress_delta_fit_cuda_strided.argtypes = [
+            _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+            ctypes.c_int, ctypes.c_uint,
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
+            ctypes.POINTER(ctypes.c_int64),
+            ctypes.c_int, ctypes.c_int,
+        ]
 
-    lib.dress_nabla_fit_cuda.restype  = ctypes.POINTER(_DressHistPair)
-    lib.dress_nabla_fit_cuda.argtypes = [
-        _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
-        ctypes.c_int, ctypes.c_uint,
-        ctypes.POINTER(ctypes.c_int), ctypes.c_int,
-        ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
-        ctypes.POINTER(ctypes.c_int64),
-    ]
+        lib_obj.dress_nabla_fit_cuda.restype  = ctypes.POINTER(_DressHistPair)
+        lib_obj.dress_nabla_fit_cuda.argtypes = [
+            _p_dress_graph_t, ctypes.c_int, ctypes.c_int, ctypes.c_double,
+            ctypes.c_int, ctypes.c_uint,
+            ctypes.POINTER(ctypes.c_int), ctypes.c_int,
+            ctypes.POINTER(ctypes.POINTER(ctypes.c_double)),
+            ctypes.POINTER(ctypes.c_int64),
+        ]
 
-    lib.dress_free_graph.restype  = None
-    lib.dress_free_graph.argtypes = [_p_dress_graph_t]
+        lib_obj.dress_free_graph.restype  = None
+        lib_obj.dress_free_graph.argtypes = [_p_dress_graph_t]
+
+    try:
+        _bind(lib)
+    except AttributeError:
+        if path != _LOCAL_SO:
+            raise
+        _build_cuda_so()
+        lib = ctypes.CDLL(_LOCAL_SO)
+        _bind(lib)
 
     _lib = lib
     return _lib
