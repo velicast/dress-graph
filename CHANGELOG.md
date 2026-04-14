@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.2] - 2026-04-09
+
+### Fixed
+- **Python `dress.omp` and `dress.mpi` auto-build**: these backends loaded `libdress.so` via `ctypes.CDLL()` but the pip wheel did not bundle the shared library, causing `RuntimeError: libdress.so not found` on first use. Both modules now auto-compile `libdress.so` from the vendored C sources on first call (same pattern as `dress.cuda`), requiring only a system C compiler (`gcc` for OMP, `mpicc` for MPI). No `LD_LIBRARY_PATH` or manual build step needed.
+- **Python `dress.omp` / `dress.mpi` search path**: added the package's own directory to the `ctypes.CDLL` search candidates, so manually placed or symlinked `.so` files are found.
+
 ## [0.8.1] - 2026-04-03
 
 ### Fixed

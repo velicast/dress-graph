@@ -32,15 +32,71 @@ from dress._ctypes_helpers import _DressGraph, _DressHistPair, _p_dress_graph_t,
 
 _lib = None
 
+# Path constants for auto-build
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_PKG_DIR = os.path.dirname(_HERE)
+_VENDORED = os.path.join(_PKG_DIR, '_vendored')
+_ROOT = os.path.normpath(os.path.join(_HERE, '..', '..', '..', '..'))
+if os.path.isdir(_VENDORED):
+    _LIB_DIR = _VENDORED
+elif os.path.isdir(os.path.join(_ROOT, 'libdress')):
+    _LIB_DIR = os.path.join(_ROOT, 'libdress')
+else:
+    _LIB_DIR = None
+_LOCAL_SO = os.path.join(_HERE, 'libdress_mpi.so')
+
+
+def _build_mpi_so():
+    """Build libdress_mpi.so with MPI + OpenMP from vendored sources."""
+    import shutil
+    import subprocess
+
+    mpicc = shutil.which('mpicc')
+    if mpicc is None:
+        raise RuntimeError("mpicc not found — cannot auto-build MPI library.")
+
+    if _LIB_DIR is None:
+        raise RuntimeError("No vendored sources available for auto-build.")
+
+    inc = os.path.join(_LIB_DIR, 'include')
+    src = os.path.join(_LIB_DIR, 'src')
+
+    c_srcs = [
+        os.path.join(src, 'dress.c'),
+        os.path.join(src, 'dress_histogram.c'),
+        os.path.join(src, 'delta_dress.c'),
+        os.path.join(src, 'delta_dress_impl.c'),
+        os.path.join(src, 'nabla_dress.c'),
+        os.path.join(src, 'nabla_dress_impl.c'),
+        os.path.join(src, 'omp', 'dress_omp.c'),
+        os.path.join(src, 'omp', 'delta_dress_omp.c'),
+        os.path.join(src, 'omp', 'nabla_dress_omp.c'),
+        os.path.join(src, 'mpi', 'dress_mpi.c'),
+    ]
+    c_srcs = [s for s in c_srcs if os.path.isfile(s)]
+    if not c_srcs:
+        raise RuntimeError(f"No C sources found under {src}")
+
+    subprocess.check_call([
+        mpicc, '-shared', '-fPIC', '-O3', '-fopenmp', '-DDRESS_MPI',
+        f'-I{inc}', f'-I{src}',
+        '-o', _LOCAL_SO,
+        *c_srcs,
+        '-lm', '-lpthread',
+    ])
+
 
 def _get_lib():
-    """Load libdress.so (with MPI) on first use."""
+    """Load libdress.so (with MPI) on first use, auto-building if needed."""
     global _lib
     if _lib is not None:
         return _lib
 
     _here = os.path.dirname(os.path.abspath(__file__))
     candidates = [
+        _LOCAL_SO,
+        os.path.join(_here, 'libdress.so'),
+        os.path.join(_here, '..', '_libdress', 'libdress.so'),
         os.path.join(_here, '..', '..', '..', '..', 'build', 'libdress', 'libdress.so'),
         os.path.join(_here, '..', '..', '..', '..', 'build', 'libdress.so'),
         'libdress.so',
@@ -49,22 +105,24 @@ def _get_lib():
     for path in candidates:
         try:
             lib = ctypes.CDLL(path)
+            # Verify MPI API is present
+            lib.dress_delta_fit_mpi_fcomm
             break
-        except OSError:
+        except (OSError, AttributeError):
+            lib = None
             continue
-    if lib is None:
-        raise RuntimeError(
-            "libdress.so (with MPI) not found. Build with:\n"
-            "  cmake -DDRESS_MPI=ON -S libdress -B build && cmake --build build"
-        )
 
-    try:
-        lib.dress_delta_fit_mpi_fcomm
-    except AttributeError:
-        raise RuntimeError(
-            "libdress.so found but MPI _fcomm API not available. "
-            "Rebuild with -DDRESS_MPI=ON."
-        )
+    # Auto-build from vendored sources if not found
+    if lib is None:
+        try:
+            _build_mpi_so()
+            lib = ctypes.CDLL(_LOCAL_SO)
+        except Exception as exc:
+            raise RuntimeError(
+                f"libdress.so (with MPI) not found and auto-build failed: {exc}\n"
+                "  Build manually with:\n"
+                "  cmake -DDRESS_MPI=ON -S libdress -B build && cmake --build build"
+            ) from exc
 
     lib.dress_init_graph.restype = _p_dress_graph_t
     lib.dress_init_graph.argtypes = [

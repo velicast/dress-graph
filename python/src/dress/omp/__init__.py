@@ -31,15 +31,73 @@ from dress._ctypes_helpers import (
 
 _lib = None
 
+# Path constants for auto-build (mirrors dress.cuda pattern)
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_PKG_DIR = os.path.dirname(_HERE)                        # dress/
+_VENDORED = os.path.join(_PKG_DIR, '_vendored')           # dress/_vendored/
+_LIBDRESS = os.path.join(_PKG_DIR, '_libdress')           # dress/_libdress/
+_ROOT = os.path.normpath(os.path.join(_HERE, '..', '..', '..', '..'))
+if os.path.isdir(_VENDORED):
+    _LIB_DIR = _VENDORED
+elif os.path.isdir(os.path.join(_ROOT, 'libdress')):
+    _LIB_DIR = os.path.join(_ROOT, 'libdress')
+else:
+    _LIB_DIR = None
+_LOCAL_SO = os.path.join(_HERE, 'libdress.so')
+
+
+def _build_omp_so():
+    """Build libdress.so with OpenMP from vendored sources."""
+    import subprocess
+
+    if _LIB_DIR is None:
+        raise RuntimeError(
+            "libdress.so not found and no vendored sources available.\n"
+            "  pip install dress-graph  # should include vendored sources\n"
+            "  or: ./build.sh c         # from the dress-graph repo"
+        )
+
+    inc = os.path.join(_LIB_DIR, 'include')
+    src = os.path.join(_LIB_DIR, 'src')
+    if not os.path.isdir(src):
+        raise RuntimeError(f"Source directory not found: {src}")
+
+    cc = os.environ.get('CC', 'gcc')
+    c_srcs = [
+        os.path.join(src, 'dress.c'),
+        os.path.join(src, 'dress_histogram.c'),
+        os.path.join(src, 'delta_dress.c'),
+        os.path.join(src, 'delta_dress_impl.c'),
+        os.path.join(src, 'nabla_dress.c'),
+        os.path.join(src, 'nabla_dress_impl.c'),
+        os.path.join(src, 'omp', 'dress_omp.c'),
+        os.path.join(src, 'omp', 'delta_dress_omp.c'),
+        os.path.join(src, 'omp', 'nabla_dress_omp.c'),
+    ]
+    # Filter to existing files only
+    c_srcs = [s for s in c_srcs if os.path.isfile(s)]
+    if not c_srcs:
+        raise RuntimeError(f"No C sources found under {src}")
+
+    subprocess.check_call([
+        cc, '-shared', '-fPIC', '-O3', '-fopenmp',
+        f'-I{inc}', f'-I{src}',
+        '-o', _LOCAL_SO,
+        *c_srcs,
+        '-lm', '-lpthread',
+    ])
+
 
 def _get_lib():
-    """Load libdress.so (with OpenMP) on first use."""
+    """Load libdress.so (with OpenMP) on first use, auto-building if needed."""
     global _lib
     if _lib is not None:
         return _lib
 
     _here = os.path.dirname(os.path.abspath(__file__))
     candidates = [
+        _LOCAL_SO,
+        os.path.join(_here, '..', '_libdress', 'libdress.so'),
         os.path.join(_here, '..', '..', '..', '..', 'build', 'libdress', 'libdress.so'),
         os.path.join(_here, '..', '..', '..', '..', 'build', 'libdress.so'),
         'libdress.so',
@@ -51,11 +109,17 @@ def _get_lib():
             break
         except OSError:
             continue
+
+    # Auto-build from vendored sources if not found
     if lib is None:
-        raise RuntimeError(
-            "libdress.so not found. Build with:\n"
-            "  ./build.sh c"
-        )
+        try:
+            _build_omp_so()
+            lib = ctypes.CDLL(_LOCAL_SO)
+        except (RuntimeError, subprocess.CalledProcessError, OSError) as exc:
+            raise RuntimeError(
+                f"libdress.so not found and auto-build failed: {exc}\n"
+                "  Build manually with: ./build.sh c"
+            ) from exc
 
     try:
         lib.dress_fit_omp
