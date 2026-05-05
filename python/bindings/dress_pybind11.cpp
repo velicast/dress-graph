@@ -299,6 +299,27 @@ NablaFitResult
             return wrap_array(g.vertexDressValues(), g.numVertices(), self);
         }, "Per-vertex dress norm array (NumPy view, float64)")
 
+        .def("load_fit_result", [](DRESS& self,
+                                   py::array_t<double, py::array::c_style | py::array::forcecast> edge_dress,
+                                   py::array_t<double, py::array::c_style | py::array::forcecast> vertex_dress) {
+            auto ed = edge_dress.request();
+            auto vd = vertex_dress.request();
+            self.loadFitResult(
+                static_cast<const double*>(ed.ptr), static_cast<int>(ed.size),
+                static_cast<const double*>(vd.ptr), static_cast<int>(vd.size));
+        }, py::arg("edge_dress"), py::arg("vertex_dress"),
+        R"doc(
+Load externally-computed fit results (e.g. from CUDA).
+
+After calling this, get(), edge_dress(), vertex_dress(), etc. all
+reflect the loaded values.
+
+Parameters
+----------
+edge_dress : array-like of float64, shape (E,)
+vertex_dress : array-like of float64, shape (N,)
+)doc")
+
         // --- repr ---
 
         .def("__repr__", [](const DRESS& g) {

@@ -341,16 +341,23 @@ class DRESS:
     # -- result syncing (used by hardware subclasses) ----------------------
 
     def _sync_hardware_fit(self, result):
-        """Copy hardware-backend fit results into the pure-Python impl.
+        """Copy hardware-backend fit results into the impl.
 
         After this, ``edge_dress()``, ``vertex_dress()``, ``get()`` etc.
         all reflect the hardware-computed values.
         """
-        self._impl._edge_dress = list(result.edge_dress)
-        self._impl._node_dress = list(result.vertex_dress)
-        for attr in ('_np_dress', '_np_node_dress'):
-            if hasattr(self._impl, attr):
-                delattr(self._impl, attr)
+        import numpy as np
+        ed = np.asarray(result.edge_dress, dtype=np.float64)
+        vd = np.asarray(result.vertex_dress, dtype=np.float64)
+
+        if _BACKEND == "c" and hasattr(self._impl, 'load_fit_result'):
+            self._impl.load_fit_result(ed, vd)
+        else:
+            self._impl._edge_dress = ed.tolist()
+            self._impl._vertex_dress = vd.tolist()
+            for attr in ('_np_dress', '_np_vertex_dress'):
+                if hasattr(self._impl, attr):
+                    delattr(self._impl, attr)
 
     # -- hardware-accelerated convenience (suffix API) ---------------------
 
@@ -363,8 +370,7 @@ class DRESS:
             variant=int(self._var),
             max_iterations=max_iterations, epsilon=epsilon,
         )
-        if self._force_python_impl or _BACKEND == "python":
-            self._sync_hardware_fit(result)
+        self._sync_hardware_fit(result)
         return FitResult(iterations=result.iterations, delta=result.delta)
 
     def delta_fit_cuda(self, k=0, max_iterations=100, epsilon=1e-6,

@@ -596,10 +596,8 @@ class DRESS(_BaseDRESS):
         g = DRESS(4, [0, 1, 2, 0], [1, 2, 3, 3])
         fr = g.fit()          # GPU
         dr = g.delta_fit(k=2) # GPU
-        val = g.get(0, 2)     # CPU (uses converged state)
+        val = g.get(0, 2)     # CPU (uses converged state, runs in C)
     """
-
-    _force_python_impl = True
 
     def fit(self, max_iterations=100, epsilon=1e-6):
         result = fit(

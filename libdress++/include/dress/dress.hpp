@@ -266,6 +266,19 @@ public:
     const int*    adjTarget()       const { ensureValid(); return g_->adj_target; }
     const int*    adjEdgeIdx()      const { ensureValid(); return g_->adj_edge_idx; }
 
+    // Load externally-computed fit results (e.g. from CUDA backend).
+    // Both arrays are copied into the graph struct.
+    void loadFitResult(const double* edgeDress, int nEdges,
+                       const double* vertexDress, int nVertices) {
+        ensureValid();
+        if (nEdges != g_->E)
+            throw std::invalid_argument("loadFitResult: edge_dress length mismatch");
+        if (nVertices != g_->N)
+            throw std::invalid_argument("loadFitResult: vertex_dress length mismatch");
+        std::memcpy(g_->edge_dress, edgeDress, g_->E * sizeof(double));
+        std::memcpy(g_->vertex_dress, vertexDress, g_->N * sizeof(double));
+    }
+
     // Access to the underlying C struct (escape hatch for interop).
     p_dress_graph_t       raw()       { return g_; }
     const dress_graph_t*  raw() const { return g_; }

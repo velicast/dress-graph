@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.8.3] - 2026-05-04
+
+### Added
+- **C++ `DRESS::loadFitResult(edge_dress, vertex_dress)`** (`libdress++/include/dress/dress.hpp`): copies externally-computed per-edge and per-vertex DRESS values into the underlying `dress_graph_t`, with length checks against `E` and `N`. After calling it, all read accessors (`get()`, `edgeDress()`, `vertexDress()`, `edgeDressValues()`, `vertexDressValues()`) reflect the loaded values. Intended as the interop hook for hardware backends (CUDA/MPI) that compute results out-of-band.
+- **Python `DRESS.load_fit_result(edge_dress, vertex_dress)`** (pybind11 binding): exposes the new C++ method, accepting any array-like coerced to C-contiguous `float64` arrays of shape `(E,)` and `(N,)`.
+
+### Changed
+- **Python `_sync_hardware_fit()`**: when the active backend is the C/pybind11 impl and `load_fit_result` is available, hardware-backend results (from `fit_cuda`, `fit_mpi`, etc.) are now copied directly into the C graph struct instead of being mirrored into Python lists. This keeps the C-backed `get()` / `edge_dress()` / `vertex_dress()` paths consistent with the hardware-computed state in the same process.
+- **Python `DRESS.fit_cuda()`**: now always syncs the hardware fit result back into the local impl (previously the sync was skipped whenever the C backend was active, leaving the C graph holding stale values after a CUDA run).
+- **Python `dress.cuda.DRESS`**: removed the `_force_python_impl = True` override. CPU-side queries on a CUDA graph (e.g. `g.get(u, v)` after `g.fit()`) now run through the C backend using the synced converged state, instead of forcing a slower pure-Python fallback.
+
+### Fixed
+- **Python `_DressGraph` ctypes layout** (`python/src/dress/_ctypes_helpers.py`): reordered the `NW` and `vertex_dress` fields to match the actual `dress_graph_t` C struct layout. The previous order misaligned every field after `edge_dress_next`, which could corrupt memory or return wrong values when accessing vertex weights / vertex DRESS through the ctypes path.
+- **Python `_sync_hardware_fit()` attribute names**: replaced leftover `_node_dress` / `_np_node_dress` references (missed during the v0.8.0 node→vertex rename) with `_vertex_dress` / `_np_vertex_dress`. Without this fix, the pure-Python fallback path silently failed to update vertex DRESS values and to invalidate the cached NumPy view after a hardware fit.
+
 ## [0.8.2] - 2026-04-09
 
 ### Fixed
