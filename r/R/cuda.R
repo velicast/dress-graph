@@ -130,7 +130,6 @@ cuda <- local({
           n_samples, seed,
           precompute, keep_multisets,
           compute_histogram,
-          0L, 1L,
           PACKAGE = "dress.graph")
   }
 

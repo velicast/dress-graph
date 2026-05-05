@@ -209,9 +209,7 @@ delta_fit <- function(n_vertices,
         seed,
         precompute,
         keep_multisets,
-        compute_histogram,
-        0L,
-        1L)
+        compute_histogram)
 }
 
 # ---- Nabla-k-DRESS ---------------------------------------------------

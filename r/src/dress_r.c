@@ -172,9 +172,7 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
                        SEXP seed_,
                        SEXP precompute_,
                        SEXP keep_multisets_,
-                       SEXP compute_histogram_,
-                       SEXP offset_,
-                       SEXP stride_) {
+                       SEXP compute_histogram_) {
 
     int N  = INTEGER(n_vertices_)[0];
     int E  = LENGTH(sources_);
@@ -187,8 +185,8 @@ SEXP C_delta_dress_fit(SEXP n_vertices_,
     int precompute     = INTEGER(precompute_)[0];
     int keep_ms        = INTEGER(keep_multisets_)[0];
     int compute_hist   = INTEGER(compute_histogram_)[0];
-    int offset         = INTEGER(offset_)[0];
-    int stride         = INTEGER(stride_)[0];
+    int offset         = 0;
+    int stride         = 1;
 
     /* Allocate copies (dress_init_graph takes ownership). */
     int *U = (int *)malloc(E * sizeof(int));
@@ -387,14 +385,14 @@ SEXP C_nabla_dress_fit(SEXP n_vertices_,
 #ifdef DRESS_CUDA
 /* CUDA bridge (defined in dress_cuda_r.c) */
 extern SEXP C_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
-extern SEXP C_delta_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_delta_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP C_nabla_dress_fit_cuda(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP C_dress_fit_cuda_obj(SEXP, SEXP, SEXP);
 #endif
 
 /* OMP bridge (defined in dress_omp_r.c) */
 extern SEXP C_dress_fit_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
-extern SEXP C_delta_dress_fit_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
+extern SEXP C_delta_dress_fit_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 extern SEXP C_nabla_dress_fit_omp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
 
 #ifdef DRESS_MPI
@@ -576,7 +574,7 @@ SEXP C_dress_close(SEXP ptr_) {
 /* ------------------------------------------------------------------ */
 static const R_CallMethodDef callMethods[] = {
     {"C_dress_fit",            (DL_FUNC) &C_dress_fit,            9},
-    {"C_delta_dress_fit",      (DL_FUNC) &C_delta_dress_fit,      13},
+    {"C_delta_dress_fit",      (DL_FUNC) &C_delta_dress_fit,      14},
     {"C_nabla_dress_fit",      (DL_FUNC) &C_nabla_dress_fit,      14},
     {"C_dress_version",        (DL_FUNC) &C_dress_version,        0},
     {"C_dress_init",           (DL_FUNC) &C_dress_init,           7},
@@ -585,11 +583,11 @@ static const R_CallMethodDef callMethods[] = {
     {"C_dress_result",         (DL_FUNC) &C_dress_result,         1},
     {"C_dress_close",          (DL_FUNC) &C_dress_close,          1},
     {"C_dress_fit_omp",        (DL_FUNC) &C_dress_fit_omp,        9},
-    {"C_delta_dress_fit_omp",  (DL_FUNC) &C_delta_dress_fit_omp,  13},
+    {"C_delta_dress_fit_omp",  (DL_FUNC) &C_delta_dress_fit_omp,  14},
     {"C_nabla_dress_fit_omp",  (DL_FUNC) &C_nabla_dress_fit_omp,  14},
 #ifdef DRESS_CUDA
     {"C_dress_fit_cuda",       (DL_FUNC) &C_dress_fit_cuda,       9},
-    {"C_delta_dress_fit_cuda", (DL_FUNC) &C_delta_dress_fit_cuda, 13},
+    {"C_delta_dress_fit_cuda", (DL_FUNC) &C_delta_dress_fit_cuda, 14},
     {"C_nabla_dress_fit_cuda", (DL_FUNC) &C_nabla_dress_fit_cuda, 14},
     {"C_dress_fit_cuda_obj",   (DL_FUNC) &C_dress_fit_cuda_obj,   3},
 #endif

@@ -171,9 +171,7 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
                             SEXP seed_,
                             SEXP precompute_,
                             SEXP keep_multisets_,
-                            SEXP compute_histogram_,
-                            SEXP offset_,
-                            SEXP stride_) {
+                            SEXP compute_histogram_) {
 
     int N  = INTEGER(n_vertices_)[0];
     int E  = LENGTH(sources_);
@@ -186,8 +184,8 @@ SEXP C_delta_dress_fit_cuda(SEXP n_vertices_,
     int precompute     = INTEGER(precompute_)[0];
     int keep_ms        = INTEGER(keep_multisets_)[0];
     int compute_hist   = INTEGER(compute_histogram_)[0];
-    int offset         = INTEGER(offset_)[0];
-    int stride         = INTEGER(stride_)[0];
+    int offset         = 0;
+    int stride         = 1;
 
     int *U = (int *)malloc(E * sizeof(int));
     int *V = (int *)malloc(E * sizeof(int));

@@ -82,8 +82,11 @@ omp <- local({
                                   variant          = DRESS_UNDIRECTED,
                                   max_iterations   = 100L,
                                   epsilon          = 1e-6,
+                                  n_samples        = 0L,
+                                  seed             = 0L,
                                   precompute       = FALSE,
-                                  keep_multisets   = FALSE) {
+                                  keep_multisets   = FALSE,
+                                  compute_histogram = TRUE) {
 
     n_vertices     <- as.integer(n_vertices)
     sources        <- as.integer(sources)
@@ -94,8 +97,11 @@ omp <- local({
     variant        <- as.integer(variant)
     max_iterations <- as.integer(max_iterations)
     epsilon        <- as.double(epsilon)
+    n_samples      <- as.integer(n_samples)
+    seed           <- as.integer(seed)
     precompute     <- as.integer(precompute)
     keep_multisets <- as.integer(keep_multisets)
+    compute_histogram <- as.integer(compute_histogram)
 
     stopifnot(length(sources) == length(targets))
     if (!is.null(weights)) stopifnot(length(weights) == length(sources))
@@ -109,8 +115,9 @@ omp <- local({
     .Call(C_delta_dress_fit_omp,
           n_vertices, sources, targets, weights, vertex_weights,
           k, variant, max_iterations, epsilon,
+          n_samples, seed,
           precompute, keep_multisets,
-          0L, 1L)
+          compute_histogram)
   }
 
   env$nabla_fit <- function(n_vertices,

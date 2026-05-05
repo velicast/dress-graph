@@ -2,8 +2,7 @@ Package: dress.graph
 Type: Package
 Title: DRESS - A Continuous Framework for Structural Graph Refinement
 Version: 0.8.3
-Date: 2026-03-26
-Author: Eduar Castrillo Velilla [aut, cre]
+Date: 2026-05-04
 Maintainer: Eduar Castrillo Velilla <velicast@outlook.com>
 Authors@R: person("Eduar", "Castrillo Velilla", role = c("aut", "cre"),
                   email = "velicast@outlook.com",
